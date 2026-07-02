@@ -1,15 +1,42 @@
 # NEXT_TASK.md
 
 ## Next Feature
-Product Variants — complete the variant system so each product can have combinations of options (Size, Color, Storage etc.) each with their own price and stock.
+Category Builder — admins can create/edit product categories with SEO fields and a banner image, and assign products to categories.
 
 ## Goal
 After this task is complete, an admin should be able to:
-1. Create a product (e.g. Nike Air Force 1)
-2. Define variant options (Size: 7, 8, 9 / Color: Red, Blue)
-3. Have the system auto-generate all combinations (7+Red, 7+Blue, 8+Red, 8+Blue, 9+Red, 9+Blue)
-4. Fill in price and stock per combination
-5. Save the product with all its variants to the database
+1. Create a category (e.g. "Sneakers") with a slug, description, banner image URL, and SEO title/description
+2. See a list of all categories in the admin panel
+3. Assign one or more existing products to a category
+4. View which products belong to a category
+
+---
+
+## Schema Changes Needed (not yet in DATABASE_SCHEMA.md — confirm before coding)
+
+Proposed models:
+
+**Category**
+| Column | Type | Notes |
+|---|---|---|
+| id | String (cuid) | Primary key |
+| name | String | Unique, e.g. "Sneakers" |
+| slug | String | Unique, auto-generated |
+| description | String? | Optional |
+| bannerImageUrl | String? | Optional banner image URL |
+| seoTitle | String? | Optional, defaults to name if empty |
+| seoDescription | String? | Optional |
+| createdAt | DateTime | Auto |
+| updatedAt | DateTime | Auto |
+
+**CategoryProduct** (junction table, many-to-many)
+| Column | Type | Notes |
+|---|---|---|
+| id | String (cuid) | Primary key |
+| categoryId | String | FK → Category.id (cascade delete) |
+| productId | String | FK → Product.id (cascade delete) |
+
+A product can belong to multiple categories; a category can have multiple products.
 
 ---
 
@@ -17,136 +44,76 @@ After this task is complete, an admin should be able to:
 
 | File | What changes |
 |---|---|
-| `app/admin/products/new/page.tsx` | Add variant option definition UI + auto-generated combinations table |
-| `app/api/admin/products/route.ts` | Update POST to save variants via nested Prisma create |
+| `prisma/schema.prisma` | Add `Category`, `CategoryProduct` models |
+| `app/admin/categories/page.tsx` | New — category list page (Server Component) |
+| `app/admin/categories/new/page.tsx` | New — create category form (Client Component) |
+| `app/api/admin/categories/route.ts` | New — GET (list) + POST (create) |
 | `app/generated/prisma/` | Must be recommitted after `npx prisma generate` |
 
 ---
 
 ## Step by Step
 
-**Step 1 — Run the migration (schema was already updated last session)**
-```bash
-npx prisma migrate dev --name add_product_variants
-```
-If it asks to reset the database, type `y` — no real data exists yet.
+**Step 1 — Confirm schema with Claude before writing it** (open questions below)
 
-**Step 2 — Regenerate the client**
+**Step 2 — Add models to `prisma/schema.prisma`**
+
+**Step 3 — Run migration**
+```bash
+npx prisma migrate dev --name add_categories
+```
+
+**Step 4 — Regenerate client**
 ```bash
 npx prisma generate
 ```
 
-**Step 3 — Verify in Prisma Studio**
-```bash
-npx prisma studio   # run in PowerShell
-```
-Confirm `ProductVariant` appears in the left sidebar.
+**Step 5 — Build category list page** (`app/admin/categories/page.tsx`)
+- Server Component, fetch categories directly via Prisma
+- Table: name, slug, product count, actions (edit link)
 
-**Step 4 — Update the Product Builder UI**
+**Step 6 — Build category create form** (`app/admin/categories/new/page.tsx`)
+- Client Component
+- Fields: name, description, banner image URL, SEO title, SEO description
+- Multi-select or checkbox list to assign existing products to the category
 
-In `app/admin/products/new/page.tsx`, add a "Variants" section below the custom fields section that:
-- Lets admin add option groups (e.g. "Size") with values (e.g. "7, 8, 9")
-- Has an "Generate Combinations" button that computes the cartesian product of all options
-- Shows a table of all generated combinations where admin fills in price and stock per row
-- Optionally fills in a SKU per row
+**Step 7 — Build API routes** (`app/api/admin/categories/route.ts`)
+- GET: return all categories with product count (or nested products)
+- POST: create category with auto-generated slug; optionally create `CategoryProduct` rows for assigned products in the same request
 
-State to add:
-```tsx
-const [variantOptions, setVariantOptions] = useState<{name: string, values: string}[]>([])
-const [variants, setVariants] = useState<{combination: Record<string,string>, price: string, stock: string, sku: string}[]>([])
-```
+**Step 8 — Test**
+- Create 2-3 categories
+- Assign the Nike shoe product (from variants testing) to one category
+- Confirm in Prisma Studio: `Category` row exists, `CategoryProduct` rows link correctly
 
-Combination generation logic (cartesian product):
-```tsx
-function generateCombinations(options: {name: string, values: string}[]) {
-  const parsed = options
-    .filter(o => o.name && o.values)
-    .map(o => ({
-      name: o.name,
-      values: o.values.split(',').map(v => v.trim()).filter(Boolean)
-    }))
-
-  if (parsed.length === 0) return []
-
-  const combos = parsed.reduce<Record<string,string>[]>((acc, option) => {
-    if (acc.length === 0) return option.values.map(v => ({ [option.name]: v }))
-    return acc.flatMap(combo =>
-      option.values.map(v => ({ ...combo, [option.name]: v }))
-    )
-  }, [])
-
-  return combos.map(combination => ({
-    combination,
-    price: '',
-    stock: '',
-    sku: ''
-  }))
-}
-```
-
-**Step 5 — Update the Products API**
-
-In `app/api/admin/products/route.ts`, update POST to handle variants:
-```tsx
-const product = await prisma.product.create({
-  data: {
-    name,
-    slug,
-    description,
-    productTypeId,
-    attributes: attributes || {},
-    variantOptions: variantOptions || {},
-    variants: {
-      create: variants.map((v: any) => ({
-        combination: v.combination,
-        price: parseFloat(v.price),
-        stock: parseInt(v.stock),
-        sku: v.sku || null,
-      }))
-    }
-  },
-  include: { variants: true }
-})
-```
-
-**Step 6 — Test**
-- Create a "Shoe" product type with fields: Brand (TEXT), Material (TEXT)
-- Create a Nike shoe with Size options [7,8,9] and Color options [Red, Blue]
-- Generate combinations — should produce 6 rows
-- Fill in price and stock per row
-- Submit and check Prisma Studio — confirm Product row exists with variantOptions JSON and 6 ProductVariant rows
-
-**Step 7 — Commit**
+**Step 9 — Commit**
 ```bash
 git add .
-git commit -m "Phase 2: Product variants with combination generation"
+git commit -m "Phase 2: Category Builder"
 git push
 ```
 
 ---
 
-## Dependencies
+## Open Questions (resolve before coding)
 
-- `prisma/schema.prisma` already updated with `ProductVariant` model last session
-- Migration must be run before anything else works
-- No new npm packages needed
+1. Should product assignment happen on the category creation form, or as a separate step (e.g. assign products from the product edit page instead)?
+2. Should categories support nesting (parent/child, e.g. "Shoes" > "Sneakers")? Not in original scope — confirm if needed now or deferred.
+3. Banner image — plain URL string for now (no upload), consistent with no file-upload infra yet. Confirm this is fine for v1.
 
 ---
 
-## Potential Risks
+## Dependencies
 
-- If migration fails due to existing product data with price/stock columns: drop the `Product` table data manually via Prisma Studio and retry, or use `--force-reset` flag (acceptable since no real data exists)
-- Cartesian product generation can produce many rows if too many options/values are added — no limit needed for now but worth noting
-- SKU uniqueness is optional in schema — no unique constraint set, so duplicates are possible; validation can be added later
+- No new npm packages needed
+- Products and their variants must already exist for meaningful testing (already true — Nike shoe created last session)
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] `ProductVariant` table exists in Neon database
-- [ ] Admin can define variant options in the Product Builder
-- [ ] "Generate Combinations" auto-creates all option combinations
-- [ ] Admin can set price and stock per combination
-- [ ] Submitting the form saves the product AND all variants
-- [ ] Prisma Studio shows correct ProductVariant rows linked to the product
+- [ ] `Category` and `CategoryProduct` tables exist in Neon database
+- [ ] Admin can create a category with name, slug, description, banner image URL, SEO fields
+- [ ] Admin can assign existing products to a category
+- [ ] Category list page shows all categories with product count
 - [ ] Vercel build still passes after committing updated generated client

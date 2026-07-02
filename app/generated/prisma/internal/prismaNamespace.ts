@@ -389,7 +389,9 @@ export const ModelName = {
   ProductType: 'ProductType',
   ProductField: 'ProductField',
   Product: 'Product',
-  ProductVariant: 'ProductVariant'
+  ProductVariant: 'ProductVariant',
+  Category: 'Category',
+  CategoryProduct: 'CategoryProduct'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -405,7 +407,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "address" | "productType" | "productField" | "product" | "productVariant"
+    modelProps: "user" | "address" | "productType" | "productField" | "product" | "productVariant" | "category" | "categoryProduct"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -853,6 +855,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    Category: {
+      payload: Prisma.$CategoryPayload<ExtArgs>
+      fields: Prisma.CategoryFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CategoryFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CategoryFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>
+        }
+        findFirst: {
+          args: Prisma.CategoryFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CategoryFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>
+        }
+        findMany: {
+          args: Prisma.CategoryFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>[]
+        }
+        create: {
+          args: Prisma.CategoryCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>
+        }
+        createMany: {
+          args: Prisma.CategoryCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CategoryCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>[]
+        }
+        delete: {
+          args: Prisma.CategoryDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>
+        }
+        update: {
+          args: Prisma.CategoryUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>
+        }
+        deleteMany: {
+          args: Prisma.CategoryDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CategoryUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CategoryUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>[]
+        }
+        upsert: {
+          args: Prisma.CategoryUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryPayload>
+        }
+        aggregate: {
+          args: Prisma.CategoryAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCategory>
+        }
+        groupBy: {
+          args: Prisma.CategoryGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CategoryGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CategoryCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CategoryCountAggregateOutputType> | number
+        }
+      }
+    }
+    CategoryProduct: {
+      payload: Prisma.$CategoryProductPayload<ExtArgs>
+      fields: Prisma.CategoryProductFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CategoryProductFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryProductPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CategoryProductFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryProductPayload>
+        }
+        findFirst: {
+          args: Prisma.CategoryProductFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryProductPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CategoryProductFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryProductPayload>
+        }
+        findMany: {
+          args: Prisma.CategoryProductFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryProductPayload>[]
+        }
+        create: {
+          args: Prisma.CategoryProductCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryProductPayload>
+        }
+        createMany: {
+          args: Prisma.CategoryProductCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CategoryProductCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryProductPayload>[]
+        }
+        delete: {
+          args: Prisma.CategoryProductDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryProductPayload>
+        }
+        update: {
+          args: Prisma.CategoryProductUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryProductPayload>
+        }
+        deleteMany: {
+          args: Prisma.CategoryProductDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CategoryProductUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CategoryProductUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryProductPayload>[]
+        }
+        upsert: {
+          args: Prisma.CategoryProductUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CategoryProductPayload>
+        }
+        aggregate: {
+          args: Prisma.CategoryProductAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCategoryProduct>
+        }
+        groupBy: {
+          args: Prisma.CategoryProductGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CategoryProductGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CategoryProductCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CategoryProductCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -973,6 +1123,30 @@ export const ProductVariantScalarFieldEnum = {
 } as const
 
 export type ProductVariantScalarFieldEnum = (typeof ProductVariantScalarFieldEnum)[keyof typeof ProductVariantScalarFieldEnum]
+
+
+export const CategoryScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  slug: 'slug',
+  description: 'description',
+  bannerImageUrl: 'bannerImageUrl',
+  seoTitle: 'seoTitle',
+  seoDescription: 'seoDescription',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CategoryScalarFieldEnum = (typeof CategoryScalarFieldEnum)[keyof typeof CategoryScalarFieldEnum]
+
+
+export const CategoryProductScalarFieldEnum = {
+  id: 'id',
+  categoryId: 'categoryId',
+  productId: 'productId'
+} as const
+
+export type CategoryProductScalarFieldEnum = (typeof CategoryProductScalarFieldEnum)[keyof typeof CategoryProductScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1249,6 +1423,8 @@ export type GlobalOmitConfig = {
   productField?: Prisma.ProductFieldOmit
   product?: Prisma.ProductOmit
   productVariant?: Prisma.ProductVariantOmit
+  category?: Prisma.CategoryOmit
+  categoryProduct?: Prisma.CategoryProductOmit
 }
 
 /* Types for Logging */
