@@ -27,3 +27,23 @@ export type User = Prisma.UserModel
  * 
  */
 export type Address = Prisma.AddressModel
+/**
+ * Model ProductType
+ * 
+ */
+export type ProductType = Prisma.ProductTypeModel
+/**
+ * Model ProductField
+ * 
+ */
+export type ProductField = Prisma.ProductFieldModel
+/**
+ * Model Product
+ * 
+ */
+export type Product = Prisma.ProductModel
+/**
+ * Model ProductVariant
+ * 
+ */
+export type ProductVariant = Prisma.ProductVariantModel

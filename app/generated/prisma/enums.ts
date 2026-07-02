@@ -16,3 +16,23 @@ export const Role = {
 } as const
 
 export type Role = (typeof Role)[keyof typeof Role]
+
+
+export const FieldType = {
+  TEXT: 'TEXT',
+  RICH_TEXT: 'RICH_TEXT',
+  NUMBER: 'NUMBER',
+  CURRENCY: 'CURRENCY',
+  BOOLEAN: 'BOOLEAN',
+  DATE: 'DATE',
+  DROPDOWN: 'DROPDOWN',
+  CHECKBOX: 'CHECKBOX',
+  RADIO: 'RADIO',
+  IMAGE: 'IMAGE',
+  VIDEO: 'VIDEO',
+  JSON: 'JSON',
+  TAG: 'TAG',
+  COLOR: 'COLOR'
+} as const
+
+export type FieldType = (typeof FieldType)[keyof typeof FieldType]

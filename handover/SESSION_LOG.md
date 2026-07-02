@@ -1,0 +1,188 @@
+# SESSION_LOG.md
+
+Append a new section after each completed feature.
+Do not remove previous entries.
+
+---
+
+## Session 1
+
+Date: 2026-07-01
+
+### Objective
+Set up the project from scratch — Phase 0 and Phase 1.
+
+### Completed
+- Next.js 15 (App Router) + TypeScript + TailwindCSS project created
+- GitHub repo created and connected (private)
+- Vercel deployment configured (auto-deploy from main)
+- Neon PostgreSQL database provisioned
+- Prisma 7 initialized with custom output path (`app/generated/prisma/`)
+- ngrok installed and authenticated for local webhook tunneling
+- HitPay sandbox account created
+- Prisma schema: User, Address models with Role enum (CUSTOMER, STAFF, ADMIN)
+- Clerk authentication integrated (ClerkProvider in layout, middleware/proxy)
+- Sign-in (`/sign-in`) and sign-up (`/sign-up`) pages using Clerk pre-built components
+- Clerk webhook (`/api/webhooks/clerk`) implemented — syncs new users to database
+- lib/prisma.ts singleton created (Prisma 7 PrismaPg adapter pattern)
+- Own account promoted to ADMIN via Prisma Studio
+
+### Files Modified
+- `prisma/schema.prisma` — User, Address, Role enum
+- `prisma.config.ts` — Prisma 7 CLI config
+- `app/layout.tsx` — ClerkProvider added
+- `app/sign-in/[[...sign-in]]/page.tsx` — created
+- `app/sign-up/[[...sign-up]]/page.tsx` — created
+- `app/api/webhooks/clerk/route.ts` — created
+- `lib/prisma.ts` — created
+- `next.config.ts` — allowedDevOrigins for ngrok
+- `package.json` — build script updated to `prisma generate && next build`
+- `.gitignore` — removed app/generated from ignore (needed for Vercel)
+- `.gitattributes` — LF line endings enforced
+
+### Bugs Found
+- Prisma 7 uses `provider = "prisma-client"` not `"prisma-client-js"` — different client generation
+- Prisma 7 does NOT support `url = env("DATABASE_URL")` in datasource block — breaks with error
+- Generated client output path was `app/generated/prisma` (root level) not `src/app/generated/prisma` — project has no `src/` directory despite create-next-app offering it
+- `@/app/generated/prisma/client` not `@/app/generated/prisma` is the correct import path (entry file is `client.ts` not `index.ts`)
+- Home directory (`C:\Users\crate`) had a rogue `.git` folder from a past accidental `git init` — was tracking entire user profile
+- Stray `telebot/` folder inside project from old git history
+- `package-lock.json` and `package.json` at home directory root confused Next.js workspace detection
+
+### Bugs Fixed
+- All above resolved before end of session
+- Vercel build failing: fixed by committing generated Prisma client and adding `prisma generate &&` to build script
+- Duplicate `RootLayout` in `layout.tsx`: fixed by merging into single function
+- Missing `<a` tags stripped by copy-paste: fixed by using `cat > file << 'EOF'` in Git Bash instead of clipboard
+
+### Technical Decisions
+- Chose Clerk over Auth.js (simpler for solo dev)
+- Kept Prisma 7 (not downgraded to 6)
+- Committed generated Prisma client to repo for Vercel build reliability
+- Used Next.js API routes (not NestJS) for simpler v1 architecture
+
+### Lessons Learned
+- Never run `git init` in home directory — always `cd` into project folder first
+- Always verify `git status` scope before `git add .` — check that paths shown are only project files
+- On Windows, use `cat > file << 'EOF'` in Git Bash to write files instead of copy-pasting code (angle brackets get stripped from clipboard)
+- Prisma 7 is significantly different from Prisma 6 in datasource, generator, and client import patterns
+- `npx prisma studio` must run in PowerShell not Git Bash (ERR_STREAM_PREMATURE_CLOSE in Git Bash)
+- ngrok URL changes on every restart — must update Clerk webhook URL AND next.config.ts allowedDevOrigins each time
+
+### Outstanding Issues
+- None
+
+### Recommended Next Task
+Phase 2 — Admin Panel: Product Type Builder, Product Builder, Category Builder
+
+### Notes
+- Project root is `C:\Users\crate\Documents\POKE\ecommerce-platform`
+- No `src/` directory — all app code at root level (`app/`, `lib/`, etc.)
+- GitHub repo: `github.com/josthan12/ECOMMERCE-PLATFORM` (private)
+- Vercel deploys from `main` branch only
+
+---
+
+## Session 2
+
+Date: 2026-07-01
+
+### Objective
+Build Phase 2 admin panel — Product Type Builder, Product Builder, and begin Product Variants.
+
+### Completed
+- Admin layout with role-based access guard (`app/admin/layout.tsx`)
+- Admin dashboard home page (`app/admin/page.tsx`)
+- Product Type Builder: list page + create form with dynamic field adding
+- Product Builder: list page + dynamic create form (renders fields based on selected product type)
+- API routes: GET/POST `/api/admin/product-types`, GET/POST `/api/admin/products`
+- Prisma schema updated: ProductType, ProductField, Product, ProductVariant models added
+- FieldType enum added (TEXT, RICH_TEXT, NUMBER, CURRENCY, BOOLEAN, DATE, DROPDOWN, CHECKBOX, RADIO, IMAGE, VIDEO, JSON, TAG, COLOR)
+- Migration run: `add_product_types_and_products`
+- Schema rewritten to add ProductVariant, remove price/stock from Product, add variantOptions JSON column
+- Migration `add_product_variants` schema ready (not yet run — next session task)
+
+### Files Modified
+- `prisma/schema.prisma` — ProductType, ProductField, Product, ProductVariant, FieldType enum
+- `app/admin/layout.tsx` — created
+- `app/admin/page.tsx` — created
+- `app/admin/product-types/page.tsx` — created
+- `app/admin/product-types/new/page.tsx` — created
+- `app/admin/products/page.tsx` — created
+- `app/admin/products/new/page.tsx` — created
+- `app/api/admin/product-types/route.ts` — created
+- `app/api/admin/products/route.ts` — created
+- `app/generated/prisma/` — regenerated and committed
+
+### Bugs Found
+- `prisma.productType` undefined at runtime — caused by stale Next.js `.next` cache holding old Prisma client
+- `app/generated/prisma` generated at wrong path (root `app/` not intended) — confirmed project has no `src/`
+- Grammarly browser extension caused React hydration mismatch warning (data attributes injected into body tag)
+
+### Bugs Fixed
+- Cleared `.next` cache and re-ran `npx prisma generate` to fix stale client
+- Added `suppressHydrationWarning` to `<body>` tag in layout.tsx for Grammarly issue
+- All Vercel build errors resolved (import paths, prisma generate in build script)
+
+### Technical Decisions
+- Moved price/stock from Product to ProductVariant — almost all real products have variants, better to do now with empty DB than retrofit later
+- Used JSON column for product attributes and variantOptions — enables zero-code new product types
+
+### Lessons Learned
+- When Prisma model properties show as undefined at runtime, clear `.next` cache and regenerate client
+- Always commit `app/generated/` after schema changes or Vercel build will fail
+- Understand code before copy-pasting — took time mid-session to explain architecture which helped developer understand the dynamic product system
+
+### Outstanding Issues
+- Product Variant migration not yet run — must be first task next session
+- Product Builder UI not yet updated for variant definition and generation
+- Category Builder not yet built
+
+### Recommended Next Task
+1. Run `npx prisma migrate dev --name add_product_variants`
+2. Update Product Builder UI to support defining variant options and auto-generating combinations
+3. Update products API to save variants
+4. Build Category Builder
+
+
+## Session 3
+
+Date: 2026-07-02
+
+### Objective
+Complete Product Variants feature — migration, Product Builder UI, API, and fix downstream breakage.
+
+### Completed
+- Ran `add_product_variants` migration, regenerated Prisma client
+- Product Builder UI (`app/admin/products/new/page.tsx`): added variant option definition inputs, "Generate Combinations" cartesian-product button, editable variant table (price/stock/SKU per row); removed obsolete top-level Price/Stock inputs
+- Products API (`app/api/admin/products/route.ts`): POST now creates `Product` with nested `variants.create`; validates at least one variant with price and stock present; GET now includes `variants`
+- Fixed runtime error on products list page (`app/admin/products/page.tsx`) — page still read removed `product.price`/`product.stock` fields; updated to derive price range and total stock from `product.variants`
+- End-to-end tested: created Shoe product type, created Nike shoe with Size [7,8,9] and Color [Red,Blue], generated 6 combinations, filled price/stock, submitted, confirmed 1 Product + 6 ProductVariant rows in Prisma Studio
+
+### Files Modified
+- `prisma/schema.prisma` — no change this session (already updated last session)
+- `app/admin/products/new/page.tsx` — variant UI added, price/stock inputs removed
+- `app/api/admin/products/route.ts` — nested variant create, validation
+- `app/admin/products/page.tsx` — derived price/stock display from variants
+- `app/generated/prisma/` — regenerated (commit pending confirmation)
+
+### Bugs Found
+- `app/admin/products/page.tsx` threw `Cannot read properties of undefined (reading 'toFixed')` on `product.price.toFixed(2)` — page wasn't in the original expected-changes list but broke as a direct consequence of removing `price`/`stock` from `Product`
+- Pre-existing bug in old POST handler: `!price === undefined` (operator precedence) — moot now since `price` isn't a top-level field anymore, but noted for awareness
+
+### Bugs Fixed
+- Products list page updated to include `variants` in the Prisma query and derive a price range (`$X` or `$X – $Y`) and summed stock instead of reading removed fields
+
+### Technical Decisions
+- Product creation now requires at least one variant (both client and server validate `variants.length > 0`) — a `Product` with zero variants has no price, making it unsellable. No "draft without variants" path was added.
+- Products list shows price as a range (min–max across variants) rather than a single value, since variants can have different prices
+
+### Lessons Learned
+- Removing fields from a Prisma model requires auditing every page/query that reads those fields directly, not just the ones explicitly listed in the task's expected file changes — the products list page was missed in planning and only caught at runtime
+
+### Outstanding Issues
+- Confirm `app/generated/prisma/` was committed after this session's `prisma generate`
+- Confirm `git push` completed (Step 7 of NEXT_TASK.md)
+
+### Recommended Next Task
+Category Builder — create/edit categories with SEO fields + banner image, category list page, GET/POST `/api/admin/categories`
