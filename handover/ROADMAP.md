@@ -30,7 +30,7 @@ Phases 0–5 = shippable store (real products, real payments, real order fulfill
 
 ---
 
-## Phase 2 — Admin Panel 🔄 IN PROGRESS
+## Phase 2 — Admin Panel ✅ COMPLETE
 
 - [x] Admin layout with role-based access protection
 - [x] Admin dashboard shell with sidebar navigation
@@ -40,8 +40,8 @@ Phases 0–5 = shippable store (real products, real payments, real order fulfill
 - [x] API routes: /api/admin/product-types, /api/admin/products
 - [x] ProductVariant schema added
 - [x] Product Variant UI
-- [ ] **Category Builder (create/edit categories with SEO + banner)** ← CURRENT TASK
-- [ ] Category list page and API routes
+- [x] Category Builder (create/edit categories with SEO + banner)
+- [x] Category list page and API routes
 
 ---
 

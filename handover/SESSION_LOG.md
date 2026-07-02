@@ -186,3 +186,50 @@ Complete Product Variants feature — migration, Product Builder UI, API, and fi
 
 ### Recommended Next Task
 Category Builder — create/edit categories with SEO fields + banner image, category list page, GET/POST `/api/admin/categories`
+
+
+## Session 4
+
+Date: 2026-07-02
+
+### Objective
+Build Category Builder — final Phase 2 feature.
+
+### Completed
+- Category + CategoryProduct models added to schema, migration run (`add_categories`)
+- Product model updated with inverse `categoryProducts` relation
+- API routes: GET/POST `/api/admin/categories` (nested CategoryProduct create, auto-slug, seoTitle defaults to name)
+- Category list page (`app/admin/categories/page.tsx`) — table with product count
+- Category create form (`app/admin/categories/new/page.tsx`) — name/description/banner/SEO fields + product checkbox assignment list
+- End-to-end tested: created categories, assigned Nike shoe product, confirmed Category and CategoryProduct rows in Prisma Studio; confirmed many-to-many works (same product assignable to multiple categories)
+
+### Files Modified
+- `prisma/schema.prisma` — Category, CategoryProduct models added
+- `app/api/admin/categories/route.ts` — created
+- `app/admin/categories/page.tsx` — created
+- `app/admin/categories/new/page.tsx` — created
+- `app/api/admin/products/route.ts` — accidentally overwritten with categories logic mid-session, fixed
+- `app/generated/prisma/` — regenerated and committed
+
+### Bugs Found
+- `app/api/admin/products/route.ts` was overwritten with the categories route's GET/POST logic (identical to `categories/route.ts`), causing `/api/admin/products` to return Category-shaped JSON instead of Product data — likely caused by editing one file as a copy-paste template for the other and saving to the wrong file/tab
+- This caused a silent frontend bug: the categories create form's "Assign Products" checkbox list rendered category names instead of product names (both shapes have `id`/`name`, so no runtime error occurred)
+- Attempting to submit a category ID as a productId caused a 500 (Prisma foreign key constraint violation on `CategoryProduct.productId`), and since Category + CategoryProduct are created in one transaction, the Category row was also rolled back and never persisted
+
+### Bugs Fixed
+- Restored `app/api/admin/products/route.ts` to correct product GET/POST logic (productType + variants include, variant validation, nested variant create)
+
+### Technical Decisions
+- Category assignment happens on the create form itself (checkbox list), not as a separate step — consistent with Product Builder's pattern of nested creates in one request
+- Category nesting (parent/child) deferred — not in current scope, no cost to adding later via nullable `parentId` self-relation
+- Banner image is a plain URL string, no upload — consistent with no file-upload infra existing yet
+
+### Lessons Learned
+- When using an existing route file as a copy-paste starting point for a new one, create the new file via `cat > path << 'EOF'` in Git Bash rather than duplicating an editor tab — reduces risk of saving changes back to the wrong file (same root cause category as the Session 1 clipboard-stripping issue: manual copy/duplicate workflows are error-prone on this setup)
+- When a fetch's data looks wrong on a page but the shape has overlapping fields (`id`/`name` in this case), check the actual route file content directly rather than assuming the frontend fetch call is at fault — the bug can be entirely server-side with no error surfaced
+
+### Outstanding Issues
+- Confirm `git push` completed for this session
+
+### Recommended Next Task
+Begin Phase 3 — Public Storefront: homepage section renderer, category page route (`/category/[slug]`), product page route (`/product/[slug]`)

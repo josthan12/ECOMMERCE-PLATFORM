@@ -1,13 +1,13 @@
 # CURRENT_STATE.md
 
 ## Current Phase
-Phase 2 — Admin Panel (In Progress)
+Phase 2 — Admin Panel (Complete)
 
 ## Current Feature
-Product Variants — COMPLETE. Category Builder is next.
+Category Builder — COMPLETE. Phase 2 finished. Phase 3 (public storefront) is next.
 
 ## Current Objective
-Product Variant system is fully implemented and tested end-to-end: Product Builder UI supports defining variant options, generating cartesian-product combinations, and setting price/stock/SKU per combination. API saves products with nested variants. Products list page derives price range and total stock from variants. Next session starts Category Builder.
+Category Builder fully implemented and tested end-to-end: admins can create categories with name, slug, description, banner image URL, and SEO fields, and assign existing products to categories via checkbox list on the create form. API creates Category + CategoryProduct rows in one nested transaction. Category list page shows all categories with product count. Confirmed in Prisma Studio: Category and CategoryProduct rows created correctly, many-to-many assignment works (a product can belong to multiple categories).
 
 ---
 
@@ -29,12 +29,16 @@ Product Variant system is fully implemented and tested end-to-end: Product Build
 * [x] Phase 2 — Product Variant UI (option definition, combination generation, price/stock/SKU per row)
 * [x] Phase 2 — Products API updated to save variants via nested create
 * [x] Phase 2 — Products list page updated to show derived price range + total stock
+* [x] Phase 2 — Category model + CategoryProduct junction table, migration run
+* [x] Phase 2 — Category Builder UI (create form with SEO fields + product assignment)
+* [x] Phase 2 — Category list page
+* [x] Phase 2 — API routes for categories (GET/POST)
 
 ---
 
 ## In Progress
 
-None — Product Variants feature is done. Category Builder not yet started.
+None — Phase 2 is complete.
 
 ---
 
@@ -46,19 +50,18 @@ None — Product Variants feature is done. Category Builder not yet started.
 
 ## Recently Modified Files
 
-* `prisma/schema.prisma` — ProductVariant model, price/stock removed from Product (from last session, migration run this session)
-* `app/admin/products/new/page.tsx` — added variant option UI, combination generator, variant table; removed top-level price/stock inputs
-* `app/api/admin/products/route.ts` — POST now creates variants via nested create; validates at least one variant with price/stock; GET now includes variants
-* `app/admin/products/page.tsx` — updated to derive price range and total stock from `product.variants` (previously read removed `product.price`/`product.stock` fields directly, causing a runtime error)
+* `prisma/schema.prisma` — added Category, CategoryProduct models; added categoryProducts relation to Product
+* `app/api/admin/categories/route.ts` — created, GET + POST with nested CategoryProduct create
+* `app/admin/categories/page.tsx` — created, category list with product count
+* `app/admin/categories/new/page.tsx` — created, category form with product checkbox assignment
+* `app/api/admin/products/route.ts` — fixed: was accidentally overwritten with categories logic during this session, restored to correct product GET/POST logic
 * `app/generated/prisma/` — regenerated and committed
 
 ---
 
 ## Immediate Next Task
 
-1. Build Category Builder — create/edit categories with SEO fields + banner image
-2. Category list page
-3. API routes: GET/POST `/api/admin/categories`
+Begin Phase 3 — Public Storefront: modular homepage section renderer, category page route, product page route (see ROADMAP.md)
 
 ---
 

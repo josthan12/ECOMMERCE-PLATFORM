@@ -140,6 +140,35 @@ A specific sellable combination of a product's options. Each variant tracks its 
 | createdAt | DateTime | Auto |
 | updatedAt | DateTime | Auto |
 
+### Category
+Admin-defined product groupings with SEO and landing page fields.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (cuid) | Primary key |
+| name | String | Unique, e.g. "Sneakers" |
+| slug | String | Unique, auto-generated |
+| description | String? | Optional |
+| bannerImageUrl | String? | Optional banner image URL |
+| seoTitle | String? | Optional, defaults to name if empty |
+| seoDescription | String? | Optional |
+| createdAt | DateTime | Auto |
+| updatedAt | DateTime | Auto |
+
+Relations: `products CategoryProduct[]`
+
+---
+
+### CategoryProduct
+Junction table — many-to-many between Category and Product. A product can belong to multiple categories.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (cuid) | Primary key |
+| categoryId | String | FK → Category.id (cascade delete) |
+| productId | String | FK → Product.id (cascade delete) |
+
+Constraint: `@@unique([categoryId, productId])` — prevents the same product being added twice to the same category (does not limit a product to one category).
 ---
 
 ## Relationships Diagram
@@ -153,7 +182,9 @@ ProductType ─────────── ProductField (one to many, cascade
                           │
                           └──── ProductVariant (one to many, cascade delete)
 ```
-
+Category ────────────── CategoryProduct ──────────────── Product
+   (one to many,              (many to one,           (one to many,
+    cascade delete)            cascade delete)          via Product.categoryProducts)
 ---
 
 ## Migrations History
@@ -163,6 +194,7 @@ ProductType ─────────── ProductField (one to many, cascade
 | 20260630143914_add_user_and_address | Initial User and Address models |
 | add_product_types_and_products | ProductType, ProductField, Product models |
 | add_product_variants | Added ProductVariant, removed price/stock from Product, added variantOptions |
+| add_categories | Category, CategoryProduct models added |
 
 ---
 

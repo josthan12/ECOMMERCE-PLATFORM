@@ -166,6 +166,60 @@ Creates a new product with its variants in a single nested Prisma create. Requir
 
 **File:** `app/api/admin/products/route.ts`
 
+## Admin — Categories
+
+### GET /api/admin/categories
+Returns all categories with product count.
+
+**Auth:** Admin only.
+
+**Response:**
+```json
+[
+  {
+    "id": "cuid",
+    "name": "Sneakers",
+    "slug": "sneakers",
+    "description": "...",
+    "bannerImageUrl": "https://...",
+    "seoTitle": "Sneakers",
+    "seoDescription": "...",
+    "_count": { "products": 3 }
+  }
+]
+```
+
+**File:** `app/api/admin/categories/route.ts`
+
+---
+
+### POST /api/admin/categories
+Creates a new category with optional product assignments in a single nested Prisma create.
+
+**Auth:** Admin only.
+
+**Request body:**
+```json
+{
+  "name": "Sneakers",
+  "description": "Optional description",
+  "bannerImageUrl": "https://...",
+  "seoTitle": "Optional, defaults to name",
+  "seoDescription": "Optional",
+  "productIds": ["cuid1", "cuid2"]
+}
+```
+
+**Notes:**
+- `slug` is auto-generated from `name`
+- `seoTitle` defaults to `name` if not provided
+- `productIds` is optional — a category can be created with zero products assigned
+- `CategoryProduct` rows are created via nested Prisma `create` in the same transaction as the `Category`
+- No duplicate-name/slug error handling yet (same as products/product-types routes) — a duplicate `name` will throw an unhandled 500 from the DB unique constraint
+
+**Response:** The created `Category` with nested `products` (each wrapping the related `product`).
+
+**File:** `app/api/admin/categories/route.ts`
 ---
 
 ## Planned API Routes (Not Yet Built)
@@ -173,7 +227,6 @@ Creates a new product with its variants in a single nested Prisma create. Requir
 These routes need to be created in upcoming phases:
 
 ```
-GET/POST   /api/admin/categories         Category management
 GET/PUT    /api/admin/orders             Order management  
 POST       /api/admin/orders/[id]/ship   Mark order as shipped
 POST       /api/admin/orders/[id]/refund Issue refund via HitPay
