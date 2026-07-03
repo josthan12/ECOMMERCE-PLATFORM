@@ -29,10 +29,14 @@ export default function ProductGallery({ variantOptions, variants, fallbackImage
   })
 
   const matchedVariant = useMemo(() => {
-    return variants.find((v) =>
-      optionKeys.every((key) => v.combination[key] === selected[key])
-    )
-  }, [selected, variants, optionKeys])
+  return variants.find((v) =>
+    optionKeys.every((key) => {
+      const a = v.combination[key]
+      const b = selected[key]
+      return a != null && b != null && a === b
+    })
+  )
+}, [selected, variants, optionKeys])
 
   function handleSelect(key: string, value: string) {
     setSelected((prev) => ({ ...prev, [key]: value }))
