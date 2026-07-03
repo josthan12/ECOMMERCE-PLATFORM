@@ -86,6 +86,7 @@ model Product {
   description    String?
   attributes     Json
   variantOptions Json?
+  imageUrl       String?
   variants       ProductVariant[]
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
@@ -100,6 +101,7 @@ model ProductVariant {
   price      Float
   stock      Int      @default(0)
   sku        String?
+  imageUrl   String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }

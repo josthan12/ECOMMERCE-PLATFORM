@@ -45,15 +45,15 @@ Phases 0–5 = shippable store (real products, real payments, real order fulfill
 
 ---
 
-## Phase 3 — Public Storefront
+## Phase 3 — Public Storefront ✅ COMPLETE
 
-- [ ] Modular homepage section renderer
-- [ ] Section types: Hero Banner, Featured Products, Category Grid, Newsletter
-- [ ] Category page route (/category/[slug]) with filters + product grid
-- [ ] Product page route (/product/[slug]) with gallery + variant selector
-- [ ] Spec table rendered from product type field schema
-- [ ] Variant selector (drives image swap, price update)
-- [ ] Basic filtering and sorting on category pages
+- [x] Modular homepage section renderer
+- [x] Section types: Hero Banner, Featured Products, Category Grid, Newsletter
+- [x] Category page route (/category/[slug]) with filters + product grid
+- [x] Product page route (/product/[slug]) with gallery + variant selector
+- [x] Spec table rendered from product type field schema
+- [x] Variant selector (drives image swap, price update)
+- [x] Basic filtering and sorting on category pages
 
 ---
 

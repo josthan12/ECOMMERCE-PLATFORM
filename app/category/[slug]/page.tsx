@@ -1,9 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import type { Metadata } from 'next'
+import BackButton from '../../components/BackButton'
 
 type Props = {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ sort?: string; inStock?: string }>
 }
 
 async function getCategory(slug: string) {
@@ -35,6 +38,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
+function minPrice(variants: { price: number }[]) {
+  if (variants.length === 0) return 0
+  return Math.min(...variants.map((v) => v.price))
+}
+
 function formatPrice(variants: { price: number }[]) {
   if (variants.length === 0) return '—'
   const prices = variants.map((v) => v.price)
@@ -47,15 +55,39 @@ function totalStock(variants: { stock: number }[]) {
   return variants.reduce((sum, v) => sum + v.stock, 0)
 }
 
-export default async function CategoryPage({ params }: Props) {
+export default async function CategoryPage({ params, searchParams }: Props) {
   const { slug } = await params
+  const { sort = 'newest', inStock } = await searchParams
   const category = await getCategory(slug)
 
   if (!category) {
     notFound()
   }
 
-  const products = category.products.map((cp) => cp.product)
+  let products = category.products.map((cp) => cp.product)
+  const hasProducts = products.length > 0
+
+  if (inStock === 'true') {
+    products = products.filter((p) => totalStock(p.variants) > 0)
+  }
+
+  switch (sort) {
+    case 'price-asc':
+      products = [...products].sort((a, b) => minPrice(a.variants) - minPrice(b.variants))
+      break
+    case 'price-desc':
+      products = [...products].sort((a, b) => minPrice(b.variants) - minPrice(a.variants))
+      break
+    case 'name':
+      products = [...products].sort((a, b) => a.name.localeCompare(b.name))
+      break
+    case 'newest':
+    default:
+      products = [...products].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+      break
+  }
 
   return (
     <div>
@@ -71,14 +103,53 @@ export default async function CategoryPage({ params }: Props) {
       )}
 
       <div className="max-w-6xl mx-auto px-6 py-8">
+        <BackButton />
+
         <h1 className="text-3xl font-bold text-gray-800">{category.name}</h1>
         {category.description && (
           <p className="mt-2 text-gray-600 max-w-2xl">{category.description}</p>
         )}
 
+        {hasProducts && (
+          <form method="GET" className="mt-6 flex flex-wrap items-center gap-4">
+            <div>
+              <label className="text-sm text-gray-600 mr-2">Sort by</label>
+              <select
+                name="sort"
+                defaultValue={sort}
+                className="border rounded px-3 py-1.5 text-sm"
+              >
+                <option value="newest">Newest (Default)</option>
+                <option value="price-asc">Price: Low to High</option>
+                <option value="price-desc">Price: High to Low</option>
+                <option value="name">Name: A to Z</option>
+              </select>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-gray-600">
+              <input
+                type="checkbox"
+                name="inStock"
+                value="true"
+                defaultChecked={inStock === 'true'}
+              />
+              In stock only
+            </label>
+
+            <button
+              type="submit"
+              className="bg-gray-800 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-gray-900"
+            >
+              Apply
+            </button>
+          </form>
+        )}
+
         {products.length === 0 ? (
           <div className="mt-10 bg-white rounded-lg p-8 text-center text-gray-500">
-            No products in this category yet.
+            {hasProducts
+              ? 'No products match your filters.'
+              : 'No products in this category yet.'}
           </div>
         ) : (
           <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
@@ -86,23 +157,33 @@ export default async function CategoryPage({ params }: Props) {
               const outOfStock = totalStock(product.variants) === 0
 
               return (
-                <div
+                <Link
                   key={product.id}
-                  className="bg-white rounded-lg shadow overflow-hidden relative"
+                  href={`/product/${product.slug}`}
+                  className="bg-white rounded-lg shadow overflow-hidden relative block hover:shadow-md transition-shadow"
                 >
                   {outOfStock && (
                     <span className="absolute top-2 right-2 bg-gray-800 text-white text-xs px-2 py-1 rounded">
                       Out of Stock
                     </span>
                   )}
-                  <div className="h-40 bg-gray-100" />
+                  <div className="h-40 bg-gray-100">
+                    {product.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={product.imageUrl}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </div>
                   <div className="p-4">
                     <h2 className="font-medium text-gray-800">{product.name}</h2>
                     <p className="mt-1 text-sm text-gray-600">
                       {formatPrice(product.variants)}
                     </p>
                   </div>
-                </div>
+                </Link>
               )
             })}
           </div>

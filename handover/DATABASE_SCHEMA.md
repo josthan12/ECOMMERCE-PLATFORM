@@ -117,6 +117,7 @@ A specific product created using a ProductType template. Type-specific fields st
 | description | String? | Optional |
 | attributes | Json | Type-specific fields e.g. `{"brand":"Apple","ram":"16GB"}` |
 | variantOptions | Json? | Option definitions e.g. `{"Color":["Red","Blue"],"Size":["7","8","9"]}` |
+| imageUrl | String? | Optional product image URL (fallback/default; set via admin form) |
 | createdAt | DateTime | Auto |
 | updatedAt | DateTime | Auto |
 
@@ -137,6 +138,7 @@ A specific sellable combination of a product's options. Each variant tracks its 
 | price | Float | Price in SGD for this combination |
 | stock | Int | Stock count, default: 0 |
 | sku | String? | Optional unique identifier |
+| imageUrl | String? | Optional per-variant image URL; falls back to `Product.imageUrl` on the storefront when unset |
 | createdAt | DateTime | Auto |
 | updatedAt | DateTime | Auto |
 
@@ -195,6 +197,8 @@ Category ────────────── CategoryProduct ────
 | add_product_types_and_products | ProductType, ProductField, Product models |
 | add_product_variants | Added ProductVariant, removed price/stock from Product, added variantOptions |
 | add_categories | Category, CategoryProduct models added |
+| add_product_image_url | Added `Product.imageUrl` |
+| add_variant_image_url | Added `ProductVariant.imageUrl` |
 
 ---
 

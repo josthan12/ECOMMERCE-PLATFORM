@@ -233,3 +233,72 @@ Build Category Builder — final Phase 2 feature.
 
 ### Recommended Next Task
 Begin Phase 3 — Public Storefront: homepage section renderer, category page route (`/category/[slug]`), product page route (`/product/[slug]`)
+
+
+## Session 5
+
+Date: 2026-07-03
+
+### Objective
+Complete Phase 3 — Public Storefront: category page, product page, variant image swap, category filtering/sorting, and homepage.
+
+### Completed
+- Category page route (`app/category/[slug]/page.tsx`): Server Component, fetch by slug, banner/name/description, product grid, `notFound()` on unknown slug, empty state
+- Product page route (`app/product/[slug]/page.tsx`): Server Component, fetch by slug, spec table from `attributes`, `notFound()` on unknown slug
+- Variant selector (`VariantSelector.tsx`, later renamed): Client Component, generic N-option selector, updates price/stock/SKU on selection
+- Category page product cards linked to `/product/[slug]`
+- Schema: `Product.imageUrl` added (migration `add_product_image_url`)
+- Schema: `ProductVariant.imageUrl` added (migration `add_variant_image_url`)
+- Admin form (`app/admin/products/new/page.tsx`): added per-variant Image URL input, then product-level Image URL input
+- API route (`app/api/admin/products/route.ts`): accepts and saves `imageUrl` on both product and each variant
+- `VariantSelector.tsx` renamed to `ProductGallery.tsx` — now owns image display + swap logic in addition to option selector, falling back to `product.imageUrl` when the selected variant has none
+- Category page: added sort (`newest` default/price-asc/price-desc/name) and in-stock-only filter via `<form method="GET">` + `searchParams`, with differentiated empty-state messaging (empty category vs. filtered to zero)
+- Homepage (`app/page.tsx` rewritten): composes four new section components under `app/components/homepage/` — `HeroBanner.tsx` (static content), `FeaturedProducts.tsx` (latest 4 products), `CategoryGrid.tsx` (all categories), `Newsletter.tsx` (non-functional form, Client Component)
+- `app/components/BackButton.tsx` created — shared Client Component using `router.back()`, added to both category and product pages
+- Category page product cards updated to render `product.imageUrl` (was a static gray placeholder with no `<img>` at all since the page was first built)
+
+### Files Modified
+- `prisma/schema.prisma` — `Product.imageUrl`, `ProductVariant.imageUrl` added
+- `app/category/[slug]/page.tsx` — created, then updated (product links, sort/filter, back button, product images)
+- `app/product/[slug]/page.tsx` — created, then updated (ProductGallery integration, back button)
+- `app/product/[slug]/ProductGallery.tsx` — created (renamed from `VariantSelector.tsx`)
+- `app/components/BackButton.tsx` — created
+- `app/components/homepage/HeroBanner.tsx` — created
+- `app/components/homepage/FeaturedProducts.tsx` — created
+- `app/components/homepage/CategoryGrid.tsx` — created
+- `app/components/homepage/Newsletter.tsx` — created
+- `app/page.tsx` — rewritten
+- `app/admin/products/new/page.tsx` — variant image input added, then product image input added
+- `app/api/admin/products/route.ts` — variant `imageUrl` save added, then product `imageUrl` save added
+- `app/generated/prisma/` — regenerated twice (both migrations)
+
+### Bugs Found
+- `Unknown argument imageUrl` Prisma error on product creation — caused by stale generated Prisma client / `.next` cache after the `ProductVariant.imageUrl` migration; not a code bug
+- `GET /products/nike-waterbottle 404` — user visited `/products/...` (plural) instead of the actual route `/product/[slug]` (singular); not a routing bug, a URL typo
+- Product-level image not showing on Featured Products (homepage): `app/admin/products/new/page.tsx` had a product-level `imageUrl` state and input added, but the `useState` call was accidentally placed at module scope (outside the component function) instead of inside `NewProductPage`, and the value was never included in the submit `fetch` body — `app/api/admin/products/route.ts` also never destructured or saved it. `Product.imageUrl` was `null` for every product as a result.
+- Product image not showing on category page grid: the category page's product card had always rendered a static empty `<div className="h-40 bg-gray-100" />` with no `<img>` tag at all — a gap from the original page build, unrelated to the imageUrl bug above.
+
+### Bugs Fixed
+- Cleared `.next` cache and re-ran `npx prisma generate` to resolve the stale client error
+- Moved `const [imageUrl, setImageUrl] = useState('')` inside `NewProductPage`; added `imageUrl` to the submit body; added `imageUrl` destructuring and save to the API route's `product.create` call
+- Added conditional `<img>` rendering to the category page's product card, matching the pattern already used on `FeaturedProducts.tsx` and `CategoryGrid.tsx`
+
+### Technical Decisions
+- Homepage sections are hardcoded in `app/components/homepage/` for now — no `HomepageSection` DB model. Admin-configurable homepage content (drag-and-drop, per-section config) is explicitly Phase 7 scope; building it now would duplicate that work later.
+- New components live under `app/components/` (nested inside `app/`), not a top-level `components/` directory — matches the project's existing "everything under `app/`" convention, and Next.js's router only recognizes `page.tsx`/`layout.tsx`/`route.ts` as routable files, so nesting has no functional downside.
+- `ProductVariant.imageUrl` is optional and falls back to `Product.imageUrl` when unset — avoids forcing per-variant photography for every SKU while still supporting it where available. `ProductGallery.tsx` (the renamed `VariantSelector.tsx`) owns both the image and the option selector as one unit, rather than splitting image/selector across a server/client boundary — kept as one Client Component for simplicity, accepting a known layout tradeoff (see below) over introducing a second wrapper component.
+- Category/product page sort and filter state is read from `searchParams` and applied via a plain `<form method="GET">` — no client-side state, no auto-apply on change, matches "manual Apply button" requirement and avoids introducing client JS for something a page reload handles fine.
+- Back button implemented via `router.back()` (browser-native history), not a custom navigation stack — the browser already tracks history; building a custom stack would have been unnecessary complexity for what native `back()` already provides.
+
+### Lessons Learned
+- When adding a new field end-to-end (schema → admin form → API route), test the full round trip immediately — the product-level `imageUrl` bug went undetected for a while because the variant-level version of the same field was tested and working, creating false confidence that the pattern was fully wired everywhere it needed to be.
+- A `useState` call outside a component is a silent trap when pasted from a diff instruction without checking placement — worth double-checking hook placement specifically when applying multi-part instructions to an existing file.
+- UI feature gaps (e.g. a card with no `<img>` tag at all) don't always throw errors — they fail silently as "looks empty," so cross-checking every page that displays the same entity (product) after adding a new field is worth doing explicitly, not just the page that was the direct target of the change.
+
+### Outstanding Issues
+- Products created before the image-url bug fix (e.g. early test products) have `imageUrl: null` and will show no image on the homepage/category grid unless manually backfilled in Prisma Studio — not a bug, just stale test data
+- Homepage/category/product page styling is intentionally minimal (bare Tailwind) — real theming deferred to Phase 7
+- Confirm `git push` completed and `app/generated/prisma/` committed for both migrations this session
+
+### Recommended Next Task
+Begin Phase 4 — Cart, Checkout & HitPay: Zustand cart state, GST calculation module, HitPay Payment Request integration (see ROADMAP.md and NEXT_TASK.md)

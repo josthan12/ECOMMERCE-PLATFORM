@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { name, description, productTypeId, attributes, variantOptions, variants } = await req.json()
+  const { name, description, imageUrl, productTypeId, attributes, variantOptions, variants } = await req.json() 
 
   if (!name || !productTypeId) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -51,6 +51,7 @@ export async function POST(req: Request) {
       name,
       slug,
       description,
+      imageUrl: imageUrl || null,
       productTypeId,
       attributes: attributes || {},
       variantOptions: variantOptions || {},
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
           price: parseFloat(v.price),
           stock: parseInt(v.stock, 10),
           sku: v.sku || null,
+          imageUrl: v.imageUrl || null,
         })),
       },
     },
