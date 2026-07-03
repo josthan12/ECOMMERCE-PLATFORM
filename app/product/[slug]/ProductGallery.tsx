@@ -2,9 +2,17 @@
 
 import { useMemo, useState } from 'react'
 
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: JsonValue }
+  | JsonValue[]
+
 type Variant = {
   id: string
-  combination: Record<string, string>
+  combination: JsonValue
   price: number
   stock: number
   sku: string | null
@@ -15,6 +23,15 @@ type Props = {
   variantOptions: Record<string, string[]>
   variants: Variant[]
   fallbackImageUrl: string | null
+}
+
+function normalizeCombination(value: JsonValue): Record<string, string> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [k, v == null ? '' : String(v)])
+    )
+  }
+  return {}
 }
 
 export default function ProductGallery({ variantOptions, variants, fallbackImageUrl }: Props) {
@@ -28,15 +45,24 @@ export default function ProductGallery({ variantOptions, variants, fallbackImage
     return initial
   })
 
-  const matchedVariant = useMemo(() => {
-  return variants.find((v) =>
-    optionKeys.every((key) => {
-      const a = v.combination[key]
-      const b = selected[key]
-      return a != null && b != null && a === b
-    })
+  const normalizedVariants = useMemo(
+    () =>
+      variants.map((v) => ({
+        ...v,
+        combination: normalizeCombination(v.combination),
+      })),
+    [variants]
   )
-}, [selected, variants, optionKeys])
+
+  const matchedVariant = useMemo(() => {
+    return normalizedVariants.find((v) =>
+      optionKeys.every((key) => {
+        const a = v.combination[key]
+        const b = selected[key]
+        return a != null && b != null && a === b
+      })
+    )
+  }, [selected, normalizedVariants, optionKeys])
 
   function handleSelect(key: string, value: string) {
     setSelected((prev) => ({ ...prev, [key]: value }))
