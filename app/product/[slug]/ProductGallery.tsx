@@ -2,17 +2,9 @@
 
 import { useMemo, useState } from 'react'
 
-type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: JsonValue }
-  | JsonValue[]
-
 type Variant = {
   id: string
-  combination: JsonValue
+  combination: unknown
   price: number
   stock: number
   sku: string | null
@@ -25,10 +17,10 @@ type Props = {
   fallbackImageUrl: string | null
 }
 
-function normalizeCombination(value: JsonValue): Record<string, string> {
+function normalizeCombination(value: unknown): Record<string, string> {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     return Object.fromEntries(
-      Object.entries(value).map(([k, v]) => [k, v == null ? '' : String(v)])
+      Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, v == null ? '' : String(v)])
     )
   }
   return {}
