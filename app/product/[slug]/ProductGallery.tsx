@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useCartStore } from '@/lib/store/cart'
 
 type Variant = {
   id: string
@@ -12,6 +13,9 @@ type Variant = {
 }
 
 type Props = {
+  productId: string
+  productName: string
+  productSlug: string
   variantOptions: Record<string, string[]>
   variants: Variant[]
   fallbackImageUrl: string | null
@@ -26,8 +30,16 @@ function normalizeCombination(value: unknown): Record<string, string> {
   return {}
 }
 
-export default function ProductGallery({ variantOptions, variants, fallbackImageUrl }: Props) {
+export default function ProductGallery({
+  productId,
+  productName,
+  productSlug,
+  variantOptions,
+  variants,
+  fallbackImageUrl,
+}: Props) {
   const optionKeys = Object.keys(variantOptions)
+  const addItem = useCartStore((state) => state.addItem)
 
   const [selected, setSelected] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {}
@@ -36,6 +48,9 @@ export default function ProductGallery({ variantOptions, variants, fallbackImage
     }
     return initial
   })
+
+  const [quantity, setQuantity] = useState(1)
+  const [justAdded, setJustAdded] = useState(false)
 
   const normalizedVariants = useMemo(
     () =>
@@ -58,6 +73,24 @@ export default function ProductGallery({ variantOptions, variants, fallbackImage
 
   function handleSelect(key: string, value: string) {
     setSelected((prev) => ({ ...prev, [key]: value }))
+    setJustAdded(false)
+  }
+
+  function handleAddToCart() {
+    if (!matchedVariant) return
+    addItem(
+      {
+        variantId: matchedVariant.id,
+        productId,
+        productName,
+        productSlug,
+        combination: matchedVariant.combination,
+        price: matchedVariant.price,
+        imageUrl: matchedVariant.imageUrl || fallbackImageUrl,
+      },
+      quantity
+    )
+    setJustAdded(true)
   }
 
   const displayImageUrl = matchedVariant?.imageUrl || fallbackImageUrl
@@ -112,6 +145,30 @@ export default function ProductGallery({ variantOptions, variants, fallbackImage
             </div>
             {matchedVariant.sku && (
               <div className="mt-1 text-xs text-gray-400">SKU: {matchedVariant.sku}</div>
+            )}
+
+            <div className="mt-4 flex items-center gap-3">
+              <input
+                type="number"
+                min={1}
+                value={quantity}
+                onChange={(e) => {
+                  setQuantity(parseInt(e.target.value, 10) || 1)
+                  setJustAdded(false)
+                }}
+                className="w-16 border border-gray-300 px-2 py-1 rounded"
+              />
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={matchedVariant.stock === 0}
+                className="px-4 py-2 bg-black text-white text-sm rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                Add to Cart
+              </button>
+            </div>
+            {justAdded && (
+              <p className="mt-2 text-sm text-green-600">Added to cart.</p>
             )}
           </>
         ) : (

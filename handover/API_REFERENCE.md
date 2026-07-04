@@ -121,11 +121,20 @@ Returns all products with their product type.
     "id": "cuid",
     "name": "MacBook Pro 14",
     "slug": "macbook-pro-14",
-    "price": null,
-    "stock": null,
+    "imageUrl": "https://...",
     "attributes": { "brand": "Apple", "ram": "16GB" },
     "variantOptions": { "Color": ["Silver", "Black"], "Storage": ["512GB", "1TB"] },
-    "productType": { "id": "cuid", "name": "Laptop" }
+    "productType": { "id": "cuid", "name": "Laptop" },
+    "variants": [
+      {
+        "id": "cuid",
+        "combination": { "Color": "Silver", "Storage": "512GB" },
+        "price": 1999.00,
+        "stock": 5,
+        "sku": "MBP14-SLV-512",
+        "imageUrl": "https://..."
+      }
+    ]
   }
 ]
 ```
@@ -144,12 +153,13 @@ Creates a new product with its variants in a single nested Prisma create. Requir
 {
   "name": "Nike Air Force 1",
   "description": "Optional",
+  "imageUrl": "https://... (optional, fallback/default product image)",
   "productTypeId": "cuid",
   "attributes": { "brand": "Nike", "material": "Leather" },
   "variantOptions": { "Size": ["7", "8", "9"], "Color": ["Red", "Blue"] },
   "variants": [
-    { "combination": { "Size": "7", "Color": "Red" }, "price": "120.00", "stock": "5", "sku": "AF1-7-RED" },
-    { "combination": { "Size": "7", "Color": "Blue" }, "price": "120.00", "stock": "3", "sku": "AF1-7-BLU" }
+    { "combination": { "Size": "7", "Color": "Red" }, "price": "120.00", "stock": "5", "sku": "AF1-7-RED", "imageUrl": "https://... (optional)" },
+    { "combination": { "Size": "7", "Color": "Blue" }, "price": "120.00", "stock": "3", "sku": "AF1-7-BLU", "imageUrl": "" }
   ]
 }
 ```
@@ -159,6 +169,8 @@ Creates a new product with its variants in a single nested Prisma create. Requir
 - `price` and `stock` do not exist on `Product` — each `ProductVariant` has its own
 - `attributes` stores type-specific describing fields as JSON
 - `variantOptions` stores the option definitions (what options exist and their possible values)
+- `imageUrl` on the product is optional and acts as the fallback/default image shown on the storefront (category grid, featured products, and the product page before/without a variant-specific image)
+- `imageUrl` on each variant is optional; when set, the storefront product page shows it in place of the product's `imageUrl` once that variant is selected
 - `variants` array must contain at least one entry — request is rejected with `400` if empty, or if any variant is missing `price`/`stock`
 - Variants are created via nested Prisma `create` in the same transaction as the `Product`
 
@@ -231,9 +243,6 @@ GET/PUT    /api/admin/orders             Order management
 POST       /api/admin/orders/[id]/ship   Mark order as shipped
 POST       /api/admin/orders/[id]/refund Issue refund via HitPay
 
-GET        /api/products                 Public product listing
-GET        /api/products/[slug]          Public product detail
-
 POST       /api/cart                     Add to cart
 GET        /api/cart                     Get cart
 
@@ -242,3 +251,5 @@ POST       /api/webhooks/hitpay          HitPay payment webhook
 
 GET        /api/account/orders           Customer order history
 ```
+
+Note: `GET /api/products` and `GET /api/products/[slug]` (listed in earlier planning) were not built as separate API routes. Public category and product browsing (`/category/[slug]`, `/product/[slug]`) are Server Components that query Prisma directly, consistent with the "Server Components can use Prisma directly" convention in PROJECT_OVERVIEW.md — no API route needed since nothing is mutated. Sort/filter on the category page is handled via `searchParams`, not a query API.

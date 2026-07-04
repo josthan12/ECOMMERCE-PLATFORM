@@ -50,10 +50,13 @@ export default async function ProductPage({ params }: Props) {
 
       <div className="grid md:grid-cols-2 gap-10">
         <ProductGallery
+          productId={product.id}
+          productName={product.name}
+          productSlug={product.slug}
           variantOptions={variantOptions}
           variants={product.variants}
           fallbackImageUrl={product.imageUrl}
-        />
+          />
 
         <div>
           <h1 className="text-2xl font-bold text-gray-800">{product.name}</h1>
