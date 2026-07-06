@@ -1,17 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export interface CartItem {
-  variantId: string;
-  productId: string;
-  productName: string;
-  productSlug: string;
-  combination: Record<string, string>;
-  price: number;
-  imageUrl: string | null;
-  quantity: number;
-}
-
 interface CartState {
   items: CartItem[];
   addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number) => void;
@@ -20,6 +9,18 @@ interface CartState {
   clearCart: () => void;
   getTotalItems: () => number;
   getSubtotal: () => number;
+}
+
+export interface CartItem {
+  variantId: string;
+  productId: string;
+  productName: string;
+  productSlug: string;
+  combination: Record<string, string>;
+  price: number;
+  stock: number;
+  imageUrl: string | null;
+  quantity: number;
 }
 
 export const useCartStore = create<CartState>()(

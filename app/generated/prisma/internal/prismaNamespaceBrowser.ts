@@ -192,6 +192,7 @@ export const OrderScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
   status: 'status',
+  hitpayPaymentRequestId: 'hitpayPaymentRequestId',
   shippingBlock: 'shippingBlock',
   shippingUnitNumber: 'shippingUnitNumber',
   shippingStreet: 'shippingStreet',

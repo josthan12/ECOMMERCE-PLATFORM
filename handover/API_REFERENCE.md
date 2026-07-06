@@ -233,6 +233,63 @@ Creates a new category with optional product assignments in a single nested Pris
 
 **File:** `app/api/admin/categories/route.ts`
 ---
+## Checkout
+
+### POST /api/checkout
+Creates an Order from the customer's cart, verifying price/stock live against the DB (never trusts client-supplied values), then creates a HitPay Payment Request and returns its hosted checkout URL.
+
+**Auth:** Required (any authenticated user). No guest checkout.
+
+**Request body:**
+```json
+{
+  "items": [{ "variantId": "cuid", "quantity": 2 }],
+  "shippingBlock": "123",
+  "shippingUnitNumber": "#03-12",
+  "shippingStreet": "Example Street",
+  "shippingPostalCode": "123456"
+}
+```
+
+**Behavior:**
+- Validates shipping address format (`lib/validateAddress.ts`)
+- Atomically checks and decrements stock per variant — rejects `409` if insufficient
+- Snapshots live price/product name/combination onto each `OrderItem`
+- Calculates GST via `lib/gst.ts`
+- Creates `Order` (status `PENDING_PAYMENT`) + nested `OrderItem[]` in one transaction
+- Calls HitPay to create a Payment Request (form-urlencoded, PayNow only, `expires_after: '5 min'`)
+- If the HitPay call fails after Order creation, runs a compensating transaction (`lib/orders.ts` → `markOrderFailedAndRestoreStock`)
+
+**Response:** `201` — `{ "orderId": "cuid", "checkoutUrl": "https://checkout.sandbox.hit-pay.com/..." }`
+
+**Errors:** `400` (empty cart / invalid address / invalid item), `409` (out of stock), `502` (HitPay request creation failed)
+
+**File:** `app/api/checkout/route.ts`
+
+---
+
+## Webhooks (continued)
+
+### POST /api/webhooks/hitpay
+Receives HitPay's payment status webhook, verifies its signature, and updates the corresponding Order.
+
+**Auth:** HMAC-SHA256 signature over the raw request body using `HITPAY_WEBHOOK_SALT`, compared against the `Hitpay-Signature` header (timing-safe comparison).
+
+**Registered via:** HitPay Dashboard (Developers → Webhook Endpoints), subscribed to `payment_request.completed` and `payment_request.failed`. NOT via the `webhook` parameter on Payment Request creation (deprecated).
+
+**Behavior:**
+- Looks up `Order` by `reference_number` (our `Order.id`)
+- Idempotent — no-ops if the order is no longer `PENDING_PAYMENT`
+- `status: "completed"` → `Order.status = PAID`
+- `status: "failed"` → `markOrderFailedAndRestoreStock(orderId)`
+
+**Note:** HitPay does not fire this webhook for expired or cancelled requests — only genuine `completed`/`failed` transitions. Expiry is instead handled by lazy reconciliation on the order confirmation page (see `app/checkout/success/page.tsx`), soon to be supplemented by a scheduled cron job.
+
+**Response:** `200` on success/no-op, `401` (missing/invalid signature), `404` (no matching order)
+
+**File:** `app/api/webhooks/hitpay/route.ts`
+
+---
 
 ## Planned API Routes (Not Yet Built)
 

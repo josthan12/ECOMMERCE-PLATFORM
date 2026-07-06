@@ -304,5 +304,86 @@ Complete Phase 3 — Public Storefront: category page, product page, variant ima
 - Homepage/category/product page styling is intentionally minimal (bare Tailwind) — real theming deferred to Phase 7
 - Confirm `git push` completed and `app/generated/prisma/` committed for both migrations this session
 
+## Session 6
+
+Date: 2026-07-06
+
+### Objective
+Phase 4 — Cart state, Checkout, and HitPay Payment integration (full flow: cart → checkout → payment → confirmation).
+
+### Completed
+- Zustand cart store (`lib/store/cart.ts`) — localStorage-persisted, guest carts allowed
+- Site header (`app/components/Header.tsx`) with cart icon/count — fixed a hydration mismatch via a `hasMounted` guard (Zustand persist only hydrates client-side)
+- Cart page (`/cart`) — quantity edit/remove, GST-exclusive subtotal
+- Stock-aware quantity guards on product page (accounts for quantity already in cart) and cart page — clamp value + inline warning
+- GST module (`lib/gst.ts`) — 9% rate, applied only at checkout
+- `Order`/`OrderItem` schema + `OrderStatus` enum (full lifecycle defined upfront)
+- Login-gated checkout (`/checkout`) — decision made: no guest checkout, account required
+- Shipping address form + validation (`lib/validateAddress.ts`)
+- Order creation API (`/api/checkout`) — atomic stock check-and-decrement, live price re-verification, GST calc, address snapshot
+- Full HitPay Payment Request integration, with several corrections found via live testing: form-urlencoded body (not JSON), removal of deprecated `webhook` param (replaced by Dashboard registration), sandbox/live key pairing fix, and critically — `expires_after: '5 min'` (not `'5 minutes'`, which HitPay's own docs incorrectly show as an example and which returns a 422)
+- HitPay webhook (`/api/webhooks/hitpay`) — HMAC-SHA256 verification, idempotent status updates
+- Shared stock-restoration helper (`lib/orders.ts`), consolidated from 3 duplicated call sites
+- Lazy reconciliation on the order confirmation page — polls HitPay as a fallback for abandoned/expired payments that never fire a webhook
+- Real order confirmation page (`/checkout/success`) — full breakdown when paid, access-controlled, cosmetic cancel messaging
+- HitPay's built-in `send_email` receipt tested and confirmed working
+- **Full end-to-end verification completed:** successful PayNow payment → webhook → `PAID`; abandoned PayNow payment → expires after 5 min on HitPay's side → reload confirmation page → `reconcileIfStale` detects `expired` → `PAYMENT_FAILED` + stock restored — all confirmed via live sandbox testing
+
+### Files Modified
+- `prisma/schema.prisma` — `Order`, `OrderItem`, `OrderStatus` enum, `Order.hitpayPaymentRequestId`
+- `lib/store/cart.ts` — created
+- `app/components/Header.tsx` — created, fixed for hydration
+- `app/layout.tsx` — added `<Header />`
+- `app/cart/page.tsx` — created, updated with stock-cap guard
+- `app/product/[slug]/ProductGallery.tsx` — cart wiring, stock-cap guard
+- `app/product/[slug]/page.tsx` — passes product identity props
+- `lib/gst.ts` — created
+- `lib/validateAddress.ts` — created
+- `app/checkout/page.tsx` — created (auth gate)
+- `app/checkout/CheckoutForm.tsx` — created
+- `app/api/checkout/route.ts` — created, corrected multiple times (form-encoding, type fixes, compensating action, `hitpayPaymentRequestId` storage, `expires_after`)
+- `app/api/webhooks/hitpay/route.ts` — created
+- `lib/orders.ts` — created (`markOrderFailedAndRestoreStock`)
+- `app/checkout/success/page.tsx` — created, rebuilt multiple times (real display, access control, lazy reconciliation, cosmetic cancel messaging)
+- `.env` / `.env.example` — `HITPAY_API_KEY`, `HITPAY_API_BASE_URL`, `HITPAY_WEBHOOK_SALT`, `NEXT_PUBLIC_APP_URL`, `GST_RATE_PERCENT`
+
+### Bugs Found
+- Hydration mismatch on cart badge — fixed with `hasMounted` guard
+- TypeScript `any[]` inference on `orderItemsData` — fixed with explicit type annotation
+- `Prisma.JsonValue` vs `Prisma.InputJsonValue` mismatch on `tx.order.create` — fixed by narrowing the annotation
+- HitPay 401 (sandbox/live key mismatch), 422 (malformed `redirect_url` from missing `NEXT_PUBLIC_APP_URL`), 422 (wrong Content-Type — JSON instead of form-urlencoded)
+- Webhook crash — `HITPAY_WEBHOOK_SALT` was never actually set (only scaffolded empty)
+- **Stock held hostage if HitPay call failed after Order creation** — fixed via compensating transaction
+- Discovered "Back to Merchant" does not cancel the underlying HitPay payment request — confirmed by successfully paying a request that had already redirected back with `status=canceled`
+- **Root cause of "stuck in PENDING_PAYMENT forever":** `expires_after` was never sent at all in the original implementation — HitPay had nothing to expire the request into
+- `expires_after: '15 minutes'` and `'5 minutes'` both rejected (422) — correct value is `'5 min'`. HitPay's own docs literally show `"5 minutes"` as an example, which is incorrect.
+- **New gap discovered after the above was fixed:** stock only restores when the confirmation page is manually reloaded post-expiry — there is no automatic background recovery. Root cause: HitPay never fires a webhook for `expired`/`canceled` requests, and our reconciliation is page-load-triggered only. This is the next task (Vercel Cron).
+
+### Bugs Fixed
+All of the above except the final gap (silently-abandoned checkouts never getting reconciled without a manual page visit) — that's the next task, not a bug in what was built.
+
+### Technical Decisions
+- Guest checkout disallowed — account required, cart survives the sign-in redirect via localStorage
+- Cart is always re-verified live at checkout — cart's cached price/stock is never trusted
+- Shipping address snapshotted onto `Order`, not a live FK — protects historical records
+- Full `OrderStatus` lifecycle enum defined upfront to avoid a future migration
+- HitPay: PayNow only for now
+- Stock-restoration logic centralized in `lib/orders.ts`, reused across 3 call sites
+- Lazy reconciliation (poll-on-page-load) chosen over a cron job initially, since it required no new infrastructure and covers the common case — **now confirmed insufficient on its own**, a cron job is needed as a complement (not a replacement) for the case where nobody ever revisits the page
+- Cosmetic-only "Payment Cancelled" messaging on `status=canceled` redirect, without mutating DB state — since PayNow requests can't be safely cancelled server-side and an early customer might have already scanned the QR
+
+### Lessons Learned
+- Documentation examples aren't always correct — HitPay's own docs show `"5 minutes"` for `expires_after`, but the API actually requires `"5 min"`. Always verify example values empirically against the live API, even when copied directly from official docs.
+- A redirect URL's query params are never a trustworthy signal for anything beyond immediate cosmetic UI — true state must come from a verified webhook or an authenticated status check.
+- "Customer navigated away" ≠ "payment attempt is over," especially for QR-based payment methods that remain completable after the browser moves on.
+- Page-load-triggered reconciliation alone is insufficient for any flow where the user might never return to the triggering page — needed a proactive background mechanism (cron) as well, not instead of, the reactive one.
+
+### Outstanding Issues
+- Vercel Cron job not yet built — orders whose confirmation page is never revisited stay `PENDING_PAYMENT` with stock held indefinitely
+- Temporary diagnostic logging (`console.log('[hitpay reconcile]', ...)`) still present in `reconcileIfStale`, to be removed once the cron work is finalized
+- Custom branded confirmation email not started (HitPay's built-in receipt confirmed working as an interim solution)
+- `failed` webhook status never directly observed in sandbox (low risk — shares code with proven `expired` path)
+- Card payment testing blocked (HitPay sandbox requires bank account setup)
+
 ### Recommended Next Task
-Begin Phase 4 — Cart, Checkout & HitPay: Zustand cart state, GST calculation module, HitPay Payment Request integration (see ROADMAP.md and NEXT_TASK.md)
+Build a Vercel Cron job (`app/api/cron/reconcile-orders/route.ts` + `vercel.json`) to automatically reconcile stale `PENDING_PAYMENT` orders in the background, closing the last gap in Phase 4's payment flow. Then move to the custom order confirmation email.

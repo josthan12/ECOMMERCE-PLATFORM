@@ -1,13 +1,26 @@
-'use client';
+'use client'
 
-import Link from 'next/link';
-import { useCartStore } from '@/lib/store/cart';
+import { useState } from 'react'
+import Link from 'next/link'
+import { useCartStore } from '@/lib/store/cart'
 
 export default function CartPage() {
-  const items = useCartStore((state) => state.items);
-  const updateQuantity = useCartStore((state) => state.updateQuantity);
-  const removeItem = useCartStore((state) => state.removeItem);
-  const subtotal = useCartStore((state) => state.getSubtotal());
+  const items = useCartStore((state) => state.items)
+  const updateQuantity = useCartStore((state) => state.updateQuantity)
+  const removeItem = useCartStore((state) => state.removeItem)
+  const subtotal = useCartStore((state) => state.getSubtotal())
+
+  const [warnings, setWarnings] = useState<Record<string, string>>({})
+
+  function handleQuantityChange(variantId: string, value: number, stock: number) {
+    if (value > stock) {
+      updateQuantity(variantId, stock)
+      setWarnings((prev) => ({ ...prev, [variantId]: `Only ${stock} available.` }))
+    } else {
+      updateQuantity(variantId, value || 1)
+      setWarnings((prev) => ({ ...prev, [variantId]: '' }))
+    }
+  }
 
   if (items.length === 0) {
     return (
@@ -17,7 +30,7 @@ export default function CartPage() {
           Continue shopping
         </Link>
       </div>
-    );
+    )
   }
 
   return (
@@ -50,14 +63,18 @@ export default function CartPage() {
                   .join(', ')}
               </p>
               <p className="text-sm">${item.price.toFixed(2)}</p>
+              {warnings[item.variantId] && (
+                <p className="text-sm text-amber-600 mt-1">{warnings[item.variantId]}</p>
+              )}
             </div>
 
             <input
               type="number"
               min={1}
+              max={item.stock}
               value={item.quantity}
               onChange={(e) =>
-                updateQuantity(item.variantId, parseInt(e.target.value, 10) || 1)
+                handleQuantityChange(item.variantId, parseInt(e.target.value, 10) || 0, item.stock)
               }
               className="w-16 border border-gray-300 px-2 py-1"
             />
@@ -74,7 +91,13 @@ export default function CartPage() {
 
       <div className="mt-6 flex justify-between items-center">
         <span className="font-semibold">Subtotal: ${subtotal.toFixed(2)}</span>
+        <Link
+          href="/checkout"
+          className="px-4 py-2 bg-black text-white text-sm rounded"
+        >
+          Checkout
+        </Link>
       </div>
     </div>
-  );
+  )
 }

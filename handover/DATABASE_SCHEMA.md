@@ -171,6 +171,58 @@ Junction table — many-to-many between Category and Product. A product can belo
 | productId | String | FK → Product.id (cascade delete) |
 
 Constraint: `@@unique([categoryId, productId])` — prevents the same product being added twice to the same category (does not limit a product to one category).
+OrderStatus (enum)
+PENDING_PAYMENT
+PAID
+PAYMENT_FAILED
+PROCESSING
+PACKED
+SHIPPED
+DELIVERED
+COMPLETED
+CANCELLED
+REFUNDED
+Full lifecycle defined upfront (Phase 4 only uses the first three) to avoid a second migration when Phase 5 fulfillment work begins.
+
+---
+
+
+### Order
+A customer order. Created at checkout with live-verified price/stock; shipping address is snapshotted (not a live FK) so later address-book edits never alter historical orders.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (cuid) | Primary key |
+| userId | String | FK → User.id. Required — no guest orders. |
+| status | OrderStatus | Default: PENDING_PAYMENT |
+| hitpayPaymentRequestId | String? | HitPay's own payment request ID; used to poll their Get Payment Status endpoint for reconciliation |
+| shippingBlock | String | Snapshotted at order time |
+| shippingUnitNumber | String? | Snapshotted at order time; optional (landed properties have no unit) |
+| shippingStreet | String | Snapshotted at order time |
+| shippingPostalCode | String | Snapshotted at order time |
+| subtotal | Float | GST-exclusive |
+| gstAmount | Float | Calculated via `lib/gst.ts` |
+| total | Float | subtotal + gstAmount |
+| createdAt | DateTime | Auto |
+| updatedAt | DateTime | Auto |
+
+Relations: `items OrderItem[]`
+
+---
+
+### OrderItem
+Line item snapshot — price/name/combination captured live at checkout time, not joined from the current catalog, so historical orders remain accurate even if products are later renamed/repriced/deleted.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (cuid) | Primary key |
+| orderId | String | FK → Order.id (cascade delete) |
+| productVariantId | String | Plain string reference, NOT a live FK — avoids cascade-delete risk if a variant is later removed |
+| productName | String | Snapshotted |
+| combination | Json | Snapshotted |
+| price | Float | Snapshotted, verified live at checkout (never trusts cart's cached price) |
+| quantity | Int | |
+| sku | String? | Snapshotted |
 ---
 
 ## Relationships Diagram
@@ -199,16 +251,14 @@ Category ────────────── CategoryProduct ────
 | add_categories | Category, CategoryProduct models added |
 | add_product_image_url | Added `Product.imageUrl` |
 | add_variant_image_url | Added `ProductVariant.imageUrl` |
+| add_orders | Order, OrderItem models + OrderStatus enum |
+| add_hitpay_payment_request_id | Added `Order.hitpayPaymentRequestId` |
 
 ---
 
 ## Planned Models (Not Yet Built)
 
 ```
-Category          ← product categories with landing page config
-CategoryProduct   ← junction table linking products to categories
-Order             ← customer orders (status lifecycle)
-OrderItem         ← line items per order
 Shipment          ← courier tracking per order
 Payment           ← HitPay transaction references
 Promotion         ← coupons and flash sales

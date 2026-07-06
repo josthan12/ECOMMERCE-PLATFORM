@@ -1,99 +1,106 @@
 # CURRENT_STATE.md
 
 ## Current Phase
-Phase 3 — Public Storefront (Complete)
+Phase 4 — Cart, Checkout & HitPay (In Progress)
 
 ## Current Feature
-None in progress. Phase 3 finished. Phase 4 (Cart, Checkout & HitPay) is next.
+None in progress. Core cart → checkout → HitPay payment → confirmation loop is
+complete and verified end-to-end, including abandoned/expired payment recovery.
+One known gap remains before Phase 4's payment flow is fully robust — see
+"Immediate Next Task" below.
 
 ## Current Objective
-Phase 3 fully implemented and tested end-to-end:
-- Category page (`/category/[slug]`) — banner, description, product grid, sort (newest/price/name), in-stock-only filter, differentiated empty states, 404 on unknown slug
-- Product page (`/product/[slug]`) — image gallery with per-variant image swap (falls back to product-level image), generic N-option variant selector (price/stock/SKU update on selection), spec table from `attributes`, 404 on unknown slug
-- Homepage (`/`) — four hardcoded sections: Hero Banner (static content), Featured Products (latest 4), Category Grid (all categories), Newsletter (non-functional UI)
-- Back button (browser history-based) on both category and product pages
-- `Product.imageUrl` and `ProductVariant.imageUrl` fields added; variant image swap falls back to product image when a variant has none
+Phase 4's core commerce loop is functionally complete:
+- Cart state (Zustand, localStorage-persisted, guest carts allowed)
+- Stock-aware quantity guards on product and cart pages
+- GST calculation (9%, applied only at checkout)
+- Login-gated checkout (no guest checkout — account required)
+- Shipping address form with Singapore-specific validation
+- Order creation with atomic stock decrement (race-condition safe) and live price
+  re-verification (cart price never trusted)
+- Full HitPay Payment Request integration (PayNow only), hosted checkout redirect
+- HitPay webhook with HMAC signature verification, idempotent status updates
+- Stock compensation (restore on failure) shared across all failure scenarios
+- Order confirmation page with access control and lazy reconciliation for
+  abandoned/expired payments
+- **Verified working:** successful payment → `PAID`; abandoned payment → expires
+  after 5 min on HitPay's side → reload confirmation page → `PAYMENT_FAILED` +
+  stock restored
 
 ---
 
 ## Completed Features
 
-* [x] Phase 0 — Project setup (Next.js, TypeScript, Tailwind, GitHub, Vercel, Neon DB, Prisma, ngrok)
-* [x] Phase 1 — Prisma schema (User, Address models)
-* [x] Phase 1 — Clerk authentication (sign-in, sign-up pages)
-* [x] Phase 1 — Clerk webhook syncing new users to database
-* [x] Phase 1 — Role system (CUSTOMER, STAFF, ADMIN)
-* [x] Phase 1 — Admin account promoted to ADMIN in database
-* [x] Phase 2 — Admin layout with role-based access protection
-* [x] Phase 2 — Admin dashboard shell with sidebar navigation
-* [x] Phase 2 — Product Type Builder (create types with custom fields)
-* [x] Phase 2 — Product Builder (dynamic form rendering from product type fields)
-* [x] Phase 2 — Products list page
-* [x] Phase 2 — API routes for product types and products
-* [x] Phase 2 — ProductVariant schema, migration run
-* [x] Phase 2 — Product Variant UI (option definition, combination generation, price/stock/SKU/image per row)
-* [x] Phase 2 — Products API updated to save variants via nested create
-* [x] Phase 2 — Products list page updated to show derived price range + total stock
-* [x] Phase 2 — Category model + CategoryProduct junction table, migration run
-* [x] Phase 2 — Category Builder UI (create form with SEO fields + product assignment)
-* [x] Phase 2 — Category list page
-* [x] Phase 2 — API routes for categories (GET/POST)
-* [x] Phase 3 — Category page route (`/category/[slug]`) with product grid
-* [x] Phase 3 — Product page route (`/product/[slug]`) with gallery + variant selector
-* [x] Phase 3 — Spec table rendered from product type field schema
-* [x] Phase 3 — Variant selector drives price/stock update
-* [x] Phase 3 — Variant image swap (per-variant image, falls back to product image)
-* [x] Phase 3 — Basic filtering (in-stock only) and sorting (newest/price/name) on category pages
-* [x] Phase 3 — Modular homepage section renderer (Hero Banner, Featured Products, Category Grid, Newsletter)
-* [x] Phase 3 — Back button on category and product pages (browser history)
-* [x] Phase 3 — `Product.imageUrl` and `ProductVariant.imageUrl` schema fields + admin form inputs
+* [x] Phase 0 — Project setup
+* [x] Phase 1 — Data model & auth
+* [x] Phase 2 — Admin panel
+* [x] Phase 3 — Public storefront
+* [x] Phase 4 — Cart state with Zustand (localStorage, guest carts allowed)
+* [x] Phase 4 — Minimal site header with cart icon/count (`app/components/Header.tsx`), hydration-safe (`hasMounted` guard needed since Zustand persist only hydrates client-side)
+* [x] Phase 4 — Cart page (`/cart`) — quantity edit/remove, stock-capped quantity input (clamp + inline warning), GST-exclusive subtotal
+* [x] Phase 4 — Stock-aware quantity guards on product page (accounts for quantity already in cart) and cart page
+* [x] Phase 4 — GST calculation module (`lib/gst.ts`) — 9% rate via `GST_RATE_PERCENT` env var, applied only at checkout
+* [x] Phase 4 — `Order`, `OrderItem` models + `OrderStatus` enum (full lifecycle defined upfront, including unused Phase 5 states, to avoid a second migration later)
+* [x] Phase 4 — `Order.hitpayPaymentRequestId` — stores HitPay's own payment request ID for status polling
+* [x] Phase 4 — Login-gated checkout (`/checkout`) — server-side `auth()`, redirects guests to `/sign-in?redirect_url=/checkout`; **guest checkout is disallowed by decision**, account required
+* [x] Phase 4 — Shipping address validation (`lib/validateAddress.ts`) — SG postal code (6 digits), block number (alphanumeric, max 4 chars), unit number (must start with `#` if provided), shared between client and server
+* [x] Phase 4 — Order creation API (`/api/checkout`) — atomic stock check-and-decrement (`updateMany` with `stock: { gte: quantity }` guard, prevents overselling under concurrent checkouts), live price/stock re-verification (never trusts cart), GST calc, shipping address snapshot (not a live FK)
+* [x] Phase 4 — HitPay Payment Request integration — form-urlencoded body + `X-Requested-With` header (NOT JSON), PayNow only (`payment_methods[]: 'paynow_online'`), `expires_after: '5 min'` (note: HitPay's own docs example of `'5 minutes'` is WRONG and returns a 422 — confirmed via testing)
+* [x] Phase 4 — HitPay webhook (`/api/webhooks/hitpay`) — HMAC-SHA256 verification over raw body against `Hitpay-Signature` header, idempotent status updates, registered via HitPay Dashboard (the `webhook` creation param is deprecated)
+* [x] Phase 4 — Shared stock-compensation helper (`lib/orders.ts` → `markOrderFailedAndRestoreStock`) — used by webhook's `failed` handler, checkout's HitPay-call-failure compensating action, and lazy reconciliation
+* [x] Phase 4 — Lazy reconciliation (`reconcileIfStale` in `app/checkout/success/page.tsx`) — polls HitPay's Get Payment Status endpoint when the confirmation page loads, to recover orders whose webhook never arrived (abandoned/expired PayNow requests don't fire a webhook)
+* [x] Phase 4 — Order confirmation page (`/checkout/success`) — full item/address/total breakdown when `PAID`, access-controlled (only the order's owning user can view it, else 404), cosmetic (non-DB-mutating) "Payment Cancelled" messaging on `status=canceled` redirect
+* [x] Phase 4 — HitPay's built-in `send_email` receipt tested and confirmed working (interim solution; custom branded email still planned)
 
 ---
 
 ## In Progress
 
-None — Phase 3 is complete.
+None — awaiting next task (see below).
 
 ---
 
-## Known Bugs
+## Known Bugs / Gaps
 
-* None currently. Note: products created before the `Product.imageUrl` admin input bug was fixed (e.g. early test products) will have `imageUrl: null` and show no image on the homepage/category grid — not a code bug, just missing data. Can be backfilled manually in Prisma Studio if needed.
-
----
-
-## Recently Modified Files
-
-* `prisma/schema.prisma` — added `Product.imageUrl`, `ProductVariant.imageUrl`
-* `app/category/[slug]/page.tsx` — created, then updated with sort/filter, back button, product image rendering
-* `app/product/[slug]/page.tsx` — created, then updated to use `ProductGallery` and back button
-* `app/product/[slug]/ProductGallery.tsx` — created (renamed from `VariantSelector.tsx`), owns image + option selector + price/stock display
-* `app/components/BackButton.tsx` — created, shared client component
-* `app/components/homepage/HeroBanner.tsx` — created
-* `app/components/homepage/FeaturedProducts.tsx` — created
-* `app/components/homepage/CategoryGrid.tsx` — created
-* `app/components/homepage/Newsletter.tsx` — created
-* `app/page.tsx` — rewritten to compose the four homepage sections
-* `app/admin/products/new/page.tsx` — added product-level Image URL input, per-variant Image URL input
-* `app/api/admin/products/route.ts` — accepts and saves `imageUrl` on both product and each variant
-* `app/generated/prisma/` — regenerated after each migration (confirm committed)
+* **Stock held hostage by silently-abandoned checkouts (the one real remaining gap).** Lazy reconciliation only runs when someone loads `/checkout/success?orderId=...` for a specific order. If a customer closes the tab and never revisits that page, the order stays `PENDING_PAYMENT` and its stock stays decremented forever — nothing currently resolves this automatically in the background. **This is the immediate next task** — a Vercel Cron job to periodically reconcile all stale orders without requiring a page visit. See "Immediate Next Task" below.
+* PayNow/QR payments cannot be cancelled via HitPay's API (no cancel endpoint exists for QR-based methods — confirmed via their docs; only card payments support cancellation). This is why the gap above can't be solved by an explicit "cancel" call — we can only wait for genuine expiry or a webhook.
+* Card payment testing is blocked — HitPay sandbox requires bank account setup on the business account to enable card payments. Deprioritized since webhook/signature/status-update logic is payment-method-agnostic and already proven via PayNow.
+* The `failed` webhook status (`payment_request.failed`) has never been directly observed in sandbox (neither PayNow nor card reached a terminal `failed` state easily in testing). It shares identical code with the proven `expired` path (`markOrderFailedAndRestoreStock`), so risk is considered low but technically unverified.
+* No admin order visibility yet (`/admin/orders` doesn't exist) — only Prisma Studio. Good candidate for a small, minimal, read-only addition later; full Order queue/filtering is Phase 5 scope.
+* SSL deprecation warning from the `pg` driver (Neon connection string `sslmode`) — cosmetic, unrelated to this feature, not fixed. Optional future cleanup: add `&sslmode=verify-full` to `DATABASE_URL`.
+* Old/pre-fix `Order` rows created before `hitpayPaymentRequestId` existed, or before `expires_after` was added to the HitPay call, cannot be reconciled — expected for stale test data, not a bug.
+* Temporary diagnostic logging (`console.log('[hitpay reconcile]', ...)`) is still present in `reconcileIfStale` — should be removed once the cron job work is done and the whole reconciliation path is considered final.
 
 ---
 
 ## Immediate Next Task
 
-Begin Phase 4 — Cart, Checkout & HitPay (see ROADMAP.md and NEXT_TASK.md)
+**Build a Vercel Cron job to automatically reconcile abandoned/expired orders**, closing the "stock held hostage" gap described above.
+
+Rough plan (not yet finalized — plan properly at session start):
+- New route: `app/api/cron/reconcile-orders/route.ts` — queries all `PENDING_PAYMENT` orders older than a threshold with a `hitpayPaymentRequestId` set, checks each against HitPay's Get Payment Status endpoint, resolves via existing logic
+- Extract the "check one order against HitPay and resolve it" logic out of `reconcileIfStale` into a shared function (e.g. in `lib/orders.ts`) so both the page-load path and the cron path reuse identical logic — avoid duplicating this a second time
+- New/updated `vercel.json` for the cron schedule
+- Needs a decision on: Vercel plan tier (Hobby vs Pro — affects minimum allowed cron interval), and what staleness threshold the cron itself should use
+- Must verify Vercel's cron request is authentic (secret/header check) so the endpoint can't be triggered by arbitrary public requests
+
+**After that:** custom branded order confirmation email (provider TBD — likely Resend; HitPay's built-in receipt already works as an interim solution and was explicitly tested/confirmed).
 
 ---
 
 ## Important Notes
 
-- This project uses **Prisma 7** (not 6). Prisma 7 does NOT use `url = env("DATABASE_URL")` in the datasource block. The DB connection is handled via `PrismaPg` adapter in `lib/prisma.ts` and `prisma.config.ts`.
-- The generated Prisma client (`app/generated/prisma/`) is committed to the repo — do NOT add it back to `.gitignore`. Vercel needs it.
-- Every schema change requires BOTH `npx prisma migrate dev` AND `npx prisma generate`, then commit the updated `app/generated/` folder. If a saved field doesn't show up at runtime ("Unknown argument"), it usually means one of these two steps was skipped or the dev server is using a stale `.next` cache — clear `.next` and restart.
-- ngrok URL changes every restart. When restarting ngrok, update the webhook URL in Clerk dashboard AND `allowedDevOrigins` in `next.config.ts`.
-- The project root does NOT use a `src/` directory despite `create-next-app` offering it — all app code is directly under `app/`, `lib/`, etc. at the project root.
-- `Product` has no `price`/`stock` of its own — any page/query touching products must include `variants` and derive display values from them.
-- `Product.imageUrl` is the fallback/default image; `ProductVariant.imageUrl` is optional and overrides it when set and selected. Both must be explicitly set via the admin form — neither is auto-populated.
-- Storefront pages (`/`, `/category/[slug]`, `/product/[slug]`) currently use minimal, unstyled Tailwind — intentional. Real theming/styling is deferred to Phase 7 (Theme Builder).
-- Homepage sections are hardcoded (no `HomepageSection` DB model yet) — that's intentionally deferred to Phase 7's drag-and-drop builder. `HeroBanner.tsx` content is a hardcoded constant.
+- This project uses **Prisma 7** (adapter pattern, no `url` in datasource, generated client committed to repo).
+- `Order.userId` is required — **no guest checkout**. Guests are redirected to `/sign-in?redirect_url=/checkout`; cart (localStorage) survives the redirect automatically since it's not tied to auth state.
+- **Never trust cart price/stock at checkout** — `/api/checkout` always re-fetches live `ProductVariant` data and snapshots verified values onto `OrderItem`.
+- **Shipping address is snapshotted onto `Order`** as plain strings, not a live FK to `Address` — protects order history from later address-book edits.
+- Stock is decremented **atomically** at Order creation (`updateMany` with `stock: { gte: quantity }` guard) to prevent overselling under concurrent checkouts.
+- **HitPay integration specifics (hard-won, don't rediscover):**
+  - Payment Request creation requires `Content-Type: application/x-www-form-urlencoded` + `X-Requested-With: XMLHttpRequest` — NOT JSON.
+  - The `webhook` parameter on request creation is deprecated — register the webhook URL once via HitPay Dashboard (Developers → Webhook Endpoints), subscribed to `payment_request.completed` and `payment_request.failed`.
+  - Sandbox and live API keys/base URLs must match (`api.sandbox.hit-pay.com` for sandbox key, `api.hit-pay.com` for live key) — mismatched pairing causes a 401.
+  - **`expires_after` must be `'5 min'`, NOT `'5 minutes'`** — HitPay's own documentation example (`"5 minutes"`) is wrong and returns a 422 validation error. This was the root cause of a long debugging session where reconciliation appeared broken but was actually correct — there was simply no expiry configured for HitPay to ever report.
+  - PayNow/QR payments have **no cancel endpoint** — only card payments can be cancelled via API. "Back to Merchant" is purely a cosmetic browser redirect; it does not affect the real payment request state.
+  - HitPay does **not** fire a webhook for expired or cancelled requests — only `completed` and `failed` are real webhook events. Expiry must be detected via polling (Get Payment Status), which is why lazy reconciliation (and soon, the cron job) exists.
+- Stock-compensation logic lives in ONE shared place: `lib/orders.ts` → `markOrderFailedAndRestoreStock(orderId)`. Do not duplicate this logic elsewhere — reuse it (and extend this file further for the upcoming cron job).
+- Storefront/checkout pages remain intentionally minimal/unstyled Tailwind — real theming is Phase 7 scope.

@@ -148,3 +148,111 @@ Reason:
 
 Date:
 2026-07-03
+
+Decision:
+Guest checkout is disallowed — checkout requires a signed-in Clerk account.
+
+Reason:
+Simplifies order ownership and account-linked order history without needing separate guest-order data models. Guests are redirected to `/sign-in?redirect_url=/checkout`; the cart (localStorage-based) survives this redirect automatically since it isn't tied to auth state.
+
+Date:
+2026-07-06
+
+---
+
+Decision:
+Cart data (price, stock) is never trusted at checkout — `/api/checkout` always re-fetches live `ProductVariant` data and snapshots verified values onto `OrderItem`.
+
+Reason:
+The cart is optimistic client-side state that can go stale. Checkout must be the authoritative source of truth for what's actually charged and recorded.
+
+Date:
+2026-07-06
+
+---
+
+Decision:
+Shipping address is snapshotted onto `Order` as plain string columns, not a live FK to `Address`.
+
+Reason:
+Same reasoning as OrderItem price snapshotting — an Order is a historical record and must not silently change if a saved address is later edited or deleted.
+
+Date:
+2026-07-06
+
+---
+
+Decision:
+Stock is decremented atomically at Order creation via `updateMany({ where: { stock: { gte: quantity } }, data: { stock: { decrement: quantity } } })` inside a Prisma transaction.
+
+Reason:
+Prevents the classic race condition where two concurrent checkouts for the last unit of stock could both succeed.
+
+Date:
+2026-07-06
+
+---
+
+Decision:
+HitPay Payment Request creation uses `application/x-www-form-urlencoded` with `X-Requested-With: XMLHttpRequest`, not JSON.
+
+Reason:
+Confirmed via HitPay's documentation and live testing (an initial JSON attempt returned a 422).
+
+Date:
+2026-07-06
+
+---
+
+Decision:
+HitPay webhook URL is registered via their Dashboard (Developers → Webhook Endpoints), not via the `webhook` parameter on Payment Request creation.
+
+Reason:
+HitPay has deprecated the per-request `webhook` parameter in favor of Dashboard-managed webhooks.
+
+Date:
+2026-07-06
+
+---
+
+Decision:
+Stock-restoration-on-payment-failure logic is centralized in one shared helper, `lib/orders.ts` → `markOrderFailedAndRestoreStock(orderId)`.
+
+Reason:
+Needed identically in three places (checkout's compensating action, webhook's `failed` handler, lazy reconciliation) — a single shared function avoids drift between duplicated copies.
+
+Date:
+2026-07-06
+
+---
+
+Decision:
+`expires_after` must be set to `'5 min'` when creating a HitPay Payment Request.
+
+Reason:
+Without this parameter, HitPay never expires a payment request — it stays `pending` indefinitely regardless of elapsed time, which silently broke our abandoned-payment reconciliation for an entire debugging session. HitPay's own documentation shows `"5 minutes"` as an example value, but this is incorrect and returns a 422 validation error; `'5 min'` is the confirmed-working format.
+
+Date:
+2026-07-06
+
+---
+
+Decision:
+The order confirmation page shows a cosmetic-only "Payment Cancelled" message when redirected with `status=canceled`, without mutating the Order/stock state at that moment.
+
+Reason:
+PayNow-based payment requests cannot be cancelled via HitPay's API (no cancel endpoint exists for QR-based methods — only cards support cancellation). A customer may have already scanned the QR code before clicking "Back to Merchant," so immediately marking the order failed and restoring stock risks incorrectly releasing inventory for a payment that completes moments later.
+
+Date:
+2026-07-06
+
+---
+
+Decision:
+Lazy, page-load-triggered reconciliation alone is insufficient — a Vercel Cron job is needed as a complementary mechanism.
+
+Reason:
+Confirmed via testing: if a customer abandons checkout and never revisits `/checkout/success` for that order, nothing currently reconciles it — the order stays `PENDING_PAYMENT` and its stock stays held indefinitely. A scheduled job that runs independently of any page visit is required to close this gap. This does not replace lazy reconciliation (which still gives faster resolution when the customer does return); it supplements it for the case where they don't.
+
+Date:
+2026-07-06

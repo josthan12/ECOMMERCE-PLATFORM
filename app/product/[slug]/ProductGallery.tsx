@@ -40,6 +40,7 @@ export default function ProductGallery({
 }: Props) {
   const optionKeys = Object.keys(variantOptions)
   const addItem = useCartStore((state) => state.addItem)
+  const cartItems = useCartStore((state) => state.items)
 
   const [selected, setSelected] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {}
@@ -51,6 +52,7 @@ export default function ProductGallery({
 
   const [quantity, setQuantity] = useState(1)
   const [justAdded, setJustAdded] = useState(false)
+  const [quantityWarning, setQuantityWarning] = useState<string | null>(null)
 
   const normalizedVariants = useMemo(
     () =>
@@ -71,13 +73,33 @@ export default function ProductGallery({
     )
   }, [selected, normalizedVariants, optionKeys])
 
+  const alreadyInCart = useMemo(() => {
+    if (!matchedVariant) return 0
+    const existing = cartItems.find((i) => i.variantId === matchedVariant.id)
+    return existing?.quantity ?? 0
+  }, [cartItems, matchedVariant])
+
+  const remaining = matchedVariant ? Math.max(matchedVariant.stock - alreadyInCart, 0) : 0
+
   function handleSelect(key: string, value: string) {
     setSelected((prev) => ({ ...prev, [key]: value }))
     setJustAdded(false)
+    setQuantityWarning(null)
+  }
+
+  function handleQuantityChange(value: number) {
+    setJustAdded(false)
+    if (value > remaining) {
+      setQuantity(remaining)
+      setQuantityWarning(`Only ${remaining} more available (you already have ${alreadyInCart} in your cart).`)
+    } else {
+      setQuantity(value || 1)
+      setQuantityWarning(null)
+    }
   }
 
   function handleAddToCart() {
-    if (!matchedVariant) return
+    if (!matchedVariant || remaining <= 0) return
     addItem(
       {
         variantId: matchedVariant.id,
@@ -86,11 +108,14 @@ export default function ProductGallery({
         productSlug,
         combination: matchedVariant.combination,
         price: matchedVariant.price,
+        stock: matchedVariant.stock,
         imageUrl: matchedVariant.imageUrl || fallbackImageUrl,
       },
       quantity
     )
     setJustAdded(true)
+    setQuantity(1)
+    setQuantityWarning(null)
   }
 
   const displayImageUrl = matchedVariant?.imageUrl || fallbackImageUrl
@@ -151,22 +176,23 @@ export default function ProductGallery({
               <input
                 type="number"
                 min={1}
+                max={remaining}
                 value={quantity}
-                onChange={(e) => {
-                  setQuantity(parseInt(e.target.value, 10) || 1)
-                  setJustAdded(false)
-                }}
+                onChange={(e) => handleQuantityChange(parseInt(e.target.value, 10) || 0)}
                 className="w-16 border border-gray-300 px-2 py-1 rounded"
               />
               <button
                 type="button"
                 onClick={handleAddToCart}
-                disabled={matchedVariant.stock === 0}
+                disabled={remaining <= 0}
                 className="px-4 py-2 bg-black text-white text-sm rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                Add to Cart
+                {remaining <= 0 ? 'Max in cart' : 'Add to Cart'}
               </button>
             </div>
+            {quantityWarning && (
+              <p className="mt-2 text-sm text-amber-600">{quantityWarning}</p>
+            )}
             {justAdded && (
               <p className="mt-2 text-sm text-green-600">Added to cart.</p>
             )}

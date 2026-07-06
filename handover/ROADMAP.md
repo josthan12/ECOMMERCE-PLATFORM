@@ -59,18 +59,20 @@ Phases 0–5 = shippable store (real products, real payments, real order fulfill
 
 ## Phase 4 — Cart, Checkout & HitPay
 
-- [ ] Cart state with Zustand (persisted to DB on checkout start)
-- [ ] GST calculation module (9% Singapore GST)
-- [ ] HitPay Payment Request creation via REST API
-- [ ] HitPay.JS / hosted checkout integration
-- [ ] Webhook endpoint: /api/webhooks/hitpay
-- [ ] HMAC signature verification on HitPay webhook
-- [ ] Order status: Pending Payment → Paid / Payment Failed
-- [ ] Order confirmation page + email notification
-- [ ] Test: PayNow QR flow (sandbox)
-- [ ] Test: Card flow (sandbox)
-- [ ] Test: Failed payment flow (sandbox)
-- [ ] Test: Webhook retry behavior
+- [x] Cart state with Zustand (localStorage-persisted — deliberate choice over DB-backed for this stage)
+- [x] GST calculation module (9% Singapore GST)
+- [x] HitPay Payment Request creation via REST API
+- [x] HitPay hosted checkout integration (redirect-based)
+- [x] Webhook endpoint: /api/webhooks/hitpay
+- [x] HMAC signature verification on HitPay webhook
+- [x] Order status: Pending Payment → Paid / Payment Failed
+- [x] Order confirmation page (real breakdown + access control)
+- [ ] Automatic background reconciliation for abandoned/expired orders (Vercel Cron) — NEXT TASK; current lazy/page-load reconciliation only resolves an order if someone revisits its confirmation page
+- [ ] Custom branded order confirmation email — HitPay's built-in receipt works as an interim solution
+- [x] Test: PayNow QR flow (sandbox) — including abandonment/expiry path, fully verified
+- [ ] Test: Card flow (sandbox) — blocked, requires bank account setup on HitPay account
+- [~] Test: Failed payment flow (sandbox) — `expired` path fully verified; `failed` status specifically not directly observed but shares identical code
+- [ ] Test: Webhook retry behavior — not explicitly tested; idempotency guard in place by design
 
 ---
 
