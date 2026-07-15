@@ -233,3 +233,485 @@ Build Category Builder — final Phase 2 feature.
 
 ### Recommended Next Task
 Begin Phase 3 — Public Storefront: homepage section renderer, category page route (`/category/[slug]`), product page route (`/product/[slug]`)
+
+
+---
+
+## Session 5
+
+Date: 2026-07-03
+
+### Objective
+Complete Phase 3 — Public Storefront: category page, product page, variant image swap, category filtering/sorting, and homepage.
+
+### Completed
+- Category page route (`app/category/[slug]/page.tsx`): Server Component, fetch by slug, banner/name/description, product grid, `notFound()` on unknown slug, empty state
+- Product page route (`app/product/[slug]/page.tsx`): Server Component, fetch by slug, spec table from `attributes`, `notFound()` on unknown slug
+- Variant selector (`VariantSelector.tsx`, later renamed): Client Component, generic N-option selector, updates price/stock/SKU on selection
+- Category page product cards linked to `/product/[slug]`
+- Schema: `Product.imageUrl` added (migration `add_product_image_url`)
+- Schema: `ProductVariant.imageUrl` added (migration `add_variant_image_url`)
+- Admin form (`app/admin/products/new/page.tsx`): added per-variant Image URL input, then product-level Image URL input
+- API route (`app/api/admin/products/route.ts`): accepts and saves `imageUrl` on both product and each variant
+- `VariantSelector.tsx` renamed to `ProductGallery.tsx` — now owns image display + swap logic in addition to option selector, falling back to `product.imageUrl` when the selected variant has none
+- Category page: added sort (`newest` default/price-asc/price-desc/name) and in-stock-only filter via `<form method="GET">` + `searchParams`, with differentiated empty-state messaging (empty category vs. filtered to zero)
+- Homepage (`app/page.tsx` rewritten): composes four new section components under `app/components/homepage/` — `HeroBanner.tsx` (static content), `FeaturedProducts.tsx` (latest 4 products), `CategoryGrid.tsx` (all categories), `Newsletter.tsx` (non-functional form, Client Component)
+- `app/components/BackButton.tsx` created — shared Client Component using `router.back()`, added to both category and product pages
+- Category page product cards updated to render `product.imageUrl` (was a static gray placeholder with no `<img>` at all since the page was first built)
+
+### Files Modified
+- `prisma/schema.prisma` — `Product.imageUrl`, `ProductVariant.imageUrl` added
+- `app/category/[slug]/page.tsx` — created, then updated (product links, sort/filter, back button, product images)
+- `app/product/[slug]/page.tsx` — created, then updated (ProductGallery integration, back button)
+- `app/product/[slug]/ProductGallery.tsx` — created (renamed from `VariantSelector.tsx`)
+- `app/components/BackButton.tsx` — created
+- `app/components/homepage/HeroBanner.tsx` — created
+- `app/components/homepage/FeaturedProducts.tsx` — created
+- `app/components/homepage/CategoryGrid.tsx` — created
+- `app/components/homepage/Newsletter.tsx` — created
+- `app/page.tsx` — rewritten
+- `app/admin/products/new/page.tsx` — variant image input added, then product image input added
+- `app/api/admin/products/route.ts` — variant `imageUrl` save added, then product `imageUrl` save added
+- `app/generated/prisma/` — regenerated twice (both migrations)
+
+### Bugs Found
+- `Unknown argument imageUrl` Prisma error on product creation — caused by stale generated Prisma client / `.next` cache after the `ProductVariant.imageUrl` migration; not a code bug
+- `GET /products/nike-waterbottle 404` — user visited `/products/...` (plural) instead of the actual route `/product/[slug]` (singular); not a routing bug, a URL typo
+- Product-level image not showing on Featured Products (homepage): `app/admin/products/new/page.tsx` had a product-level `imageUrl` state and input added, but the `useState` call was accidentally placed at module scope (outside the component function) instead of inside `NewProductPage`, and the value was never included in the submit `fetch` body — `app/api/admin/products/route.ts` also never destructured or saved it. `Product.imageUrl` was `null` for every product as a result.
+- Product image not showing on category page grid: the category page's product card had always rendered a static empty `<div className="h-40 bg-gray-100" />` with no `<img>` tag at all — a gap from the original page build, unrelated to the imageUrl bug above.
+- Vercel build failure (TypeScript): `ProductGallery.tsx` typed `Variant.combination` as `Record<string, string>`, but Prisma's `Json` column type is `Prisma.JsonValue` (a recursive union including `null`/arrays/primitives), which doesn't satisfy that shape — caught by `next build`'s type check on Vercel, not locally. A first fix attempt hand-rolled a local type matching `Prisma.JsonValue`'s shape, which still failed due to TypeScript's structural matching on recursive unions with named vs. inline interfaces.
+
+### Bugs Fixed
+- Cleared `.next` cache and re-ran `npx prisma generate` to resolve the stale client error
+- Moved `const [imageUrl, setImageUrl] = useState('')` inside `NewProductPage`; added `imageUrl` to the submit body; added `imageUrl` destructuring and save to the API route's `product.create` call
+- Added conditional `<img>` rendering to the category page's product card, matching the pattern already used on `FeaturedProducts.tsx` and `CategoryGrid.tsx`
+- Retyped `ProductGallery.tsx`'s `Variant.combination` as `unknown`, added `normalizeCombination()` to convert it to `Record<string, string>` at runtime via `useMemo`; resolves the Vercel build failure and makes the component defensive against malformed/null combination data
+
+### Technical Decisions
+- Homepage sections are hardcoded in `app/components/homepage/` for now — no `HomepageSection` DB model. Admin-configurable homepage content (drag-and-drop, per-section config) is explicitly Phase 7 scope; building it now would duplicate that work later.
+- New components live under `app/components/` (nested inside `app/`), not a top-level `components/` directory — matches the project's existing "everything under `app/`" convention, and Next.js's router only recognizes `page.tsx`/`layout.tsx`/`route.ts` as routable files, so nesting has no functional downside.
+- `ProductVariant.imageUrl` is optional and falls back to `Product.imageUrl` when unset — avoids forcing per-variant photography for every SKU while still supporting it where available. `ProductGallery.tsx` (the renamed `VariantSelector.tsx`) owns both the image and the option selector as one unit, rather than splitting image/selector across a server/client boundary — kept as one Client Component for simplicity, accepting a known layout tradeoff (see below) over introducing a second wrapper component.
+- Category/product page sort and filter state is read from `searchParams` and applied via a plain `<form method="GET">` — no client-side state, no auto-apply on change, matches "manual Apply button" requirement and avoids introducing client JS for something a page reload handles fine.
+- Back button implemented via `router.back()` (browser-native history), not a custom navigation stack — the browser already tracks history; building a custom stack would have been unnecessary complexity for what native `back()` already provides.
+
+### Lessons Learned
+- When adding a new field end-to-end (schema → admin form → API route), test the full round trip immediately — the product-level `imageUrl` bug went undetected for a while because the variant-level version of the same field was tested and working, creating false confidence that the pattern was fully wired everywhere it needed to be.
+- A `useState` call outside a component is a silent trap when pasted from a diff instruction without checking placement — worth double-checking hook placement specifically when applying multi-part instructions to an existing file.
+- UI feature gaps (e.g. a card with no `<img>` tag at all) don't always throw errors — they fail silently as "looks empty," so cross-checking every page that displays the same entity (product) after adding a new field is worth doing explicitly, not just the page that was the direct target of the change.
+
+### Outstanding Issues
+- Products created before the image-url bug fix (e.g. early test products) have `imageUrl: null` and will show no image on the homepage/category grid unless manually backfilled in Prisma Studio — not a bug, just stale test data
+- Homepage/category/product page styling is intentionally minimal (bare Tailwind) — real theming deferred to Phase 7
+- Confirm `git push` completed and `app/generated/prisma/` committed for both migrations this session
+
+## Session 6
+
+Date: 2026-07-06
+
+### Objective
+Phase 4 — Cart state, Checkout, and HitPay Payment integration (full flow: cart → checkout → payment → confirmation).
+
+### Completed
+- Zustand cart store (`lib/store/cart.ts`) — localStorage-persisted, guest carts allowed
+- Site header (`app/components/Header.tsx`) with cart icon/count — fixed a hydration mismatch via a `hasMounted` guard (Zustand persist only hydrates client-side)
+- Cart page (`/cart`) — quantity edit/remove, GST-exclusive subtotal
+- Stock-aware quantity guards on product page (accounts for quantity already in cart) and cart page — clamp value + inline warning
+- GST module (`lib/gst.ts`) — 9% rate, applied only at checkout
+- `Order`/`OrderItem` schema + `OrderStatus` enum (full lifecycle defined upfront)
+- Login-gated checkout (`/checkout`) — decision made: no guest checkout, account required
+- Shipping address form + validation (`lib/validateAddress.ts`)
+- Order creation API (`/api/checkout`) — atomic stock check-and-decrement, live price re-verification, GST calc, address snapshot
+- Full HitPay Payment Request integration, with several corrections found via live testing: form-urlencoded body (not JSON), removal of deprecated `webhook` param (replaced by Dashboard registration), sandbox/live key pairing fix, and critically — `expires_after: '5 min'` (not `'5 minutes'`, which HitPay's own docs incorrectly show as an example and which returns a 422)
+- HitPay webhook (`/api/webhooks/hitpay`) — HMAC-SHA256 verification, idempotent status updates
+- Shared stock-restoration helper (`lib/orders.ts`), consolidated from 3 duplicated call sites
+- Lazy reconciliation on the order confirmation page — polls HitPay as a fallback for abandoned/expired payments that never fire a webhook
+- Real order confirmation page (`/checkout/success`) — full breakdown when paid, access-controlled, cosmetic cancel messaging
+- HitPay's built-in `send_email` receipt tested and confirmed working
+- **Full end-to-end verification completed:** successful PayNow payment → webhook → `PAID`; abandoned PayNow payment → expires after 5 min on HitPay's side → reload confirmation page → `reconcileIfStale` detects `expired` → `PAYMENT_FAILED` + stock restored — all confirmed via live sandbox testing
+
+### Files Modified
+- `prisma/schema.prisma` — `Order`, `OrderItem`, `OrderStatus` enum, `Order.hitpayPaymentRequestId`
+- `lib/store/cart.ts` — created
+- `app/components/Header.tsx` — created, fixed for hydration
+- `app/layout.tsx` — added `<Header />`
+- `app/cart/page.tsx` — created, updated with stock-cap guard
+- `app/product/[slug]/ProductGallery.tsx` — cart wiring, stock-cap guard
+- `app/product/[slug]/page.tsx` — passes product identity props
+- `lib/gst.ts` — created
+- `lib/validateAddress.ts` — created
+- `app/checkout/page.tsx` — created (auth gate)
+- `app/checkout/CheckoutForm.tsx` — created
+- `app/api/checkout/route.ts` — created, corrected multiple times (form-encoding, type fixes, compensating action, `hitpayPaymentRequestId` storage, `expires_after`)
+- `app/api/webhooks/hitpay/route.ts` — created
+- `lib/orders.ts` — created (`markOrderFailedAndRestoreStock`)
+- `app/checkout/success/page.tsx` — created, rebuilt multiple times (real display, access control, lazy reconciliation, cosmetic cancel messaging)
+- `.env` / `.env.example` — `HITPAY_API_KEY`, `HITPAY_API_BASE_URL`, `HITPAY_WEBHOOK_SALT`, `NEXT_PUBLIC_APP_URL`, `GST_RATE_PERCENT`
+
+### Bugs Found
+- Hydration mismatch on cart badge — fixed with `hasMounted` guard
+- TypeScript `any[]` inference on `orderItemsData` — fixed with explicit type annotation
+- `Prisma.JsonValue` vs `Prisma.InputJsonValue` mismatch on `tx.order.create` — fixed by narrowing the annotation
+- HitPay 401 (sandbox/live key mismatch), 422 (malformed `redirect_url` from missing `NEXT_PUBLIC_APP_URL`), 422 (wrong Content-Type — JSON instead of form-urlencoded)
+- Webhook crash — `HITPAY_WEBHOOK_SALT` was never actually set (only scaffolded empty)
+- **Stock held hostage if HitPay call failed after Order creation** — fixed via compensating transaction
+- Discovered "Back to Merchant" does not cancel the underlying HitPay payment request — confirmed by successfully paying a request that had already redirected back with `status=canceled`
+- **Root cause of "stuck in PENDING_PAYMENT forever":** `expires_after` was never sent at all in the original implementation — HitPay had nothing to expire the request into
+- `expires_after: '15 minutes'` and `'5 minutes'` both rejected (422) — correct value is `'5 min'`. HitPay's own docs literally show `"5 minutes"` as an example, which is incorrect.
+- **New gap discovered after the above was fixed:** stock only restores when the confirmation page is manually reloaded post-expiry — there is no automatic background recovery. Root cause: HitPay never fires a webhook for `expired`/`canceled` requests, and our reconciliation is page-load-triggered only. This is the next task (Vercel Cron).
+
+### Bugs Fixed
+All of the above except the final gap (silently-abandoned checkouts never getting reconciled without a manual page visit) — that's the next task, not a bug in what was built.
+
+### Technical Decisions
+- Guest checkout disallowed — account required, cart survives the sign-in redirect via localStorage
+- Cart is always re-verified live at checkout — cart's cached price/stock is never trusted
+- Shipping address snapshotted onto `Order`, not a live FK — protects historical records
+- Full `OrderStatus` lifecycle enum defined upfront to avoid a future migration
+- HitPay: PayNow only for now
+- Stock-restoration logic centralized in `lib/orders.ts`, reused across 3 call sites
+- Lazy reconciliation (poll-on-page-load) chosen over a cron job initially, since it required no new infrastructure and covers the common case — **now confirmed insufficient on its own**, a cron job is needed as a complement (not a replacement) for the case where nobody ever revisits the page
+- Cosmetic-only "Payment Cancelled" messaging on `status=canceled` redirect, without mutating DB state — since PayNow requests can't be safely cancelled server-side and an early customer might have already scanned the QR
+
+### Lessons Learned
+- Documentation examples aren't always correct — HitPay's own docs show `"5 minutes"` for `expires_after`, but the API actually requires `"5 min"`. Always verify example values empirically against the live API, even when copied directly from official docs.
+- A redirect URL's query params are never a trustworthy signal for anything beyond immediate cosmetic UI — true state must come from a verified webhook or an authenticated status check.
+- "Customer navigated away" ≠ "payment attempt is over," especially for QR-based payment methods that remain completable after the browser moves on.
+- Page-load-triggered reconciliation alone is insufficient for any flow where the user might never return to the triggering page — needed a proactive background mechanism (cron) as well, not instead of, the reactive one.
+
+### Outstanding Issues
+- Vercel Cron job not yet built — orders whose confirmation page is never revisited stay `PENDING_PAYMENT` with stock held indefinitely
+- Temporary diagnostic logging (`console.log('[hitpay reconcile]', ...)`) still present in `reconcileIfStale`, to be removed once the cron work is finalized
+- Custom branded confirmation email not started (HitPay's built-in receipt confirmed working as an interim solution)
+- `failed` webhook status never directly observed in sandbox (low risk — shares code with proven `expired` path)
+- Card payment testing blocked (HitPay sandbox requires bank account setup)
+
+### Recommended Next Task
+Build a Vercel Cron job (`app/api/cron/reconcile-orders/route.ts` + `vercel.json`) to automatically reconcile stale `PENDING_PAYMENT` orders in the background, closing the last gap in Phase 4's payment flow. Then move to the custom order confirmation email.
+
+---
+
+## Session 7
+
+Date: 2026-07-13
+
+### Objective
+Close out Phase 4: decide on the automatic-reconciliation gap (Vercel Cron job), and build the custom branded order confirmation / payment-failed emails.
+
+### Completed
+- **Reconciliation automation deferred** (see Technical Decisions) — instead, `app/checkout/success/page.tsx`'s cosmetic `status=canceled` messaging was updated to explicitly instruct customers to refresh the page after completing payment via QR, and not to reuse the old QR code
+- Resend account created, custom domain `biggyballs69.gay` verified (DNS/SPF/DKIM), sending address set to `orders@biggyballs69.gay`
+- `resend`, `react-email`, `@react-email/components` installed
+- `lib/email/resend.ts` — Resend client singleton, reads `RESEND_API_KEY`/`RESEND_FROM_EMAIL`
+- `lib/email/templates/brand.ts` — shared brand constants (store name "PokeSunshineTCG", palette: navy `#14213D`, burgundy `#6E2439`, gold `#C6A15B`, background `#FAF6EE`, text `#1F2126`, button text `#FFFFFF`)
+- `lib/email/templates/orderConfirmation.tsx` — React Email template, itemized order breakdown, shipping address, "View Order" CTA
+- `lib/email/templates/paymentFailed.tsx` — React Email template, failure messaging, "Return to Cart" CTA
+- `lib/email/sendOrderEmail.ts` — `sendOrderConfirmationEmail(orderId)` and `sendPaymentFailedEmail(orderId)`, both fetch order data via Prisma, render the React Email template, call Resend; both wrapped in try/catch that only logs on failure (never throws into the caller)
+- Wired `sendOrderConfirmationEmail` into `app/api/webhooks/hitpay/route.ts`'s `completed` branch (called after the `Order` status update resolves)
+- Wired `sendPaymentFailedEmail` into `lib/orders.ts` → `markOrderFailedAndRestoreStock`, called after the `$transaction` block resolves (single call site — automatically covers both the webhook's `failed` path and lazy reconciliation's `expired`/`canceled` path)
+- Built a temporary debug route `app/api/test-email/route.ts` to isolate email-layer testing from the HitPay webhook — used to confirm the email stack worked independently of a webhook 404 that was being investigated in parallel
+- **End-to-end verified:** both order-confirmation and payment-failed emails received in a real inbox, for real orders, styled with the correct brand palette
+
+### Files Modified
+- `app/checkout/success/page.tsx` — cosmetic cancel-messaging copy updated (no logic change)
+- `lib/orders.ts` — `sendPaymentFailedEmail` call added to `markOrderFailedAndRestoreStock`, positioned **after** the `$transaction` block (not inside it — avoids holding a DB transaction open during a Resend network call)
+- `app/api/webhooks/hitpay/route.ts` — `sendOrderConfirmationEmail` call added to the `completed` branch, positioned after the `Order` update resolves
+- `lib/email/resend.ts` — created
+- `lib/email/templates/brand.ts` — created
+- `lib/email/templates/orderConfirmation.tsx` — created
+- `lib/email/templates/paymentFailed.tsx` — created
+- `lib/email/sendOrderEmail.ts` — created
+- `app/api/test-email/route.ts` — created (debug-only, **must be deleted**, see Outstanding Issues)
+- `.env` / `.env.example` — `RESEND_API_KEY`, `RESEND_FROM_EMAIL` added; `NEXT_PUBLIC_APP_URL` usage clarified (must be a publicly reachable URL, not `localhost`, for email CTA links to work off the dev machine)
+
+### Bugs Found
+- First draft of `markOrderFailedAndRestoreStock` placed `await sendPaymentFailedEmail(orderId)` **inside** the `prisma.$transaction(...)` callback — held the transaction open during an external network call to Resend, risking lock contention under concurrent checkouts
+- First draft of the webhook route attempted `await sendOrderConfirmationEmail(order.id)` **as a statement inside the `data: {...}` object literal** passed to `prisma.order.update(...)` — syntactically invalid, would not compile
+- A `POST /api/webhooks/hitpay 404` in dev logs was initially suspected to be a routing/compile problem; turned out to be the handler correctly running and returning its own `404` (`{"error": "Order not found"}`) because the `reference_number` HitPay sent didn't match any `Order.id` — a data/testing issue, not a broken route. (Root cause of the mismatch itself not fully diagnosed this session — flagged as an outstanding item below.)
+- Email "View Order" button worked from the same laptop running the dev server but not from other devices — `NEXT_PUBLIC_APP_URL` was set to `localhost:3000`, which only resolves locally; needs to be the current ngrok URL (or, in production, the real domain) for the link to work off-device
+- A long run of ~48 identical `GET /checkout/success?...&status=completed` requests appeared in dev logs, each taking 8–11s of application-code time — suspected to be either manual repeated refreshing during testing or `reconcileIfStale` re-running its full HitPay-status-check-and-possibly-restore-stock-and-possibly-send-email logic on every load because the order was stuck in `PENDING_PAYMENT`. **Not fully root-caused this session** — user confirmed only one email of each type was received overall, suggesting either the order resolved to a terminal status early in that sequence (so later reconciliation calls short-circuited) or the repeated requests were manual reloads rather than an automated loop, but this was not conclusively verified. Flagged as an outstanding item.
+
+### Bugs Fixed
+- Moved the payment-failed email call to after the `$transaction` block resolves in `lib/orders.ts`
+- Fixed the webhook route to call `sendOrderConfirmationEmail` as a separate statement after `prisma.order.update(...)` resolves, not nested inside its arguments
+- Clarified `NEXT_PUBLIC_APP_URL` must track the current ngrok tunnel URL in dev (documented as a known dev-only friction point, not fixed at the code level — resolves permanently on deployment to a fixed domain)
+
+### Technical Decisions
+- **Deferred: automatic background reconciliation (Vercel Cron / GitHub Actions).** Two implementation paths were scoped in detail (Vercel Cron — limited to once-daily on the project's current Hobby tier; GitHub Actions scheduled workflow — free, tier-independent, can run every few minutes) but neither was built this session. Reasoning: significant time had already been invested in this specific gap across sessions, the existing lazy (page-load-triggered) reconciliation already resolves the common case, and the remaining risk (a customer who abandons checkout and never revisits the confirmation page) was judged acceptable to mitigate via clearer on-page messaging rather than new infrastructure, in order to keep the project moving. This can be revisited later; the GitHub Actions approach was identified as the preferred path if/when it is revisited, since it avoids the Vercel Hobby-tier once-daily limitation without requiring a plan upgrade.
+- **Rejected: immediately restoring stock on the `status=canceled` cosmetic redirect.** Considered and explicitly rejected — PayNow QR codes remain payable for up to 5 minutes after a customer clicks "Back to Merchant" (no cancel endpoint exists for QR-based payments), so immediately restoring stock on that redirect risks overselling if the customer completes payment moments later. The existing HitPay-status-verified reconciliation approach (only restoring stock after confirming a real `expired`/`failed`/`canceled` status from HitPay's API) was kept instead.
+- Used React Email (`@react-email/components`) over hand-written HTML strings for the email templates — standard pairing with Resend, easier to maintain/iterate on styling.
+- Brand palette and store name ("PokeSunshineTCG") established this session for transactional emails — first fully-branded surface in the app (storefront/checkout remain intentionally unstyled per the Phase 7 theming deferral).
+- Email sending is treated strictly as a non-blocking side effect: both send functions catch their own errors internally and log-only, and both are called *after* their related DB operation resolves rather than being woven into the transaction — consistent with not letting an external service's availability affect core order-processing correctness.
+
+### Lessons Learned
+- A `404` response in dev server logs doesn't necessarily mean a broken route — it can be the correct, intentional response your own handler returned (e.g. `NextResponse.json({...}, { status: 404 })`). Check whether the log line matches your own error-response shape before assuming a routing/compile problem.
+- Statements cannot be placed inside object literals being passed as function arguments (e.g. `await x()` inside a Prisma `data: {...}` block) — this is a fundamental JS/TS syntax rule, not a Prisma-specific gotcha, but easy to introduce when quickly appending a new side-effect call near existing code.
+- External network calls (email sends, third-party API calls) should never be nested inside a DB transaction — do the DB work, let the transaction close, then perform the external call. Applies generally, not just to this feature.
+- `NEXT_PUBLIC_*` env vars used in links/redirects need to be genuinely public-reachable URLs, not `localhost` — obvious in hindsight but easy to miss when the primary testing device is also the host machine, since `localhost` "just works" there and masks the issue.
+- When multiple things are being debugged in parallel (webhook 404 + email delivery), isolating one variable at a time (e.g. a throwaway direct-call test route, bypassing the webhook entirely) is faster than trying to diagnose both through the same end-to-end flow.
+
+### Outstanding Issues
+- **`app/api/test-email/route.ts` must be deleted** — unauthenticated debug route capable of triggering real customer emails; not yet confirmed removed as of end of session
+- **Diagnostic `console.log('[hitpay reconcile]', orderId, hitpayData.status, hitpayData)` in `app/checkout/success/page.tsx` still present** — logs full HitPay response payloads on every reconciliation check; flagged as cleanup since Session 6, still not removed
+- The root cause of the `reference_number` → `Order.id` mismatch that produced the earlier `404` was not conclusively identified (stale ngrok/webhook registration was the leading theory, not confirmed)
+- The ~48-request repeated-load pattern on `/checkout/success` was not conclusively root-caused (see Bugs Found above) — worth a closer look if it recurs, since at scale it could mean repeated external calls (HitPay status checks, and potentially emails) per customer session
+- Automatic background reconciliation remains an open gap by deliberate choice — see Technical Decisions
+- Card payment testing still blocked (HitPay sandbox requires bank account setup)
+- `failed` webhook status still never directly observed in sandbox (low risk — shares code with proven `expired`/`canceled` path)
+
+### Recommended Next Task
+Begin **Phase 5 — Order Fulfillment**. Suggested starting point: a minimal, read-only `/admin/orders` list page (status/customer/total/date), since there is currently zero order visibility outside Prisma Studio. Before starting, delete `app/api/test-email/route.ts` and remove the diagnostic reconcile log as routine cleanup.
+
+
+## Session 8
+
+Date: 2026-07-14
+
+### Objective
+Close out Phase 5 — Order Fulfillment. Housekeeping cleanup, admin order
+visibility (list/detail/filter/sort), fulfillment status lifecycle, manual
+refund tracking, manual tracking numbers, customer notification emails,
+customer-facing order history, and a checkout scope change (shipping fee +
+self-collection) that emerged mid-session.
+
+### Completed
+- Housekeeping: confirmed `app/api/test-email/route.ts` deleted and the
+  diagnostic `console.log('[hitpay reconcile]', ...)` removed from
+  `app/checkout/success/page.tsx` (both carried over from Session 7)
+- `/admin/orders` — read-only list, status badge, links to detail page; later
+  extended with `searchParams`-driven status filter + sort (newest/oldest/
+  total asc/desc), matching the existing category-page GET-form convention
+- `/admin/orders/[id]` — customer, shipping/self-collection info, payment
+  reference, itemized breakdown, totals; later extended with tracking number
+  display and a shipping-fee line
+- `PUT /api/admin/orders/[id]/status` — admin-guarded, advances an order
+  exactly one fulfillment stage, transition rules **branched by
+  `fulfillmentMethod`** (delivery vs self-collection have different valid
+  chains — see below)
+- `OrderStatusActions.tsx` — Client Component, renders the next-stage button
+  (label derived from the transition map) and a separate "Mark as Refunded"
+  button with a `window.confirm()` guard
+- **Scope decision, mid-build:** rejected HitPay's Refund API and rejected
+  any order-cancellation feature entirely. Admin handles refunds manually via
+  Telegram/email + HitPay's dashboard or bank transfer, outside the app.
+  `PUT /api/admin/orders/[id]/refund` built instead — pure status flag, no
+  HitPay call, no stock change (also explicitly decided: no auto-restore)
+- **Scope decision, mid-build:** rejected courier API integration, shipping
+  label generation, and courier status sync entirely — admin self-fulfills
+  shipping and prints own labels. Replaced with a manual tracking number
+  field: `PUT /api/admin/orders/[id]/tracking` + `TrackingNumberForm.tsx`
+  (freely editable at any status, not gated to a specific stage)
+- **Scope decision, mid-build:** self-collection introduced as a first-class
+  fulfillment option at checkout, need it "now" not "later" as originally
+  discussed. This meant:
+  - Schema: `FulfillmentMethod` enum (`DELIVERY`, `SELF_COLLECTION`) added to
+    `Order`, plus `shippingFee Float @default(0)` and `trackingNumber
+    String?`
+  - Schema (second migration): `shippingBlock`, `shippingStreet`,
+    `shippingPostalCode` changed from required to nullable — self-collection
+    orders don't need a shipping address at all
+  - `lib/gst.ts` — `calculateTotalWithGST()` extended to accept an optional
+    `shippingFee` param, taxes `subtotal + shippingFee` combined (confirmed:
+    GST does apply to the shipping fee)
+  - `lib/validateAddress.ts` — `validateShippingAddress()` signature changed
+    to require `fulfillmentMethod`, short-circuits to valid when
+    `SELF_COLLECTION`
+  - `app/api/checkout/route.ts` — reads `fulfillmentMethod` from the request
+    body, branches fee (`SHIPPING_FEE_SGD` vs `SELF_COLLECTION_FEE_SGD`),
+    nulls out address fields when self-collection, saves `shippingFee` +
+    `fulfillmentMethod` onto the `Order`
+  - `CheckoutForm.tsx` — added a Delivery/Self-Collection radio toggle,
+    fetches live fee amounts from a new public `GET
+    /api/checkout/fulfillment-fees` route (env-var-backed, not
+    `NEXT_PUBLIC_*`, so fees can change without a rebuild), conditionally
+    hides the address form for self-collection, shows the pickup address
+    (hardcoded constant, see below) when self-collection is selected
+  - `lib/constants.ts` (new) — `SELF_COLLECTION_ADDRESS`, a plain string
+    constant. A DB-backed `StoreSettings` model + admin-editable form was
+    scoped and explicitly rejected as overkill; admin will hand-edit this
+    constant if the pickup location ever changes
+- **Status lifecycle branching, once self-collection existed:** admin
+  pointed out self-collection orders should skip `SHIPPED`/`DELIVERED`
+  entirely — `PAID → PROCESSING → PACKED → COMPLETED` directly (the
+  "shipped" concept doesn't apply to in-person pickup). Updated both
+  `status/route.ts` and `OrderStatusActions.tsx` to hold two separate
+  transition maps, selected by `order.fulfillmentMethod`
+- Two new email templates: `shippingNotification.tsx` (delivery orders,
+  fires on `PACKED → SHIPPED`, includes tracking number if set) and
+  `readyForCollection.tsx` (self-collection orders, fires on `PACKED →
+  COMPLETED`, includes pickup address) — both follow the exact structure of
+  the existing `orderConfirmation.tsx`/`paymentFailed.tsx` templates
+  (matched against pasted source rather than guessed)
+- `sendOrderEmail.ts` — added `sendShippingNotificationEmail()` and
+  `sendReadyForCollectionEmail()`, both following the established
+  try/catch-log-only, non-transaction-blocking pattern; both wired into
+  `status/route.ts` as separate statements *after* the `Order.update` call
+  resolves, learning directly from the Session 7 "statement inside an object
+  literal" bug rather than repeating it
+- `/account/orders` and `/account/orders/[id]` — customer-facing order
+  history, auth-gated to any signed-in user (not admin-only), scoped to
+  `where: { userId: user.id }`; detail page 404s (not just redirects) if the
+  order belongs to someone else, matching the existing `/checkout/success`
+  ownership-check pattern
+- `lib/orderStatus.ts` (new) — `STATUS_STYLES` + `formatStatus()` extracted
+  from four separate duplicated copies (admin list, admin detail,
+  `OrderStatusActions`, and now the new customer pages) into one shared
+  module
+- Bug caught and fixed: all four order-lifecycle email templates initially
+  linked their "View Order" button to `/checkout/success?orderId=...` — a
+  page designed for one-time, `PAID`-only display. Updated
+  `orderConfirmation.tsx`, `shippingNotification.tsx`, and
+  `readyForCollection.tsx` to link to `/account/orders/[id]` instead.
+  `paymentFailed.tsx` was checked and correctly left unchanged — it already
+  linked to `/cart`, which is the right destination for a payment that never
+  completed
+- `expires_after` re-confirmed as `'5 mins'` (not `'5 min'`) — supersedes the
+  2026-07-06 DECISIONS.md finding; logged as a new dated entry rather than
+  editing the old one
+- Header (`app/components/Header.tsx`) — added a "My Orders" link and full
+  Clerk auth UI (`<Show when="signed-in/signed-out">`, `<SignInButton>`,
+  `<UserButton>`) — previously had zero sign-in/sign-out UI anywhere in the
+  storefront, a gap first noticed by the admin mid-session and fixed here.
+  `afterSignOutUrl` moved to `<ClerkProvider>` in `app/layout.tsx` per
+  Clerk's current (verified via live docs search) deprecation of that prop
+  directly on `<UserButton>`
+
+### Files Modified
+- `app/api/test-email/route.ts` — deleted (housekeeping)
+- `app/checkout/success/page.tsx` — diagnostic log removed (housekeeping)
+- `app/admin/orders/page.tsx` — created, then extended with filter/sort
+- `app/admin/orders/[id]/page.tsx` — created, then extended (tracking
+  number block, shipping-fee line, self-collection-aware address display)
+- `app/admin/orders/[id]/OrderStatusActions.tsx` — created, then extended
+  twice (refund button, then fulfillment-method-aware transition maps)
+- `app/admin/orders/[id]/TrackingNumberForm.tsx` — created
+- `app/api/admin/orders/[id]/status/route.ts` — created, then rewritten for
+  branched transition maps + email trigger calls
+- `app/api/admin/orders/[id]/refund/route.ts` — created
+- `app/api/admin/orders/[id]/tracking/route.ts` — created (initially missed
+  in hand-off, caused a "Failed to save tracking number" bug until
+  identified and created)
+- `app/api/checkout/fulfillment-fees/route.ts` — created
+- `app/api/checkout/route.ts` — extended for `fulfillmentMethod`, shipping
+  fee, nulled address fields on self-collection
+- `app/checkout/CheckoutForm.tsx` — extended: fulfillment toggle, live fee
+  fetch, conditional address form, pickup address display
+- `lib/validateAddress.ts` — signature change (`fulfillmentMethod` param,
+  self-collection bypass)
+- `lib/gst.ts` — `calculateTotalWithGST()` extended for optional
+  `shippingFee` param
+- `lib/constants.ts` — created (`SELF_COLLECTION_ADDRESS`)
+- `lib/orderStatus.ts` — created (extracted `STATUS_STYLES`/`formatStatus`)
+- `lib/email/templates/shippingNotification.tsx` — created
+- `lib/email/templates/readyForCollection.tsx` — created
+- `lib/email/sendOrderEmail.ts` — extended with two new send functions
+- `lib/email/templates/orderConfirmation.tsx` — "View Order" link updated
+- `app/account/orders/page.tsx` — created
+- `app/account/orders/[id]/page.tsx` — created
+- `app/components/Header.tsx` — "My Orders" link + Clerk auth UI added
+- `app/layout.tsx` — `afterSignOutUrl="/"` added to `<ClerkProvider>`
+- `prisma/schema.prisma` — `FulfillmentMethod` enum; `Order.fulfillmentMethod`,
+  `shippingFee`, `trackingNumber` added; `shippingBlock`/`shippingStreet`/
+  `shippingPostalCode` changed to nullable (two separate migrations)
+- `.env` / `.env.example` — `SHIPPING_FEE_SGD`, `SELF_COLLECTION_FEE_SGD`
+  added
+- `app/generated/prisma/` — regenerated twice (both migrations)
+
+### Bugs Found
+- `Cannot read properties of undefined (reading 'toFixed')` on
+  `order.shippingFee.toFixed(2)` in the admin detail page — same
+  stale-Prisma-client/`.next`-cache root cause documented twice before in
+  this project (Sessions 2 and 5), not a new class of bug
+- `PUT /api/admin/orders/[id]/tracking` returned a generic "Failed to save
+  tracking number" — root cause was the route file simply not having been
+  created in the admin's project despite being scoped and written; the file
+  path (`app/api/admin/orders/[id]/tracking/route.ts`) was re-confirmed and
+  the file created directly
+- All four order-lifecycle email templates linked to `/checkout/success`
+  instead of a permanent order page — not caught until manually clicking
+  through a real received email; `/checkout/success` was never designed to
+  handle non-`PAID` statuses gracefully, so this was a real dead-end for
+  customers on Shipped/Ready-for-Collection emails until fixed
+- `expires_after: '5 mins'` vs `'5 min'` — an inconsistency surfaced across
+  this conversation (DECISIONS.md said `'5 min'`; the actual pasted code had
+  `'5 mins'`; the admin then asserted `'5 mins'` was correct). Not verified
+  independently by re-running against HitPay's sandbox this session — taken
+  on the admin's explicit confirmation as the new source of truth and logged
+  accordingly. Worth flagging: this value has now flipped once already based
+  on empirical testing; if it needs correcting again, an inline code comment
+  at the call site (not just a DECISIONS.md entry) is probably warranted.
+
+### Bugs Fixed
+- All of the above resolved within-session except the `expires_after`
+  question, which was resolved by admin confirmation rather than a fresh
+  sandbox test (flagged as a residual epistemic gap, not left as an open
+  bug)
+
+### Technical Decisions
+- **Refunds are manual, record-only, no auto stock-restore.** See
+  DECISIONS.md for full reasoning — summary: HitPay Refund API exists
+  (`Create Refund` endpoint, PayNow/Card only, verified via HitPay's public
+  docs) but was deliberately not integrated; the admin prefers handling
+  refunds entirely outside the app via direct customer contact.
+- **Order cancellation is not a feature.** Once confirmed (`PAID`), an
+  order's only "reversal" path is the manual Refund flag — no `CANCELLED`
+  transition is exposed anywhere in the admin UI.
+- **Courier integration is not a feature.** Self-fulfilled shipping, manual
+  tracking numbers only, no label generation, no courier status sync.
+- **Self-collection pickup address lives as a hardcoded constant**, not a DB
+  setting — explicitly scoped down from a proposed `StoreSettings`
+  model + admin UI, judged as unnecessary complexity for a single
+  rarely-changing value.
+- **GST applies to the shipping fee.** `subtotal + shippingFee` is the
+  taxable base, not `subtotal` alone.
+- **Self-collection fee is $0 by default but config-driven**
+  (`SELF_COLLECTION_FEE_SGD`), not hardcoded to zero — future-proofs a
+  planned but not-yet-needed change (charging for self-collection later).
+- **Order fulfillment status transitions are branched by fulfillment
+  method** — self-collection orders skip `SHIPPED`/`DELIVERED` and go
+  directly from `PACKED` to `COMPLETED`, since those two statuses describe a
+  carrier-based delivery event that doesn't apply to in-person pickup.
+- **Returns: admin approval flow dropped entirely** from ROADMAP.md — folded
+  into the same manual refund process, not built as a separate feature.
+- **Bulk actions deferred, not built** — genuinely not needed at current
+  order volume; explicitly left open to revisit later rather than dropped
+  outright (unlike Returns/courier, which were rejected on principle).
+
+### Lessons Learned
+- When a multi-stage feature evolves mid-build (self-collection went from
+  "future, schema-only" to "build it now" within the same conversation), the
+  status-machine and email-trigger logic needs to be revisited holistically,
+  not just patched incrementally — the self-collection status-skip
+  requirement wasn't obvious until self-collection actually existed as a
+  real option, and required touching two files that must stay in sync
+  (`status/route.ts` and `OrderStatusActions.tsx`).
+- Hardened, multi-session-debugged files (email sending, checkout, address
+  validation) are worth asking to see the actual current source before
+  editing, even mid-session, rather than reconstructing them from
+  documentation summaries — DATABASE_SCHEMA.md and API_REFERENCE.md
+  describe *shape*, not exact working logic, and this project has hit real
+  regressions before from editing such files blind.
+- A claimed library/API "fact" pasted into chat (e.g. a `Show` component
+  replacing `SignedIn`/`SignedOut` in Clerk) is worth verifying against live
+  docs before accepting, even when it's phrased confidently as a diff
+  summary — it turned out accurate here, but treating it as unverified until
+  checked is the correct default regardless of outcome.
+- Every new API route needs to actually exist as a file before it can work —
+  sounds obvious, but a scoped-and-written route can still fail to make it
+  into the admin's actual project during a copy-paste handoff, and the
+  resulting error (generic "Failed to..." messages) doesn't obviously point
+  at "the file is missing" as the cause.
+
+### Outstanding Issues
+- Bulk actions (mark packed, bulk export) — deferred, not scheduled
+- Self-collection address requires a manual code edit + redeploy to change
+- `expires_after: '5 mins'` accepted on assertion, not independently
+  re-verified against HitPay's sandbox this session
+- `app/layout.tsx` metadata still has unedited `create-next-app` scaffold
+  defaults (title/description)
+- All Phase 4 outstanding issues (Cron reconciliation, card payment testing,
+  unverified `failed` webhook path, SSL warning) remain open, unchanged
+
+### Recommended Next Task
+See NEXT_TASK.md — Phase 6 (Search & AI Shopping Assistant) starting point,
+or revisit deferred Bulk Actions if order volume has grown enough to warrant
+it.

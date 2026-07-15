@@ -62,7 +62,16 @@ ProductVariant → each sellable combination (Size+Color etc.) with its own pric
 
 This means new product types (Coffee Beans, Artwork, 3D Printers) can be created by admins with zero code changes.
 
-### Authentication
+### Public Storefront Pages
+`/`, `/category/[slug]`, and `/product/[slug]` are unauthenticated Server Components — no Clerk auth guard, consistent with the rest of the "Server Components fetch via Prisma directly" convention. No API routes back these pages; nothing is mutated, only read.
+
+- **Dynamic route params** (`params`) and **query strings** (`searchParams`) are both async (`Promise`) in Next.js 15 App Router — both must be `await`ed before use, in both the page component and `generateMetadata`.
+- **404 handling**: unknown slugs call `notFound()` from `next/navigation` rather than manually rendering an error state.
+- **Category page sort/filter**: read from `searchParams`, applied in-memory after the Prisma fetch (dataset per category is small), submitted via a plain `<form method="GET">` — no client-side state, page reload on Apply.
+- **Homepage sections** are hardcoded (no `HomepageSection` DB model) — see DECISIONS.md.
+- **Image fallback chain**: `ProductVariant.imageUrl` (if the selected variant has one) → `Product.imageUrl` → blank. Handled client-side in `ProductGallery.tsx`, since it depends on which variant is selected.
+
+
 Clerk handles identity (email, password, sessions). Your database stores a `User` row linked by `clerkId` for app-specific data (role, addresses). The Clerk webhook creates this row on signup.
 
 Role check pattern used in every admin API route:
@@ -80,9 +89,25 @@ if (!user || user.role !== 'ADMIN') return 403
 ecommerce-platform/
 ├── app/
 │   ├── layout.tsx                        ← Root layout, ClerkProvider wrapper
-│   ├── page.tsx                          ← Homepage (storefront, Phase 3)
+│   ├── page.tsx                          ← Homepage — composes 4 sections (Phase 3)
 │   ├── sign-in/[[...sign-in]]/page.tsx   ← Clerk sign-in page
 │   ├── sign-up/[[...sign-up]]/page.tsx   ← Clerk sign-up page
+│   │
+│   ├── category/
+│   │   └── [slug]/page.tsx               ← Public category page — grid, sort, filter, back button
+│   │
+│   ├── product/
+│   │   └── [slug]/
+│   │       ├── page.tsx                  ← Public product page — spec table, back button
+│   │       └── ProductGallery.tsx        ← Client Component — image swap + variant selector + price/stock
+│   │
+│   ├── components/                       ← Shared UI, nested under app/ (no top-level components/ folder)
+│   │   ├── BackButton.tsx                ← Shared Client Component (router.back())
+│   │   └── homepage/
+│   │       ├── HeroBanner.tsx            ← Static content (hardcoded, no DB yet)
+│   │       ├── FeaturedProducts.tsx      ← Server Component, latest 4 products
+│   │       ├── CategoryGrid.tsx          ← Server Component, all categories
+│   │       └── Newsletter.tsx            ← Client Component (non-functional form)
 │   │
 │   ├── admin/                            ← Admin panel (role-protected)
 │   │   ├── layout.tsx                    ← Admin layout + auth guard
@@ -92,8 +117,10 @@ ecommerce-platform/
 │   │   │   └── new/page.tsx              ← Create product type form
 │   │   ├── products/
 │   │   │   ├── page.tsx                  ← List all products
-│   │   │   └── new/page.tsx              ← Create product form (dynamic)
-│   │   ├── categories/                   ← (To be built)
+│   │   │   └── new/page.tsx              ← Create product form (dynamic, incl. per-product and per-variant image URL)
+│   │   ├── categories/
+│   │   │   ├── page.tsx                  ← List all categories
+│   │   │   └── new/page.tsx              ← Create category form
 │   │   └── orders/                       ← (To be built)
 │   │
 │   ├── api/
@@ -102,7 +129,8 @@ ecommerce-platform/
 │   │   │   └── hitpay/route.ts           ← HitPay payment webhook (Phase 4)
 │   │   └── admin/
 │   │       ├── product-types/route.ts    ← GET + POST product types
-│   │       └── products/route.ts         ← GET + POST products
+│   │       ├── products/route.ts         ← GET + POST products (incl. imageUrl on product + variants)
+│   │       └── categories/route.ts       ← GET + POST categories
 │   │
 │   └── generated/
 │       └── prisma/                       ← Prisma 7 generated client (committed to repo)

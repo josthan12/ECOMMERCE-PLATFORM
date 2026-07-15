@@ -18,6 +18,14 @@ export const Role = {
 export type Role = (typeof Role)[keyof typeof Role]
 
 
+export const FulfillmentMethod = {
+  DELIVERY: 'DELIVERY',
+  SELF_COLLECTION: 'SELF_COLLECTION'
+} as const
+
+export type FulfillmentMethod = (typeof FulfillmentMethod)[keyof typeof FulfillmentMethod]
+
+
 export const FieldType = {
   TEXT: 'TEXT',
   RICH_TEXT: 'RICH_TEXT',
@@ -36,3 +44,19 @@ export const FieldType = {
 } as const
 
 export type FieldType = (typeof FieldType)[keyof typeof FieldType]
+
+
+export const OrderStatus = {
+  PENDING_PAYMENT: 'PENDING_PAYMENT',
+  PAID: 'PAID',
+  PAYMENT_FAILED: 'PAYMENT_FAILED',
+  PROCESSING: 'PROCESSING',
+  PACKED: 'PACKED',
+  SHIPPED: 'SHIPPED',
+  DELIVERED: 'DELIVERED',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+  REFUNDED: 'REFUNDED'
+} as const
+
+export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus]

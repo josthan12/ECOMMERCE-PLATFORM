@@ -45,49 +45,58 @@ Phases 0–5 = shippable store (real products, real payments, real order fulfill
 
 ---
 
-## Phase 3 — Public Storefront
+## Phase 3 — Public Storefront ✅ COMPLETE
 
-- [ ] Modular homepage section renderer
-- [ ] Section types: Hero Banner, Featured Products, Category Grid, Newsletter
-- [ ] Category page route (/category/[slug]) with filters + product grid
-- [ ] Product page route (/product/[slug]) with gallery + variant selector
-- [ ] Spec table rendered from product type field schema
-- [ ] Variant selector (drives image swap, price update)
-- [ ] Basic filtering and sorting on category pages
-
----
-
-## Phase 4 — Cart, Checkout & HitPay
-
-- [ ] Cart state with Zustand (persisted to DB on checkout start)
-- [ ] GST calculation module (9% Singapore GST)
-- [ ] HitPay Payment Request creation via REST API
-- [ ] HitPay.JS / hosted checkout integration
-- [ ] Webhook endpoint: /api/webhooks/hitpay
-- [ ] HMAC signature verification on HitPay webhook
-- [ ] Order status: Pending Payment → Paid / Payment Failed
-- [ ] Order confirmation page + email notification
-- [ ] Test: PayNow QR flow (sandbox)
-- [ ] Test: Card flow (sandbox)
-- [ ] Test: Failed payment flow (sandbox)
-- [ ] Test: Webhook retry behavior
+- [x] Modular homepage section renderer
+- [x] Section types: Hero Banner, Featured Products, Category Grid, Newsletter
+- [x] Category page route (/category/[slug]) with filters + product grid
+- [x] Product page route (/product/[slug]) with gallery + variant selector
+- [x] Spec table rendered from product type field schema
+- [x] Variant selector (drives image swap, price update)
+- [x] Basic filtering and sorting on category pages
 
 ---
 
-## Phase 5 — Order Fulfillment
+## Phase 4 — Cart, Checkout & HitPay ✅ COMPLETE FOR MVP
+(One item deliberately deferred, one blocked externally — see checklist below and DECISIONS.md)
 
-- [ ] Orders queue: list/filter/sort by status
-- [ ] Bulk actions (mark packed, bulk export)
-- [ ] Order detail page: customer info, items, payment status, status timeline
-- [ ] Status lifecycle: Pending → Paid → Processing → Packed → Shipped → Delivered → Completed
-- [ ] First courier API integration (Ninja Van or Qxpress)
-- [ ] Generate shipping label action
-- [ ] Manual tracking number fallback
-- [ ] Courier status sync (webhook/polling)
-- [ ] Customer notifications on status change (email/SMS)
-- [ ] Returns: admin approval flow
-- [ ] Refunds: HitPay refund API tied to original transaction
-- [ ] Customer-facing order tracking in My Account
+- [x] Cart state with Zustand (localStorage-persisted — deliberate choice over DB-backed for this stage)
+- [x] GST calculation module (9% Singapore GST) — later extended in Phase 5 to also tax the shipping fee
+- [x] HitPay Payment Request creation via REST API
+- [x] HitPay hosted checkout integration (redirect-based)
+- [x] Webhook endpoint: /api/webhooks/hitpay
+- [x] HMAC signature verification on HitPay webhook
+- [x] Order status: Pending Payment → Paid / Payment Failed
+- [x] Order confirmation page (real breakdown + access control), cancellation messaging updated to instruct customers to refresh after completing payment via QR
+- [~] Automatic background reconciliation for abandoned/expired orders (Vercel Cron) — **deliberately deferred**, not planned for MVP; current lazy/page-load reconciliation only resolves an order if someone revisits its confirmation page. See DECISIONS.md (2026-07-13). Mitigated via clearer cancellation-page messaging instead. Revisit via GitHub Actions scheduled workflow if this becomes a real problem post-launch.
+- [x] Custom branded order confirmation + payment-failed emails (Resend + React Email) — HitPay's built-in receipt retained as a secondary receipt
+- [x] Test: PayNow QR flow (sandbox) — including abandonment/expiry path, fully verified
+- [ ] Test: Card flow (sandbox) — blocked, requires bank account setup on HitPay account
+- [~] Test: Failed payment flow (sandbox) — `expired` path fully verified; `failed` status specifically not directly observed but shares identical code
+- [ ] Test: Webhook retry behavior — not explicitly tested; idempotency guard in place by design
+- [x] **(Added in Phase 5 session)** Fulfillment method selection at checkout (Delivery / Self Collection), flat shipping fee, GST applied to shipping — see Phase 5 below and DECISIONS.md (2026-07-14)
+
+---
+
+## Phase 5 — Order Fulfillment ✅ COMPLETE FOR MVP
+(Several items dropped by deliberate decision, one deferred — see DECISIONS.md 2026-07-14)
+
+- [x] Orders queue: list/filter/sort by status
+- [~] Bulk actions (mark packed, bulk export) — **deliberately deferred**, not built. Genuinely not needed at current order volume; revisit if that changes.
+- [x] Order detail page: customer info, items, payment status, status timeline
+- [x] Status lifecycle: branched by fulfillment method —
+      Delivery: Pending → Paid → Processing → Packed → Shipped → Delivered → Completed
+      Self Collection: Pending → Paid → Processing → Packed → Completed (skips Shipped/Delivered)
+- [ ] ~~First courier API integration (Ninja Van or Qxpress)~~ — **dropped**. Admin self-fulfills shipping and prints own labels.
+- [ ] ~~Generate shipping label action~~ — **dropped**, same reasoning as above.
+- [x] Manual tracking number — now the *only* tracking mechanism (not a "fallback" as originally scoped, since no courier API exists to fall back from)
+- [ ] ~~Courier status sync (webhook/polling)~~ — **dropped**, no courier API exists to sync with.
+- [x] Customer notifications on status change (email) — Shipped notification (delivery) and Ready-for-Collection notification (self-collection), both via Resend/React Email, following the Phase 4 email pattern
+- [ ] ~~Returns: admin approval flow~~ — **dropped entirely**. Folded into the same manual refund process below; not a separate feature.
+- [x] Refunds — **manual record-keeping only**. No HitPay Refund API integration (deliberately rejected — see DECISIONS.md), no automatic stock restoration (deliberately rejected). Admin marks an order "Refunded" after handling the actual refund entirely outside the app.
+- [x] Customer-facing order tracking in My Account — `/account/orders` + `/account/orders/[id]`
+
+**Also added this phase, outside original scope:** self-collection as a checkout-time fulfillment option (with its own flat fee, defaulting to free), and a pickup-location display (hardcoded constant, not DB-managed).
 
 ---
 
@@ -138,7 +147,7 @@ Phases 0–5 = shippable store (real products, real payments, real order fulfill
 ## Phase 9 — Launch
 
 - [ ] HitPay switched to live keys (production only)
-- [ ] Live courier API credentials
+- [ ] Live courier API credentials — **note: no longer applicable per Phase 5 decision to self-fulfill shipping; remove or replace with "own shipping process finalized" if this item is revisited**
 - [ ] DNS + SSL + domain cutover on Vercel
 - [ ] Error tracking (Sentry)
 - [ ] Uptime monitoring
@@ -163,3 +172,6 @@ Phases 0–5 = shippable store (real products, real payments, real order fulfill
 - Webhooks + plugin system
 - Multi-language (Simplified Chinese, Malay, Tamil)
 - A/B testing for layouts and promotions
+- Self-collection: paid fee (currently free but config-driven, ready to flip)
+- Self-collection pickup address: move from hardcoded constant to admin-editable DB setting, if it ever needs to change more than rarely
+- Bulk order actions (mark packed in bulk, CSV export) — deferred from Phase 5

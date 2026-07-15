@@ -24,7 +24,9 @@ type VariantRow = {
   price: string
   stock: string
   sku: string
+  imageUrl: string
 }
+
 
 function generateCombinations(options: VariantOption[]): VariantRow[] {
   const parsed = options
@@ -48,6 +50,7 @@ function generateCombinations(options: VariantOption[]): VariantRow[] {
     price: '',
     stock: '',
     sku: '',
+    imageUrl: '',
   }))
 }
 
@@ -63,6 +66,7 @@ export default function NewProductPage() {
   const [attributes, setAttributes] = useState<Record<string, any>>({})
 
   const [variantOptions, setVariantOptions] = useState<VariantOption[]>([])
+  const [imageUrl, setImageUrl] = useState('')
   const [variants, setVariants] = useState<VariantRow[]>([])
 
   const [loading, setLoading] = useState(false)
@@ -214,7 +218,7 @@ export default function NewProductPage() {
     setVariants(generateCombinations(variantOptions))
   }
 
-  function updateVariantRow(index: number, field: 'price' | 'stock' | 'sku', value: string) {
+  function updateVariantRow(index: number, field: 'price' | 'stock' | 'sku' | 'imageUrl', value: string) {
     setVariants((prev) =>
       prev.map((row, i) => (i === index ? { ...row, [field]: value } : row))
     )
@@ -249,6 +253,7 @@ export default function NewProductPage() {
         body: JSON.stringify({
           name,
           description,
+          imageUrl,
           productTypeId: selectedTypeId,
           attributes,
           variantOptions: variantOptionsJson,
@@ -329,6 +334,18 @@ export default function NewProductPage() {
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+              <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Product Image URL
+              </label>
+              <input
+                type="text"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                placeholder="https://..."
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
             </div>
 
             {selectedType.fields.length > 0 && (
@@ -413,6 +430,7 @@ export default function NewProductPage() {
                         <th className="py-2 pr-4">Price (SGD)</th>
                         <th className="py-2 pr-4">Stock</th>
                         <th className="py-2 pr-4">SKU (optional)</th>
+                        <th className="py-2 pr-4">Image URL (optional)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -452,6 +470,15 @@ export default function NewProductPage() {
                               className="w-32 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                           </td>
+                          <td className="py-2 pr-4">
+                            <input
+                            type="text"
+                            onChange={(e) => updateVariantRow(i, 'imageUrl', e.target.value)}
+                            value={row.imageUrl}
+                            className="w-40 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="https://..."
+                            />
+                        </td>
                         </tr>
                       ))}
                     </tbody>

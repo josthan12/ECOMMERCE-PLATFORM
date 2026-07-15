@@ -313,6 +313,40 @@ export type FloatWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedFloatFilter<$PrismaModel>
 }
 
+export type EnumOrderStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.OrderStatus | Prisma.EnumOrderStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.OrderStatus[] | Prisma.ListEnumOrderStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.OrderStatus[] | Prisma.ListEnumOrderStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumOrderStatusFilter<$PrismaModel> | $Enums.OrderStatus
+}
+
+export type EnumFulfillmentMethodFilter<$PrismaModel = never> = {
+  equals?: $Enums.FulfillmentMethod | Prisma.EnumFulfillmentMethodFieldRefInput<$PrismaModel>
+  in?: $Enums.FulfillmentMethod[] | Prisma.ListEnumFulfillmentMethodFieldRefInput<$PrismaModel>
+  notIn?: $Enums.FulfillmentMethod[] | Prisma.ListEnumFulfillmentMethodFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumFulfillmentMethodFilter<$PrismaModel> | $Enums.FulfillmentMethod
+}
+
+export type EnumOrderStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.OrderStatus | Prisma.EnumOrderStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.OrderStatus[] | Prisma.ListEnumOrderStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.OrderStatus[] | Prisma.ListEnumOrderStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumOrderStatusWithAggregatesFilter<$PrismaModel> | $Enums.OrderStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumOrderStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumOrderStatusFilter<$PrismaModel>
+}
+
+export type EnumFulfillmentMethodWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.FulfillmentMethod | Prisma.EnumFulfillmentMethodFieldRefInput<$PrismaModel>
+  in?: $Enums.FulfillmentMethod[] | Prisma.ListEnumFulfillmentMethodFieldRefInput<$PrismaModel>
+  notIn?: $Enums.FulfillmentMethod[] | Prisma.ListEnumFulfillmentMethodFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumFulfillmentMethodWithAggregatesFilter<$PrismaModel> | $Enums.FulfillmentMethod
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumFulfillmentMethodFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumFulfillmentMethodFilter<$PrismaModel>
+}
+
 export type NestedStringFilter<$PrismaModel = never> = {
   equals?: string | Prisma.StringFieldRefInput<$PrismaModel>
   in?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
@@ -558,6 +592,40 @@ export type NestedFloatWithAggregatesFilter<$PrismaModel = never> = {
   _sum?: Prisma.NestedFloatFilter<$PrismaModel>
   _min?: Prisma.NestedFloatFilter<$PrismaModel>
   _max?: Prisma.NestedFloatFilter<$PrismaModel>
+}
+
+export type NestedEnumOrderStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.OrderStatus | Prisma.EnumOrderStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.OrderStatus[] | Prisma.ListEnumOrderStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.OrderStatus[] | Prisma.ListEnumOrderStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumOrderStatusFilter<$PrismaModel> | $Enums.OrderStatus
+}
+
+export type NestedEnumFulfillmentMethodFilter<$PrismaModel = never> = {
+  equals?: $Enums.FulfillmentMethod | Prisma.EnumFulfillmentMethodFieldRefInput<$PrismaModel>
+  in?: $Enums.FulfillmentMethod[] | Prisma.ListEnumFulfillmentMethodFieldRefInput<$PrismaModel>
+  notIn?: $Enums.FulfillmentMethod[] | Prisma.ListEnumFulfillmentMethodFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumFulfillmentMethodFilter<$PrismaModel> | $Enums.FulfillmentMethod
+}
+
+export type NestedEnumOrderStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.OrderStatus | Prisma.EnumOrderStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.OrderStatus[] | Prisma.ListEnumOrderStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.OrderStatus[] | Prisma.ListEnumOrderStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumOrderStatusWithAggregatesFilter<$PrismaModel> | $Enums.OrderStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumOrderStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumOrderStatusFilter<$PrismaModel>
+}
+
+export type NestedEnumFulfillmentMethodWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.FulfillmentMethod | Prisma.EnumFulfillmentMethodFieldRefInput<$PrismaModel>
+  in?: $Enums.FulfillmentMethod[] | Prisma.ListEnumFulfillmentMethodFieldRefInput<$PrismaModel>
+  notIn?: $Enums.FulfillmentMethod[] | Prisma.ListEnumFulfillmentMethodFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumFulfillmentMethodWithAggregatesFilter<$PrismaModel> | $Enums.FulfillmentMethod
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumFulfillmentMethodFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumFulfillmentMethodFilter<$PrismaModel>
 }
 
 

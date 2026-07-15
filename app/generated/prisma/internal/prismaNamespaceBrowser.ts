@@ -58,7 +58,9 @@ export const ModelName = {
   Product: 'Product',
   ProductVariant: 'ProductVariant',
   Category: 'Category',
-  CategoryProduct: 'CategoryProduct'
+  CategoryProduct: 'CategoryProduct',
+  Order: 'Order',
+  OrderItem: 'OrderItem'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -139,6 +141,7 @@ export const ProductScalarFieldEnum = {
   description: 'description',
   attributes: 'attributes',
   variantOptions: 'variantOptions',
+  imageUrl: 'imageUrl',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -153,6 +156,7 @@ export const ProductVariantScalarFieldEnum = {
   price: 'price',
   stock: 'stock',
   sku: 'sku',
+  imageUrl: 'imageUrl',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -182,6 +186,42 @@ export const CategoryProductScalarFieldEnum = {
 } as const
 
 export type CategoryProductScalarFieldEnum = (typeof CategoryProductScalarFieldEnum)[keyof typeof CategoryProductScalarFieldEnum]
+
+
+export const OrderScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  status: 'status',
+  hitpayPaymentRequestId: 'hitpayPaymentRequestId',
+  shippingBlock: 'shippingBlock',
+  shippingUnitNumber: 'shippingUnitNumber',
+  shippingStreet: 'shippingStreet',
+  shippingPostalCode: 'shippingPostalCode',
+  fulfillmentMethod: 'fulfillmentMethod',
+  shippingFee: 'shippingFee',
+  trackingNumber: 'trackingNumber',
+  subtotal: 'subtotal',
+  gstAmount: 'gstAmount',
+  total: 'total',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type OrderScalarFieldEnum = (typeof OrderScalarFieldEnum)[keyof typeof OrderScalarFieldEnum]
+
+
+export const OrderItemScalarFieldEnum = {
+  id: 'id',
+  orderId: 'orderId',
+  productVariantId: 'productVariantId',
+  productName: 'productName',
+  combination: 'combination',
+  price: 'price',
+  quantity: 'quantity',
+  sku: 'sku'
+} as const
+
+export type OrderItemScalarFieldEnum = (typeof OrderItemScalarFieldEnum)[keyof typeof OrderItemScalarFieldEnum]
 
 
 export const SortOrder = {

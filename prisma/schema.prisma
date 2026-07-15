@@ -12,6 +12,10 @@ enum Role {
   STAFF
   ADMIN
 }
+enum FulfillmentMethod {
+  DELIVERY
+  SELF_COLLECTION
+}
 
 model User {
   id        String    @id @default(cuid())
@@ -22,6 +26,7 @@ model User {
   addresses Address[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  orders Order[]
 }
 
 model Address {
@@ -86,6 +91,7 @@ model Product {
   description    String?
   attributes     Json
   variantOptions Json?
+  imageUrl       String?
   variants       ProductVariant[]
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
@@ -100,6 +106,7 @@ model ProductVariant {
   price      Float
   stock      Int      @default(0)
   sku        String?
+  imageUrl   String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
@@ -127,4 +134,52 @@ model CategoryProduct {
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([categoryId, productId])
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  PAYMENT_FAILED
+  PROCESSING
+  PACKED
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+model Order {
+  id                 String      @id @default(cuid())
+  userId             String
+  user               User        @relation(fields: [userId], references: [id])
+  status             OrderStatus @default(PENDING_PAYMENT)
+  hitpayPaymentRequestId String?
+  // Shipping address — snapshotted at order time, immutable afterward
+  shippingBlock      String?
+  shippingUnitNumber String?
+  shippingStreet     String?
+  shippingPostalCode String?
+  fulfillmentMethod FulfillmentMethod @default(DELIVERY)
+  shippingFee       Float             @default(0)
+  trackingNumber    String?
+  subtotal           Float
+  gstAmount          Float
+  total              Float
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  items              OrderItem[]
+}
+
+model OrderItem {
+  id               String  @id @default(cuid())
+  orderId          String
+  order            Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productVariantId String
+  productName      String
+  combination      Json
+  price            Float
+  quantity         Int
+  sku              String?
 }
