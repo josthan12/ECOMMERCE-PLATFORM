@@ -7,6 +7,8 @@ import { markOrderFailedAndRestoreStock } from '@/lib/orders'
 import { Prisma } from '@/app/generated/prisma/client'
 
 export async function POST(req: Request) {
+  const SHIPPING_FEE = Number(process.env.SHIPPING_FEE_SGD ?? 5.50)
+  const SELF_COLLECTION_FEE = Number(process.env.SELF_COLLECTION_FEE_SGD ?? 0)
   const { userId: clerkId } = await auth()
   if (!clerkId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -18,16 +20,17 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json()
-  const { items, shippingBlock, shippingUnitNumber, shippingStreet, shippingPostalCode } = body
+  const { items, fulfillmentMethod, shippingBlock, shippingUnitNumber, shippingStreet, shippingPostalCode } = body
 
   if (!Array.isArray(items) || items.length === 0) {
     return NextResponse.json({ error: 'Cart is empty' }, { status: 400 })
   }
-  if (!shippingBlock || !shippingStreet || !shippingPostalCode) {
-    return NextResponse.json({ error: 'Missing shipping address fields' }, { status: 400 })
+  if (fulfillmentMethod !== 'DELIVERY' && fulfillmentMethod !== 'SELF_COLLECTION') {
+    return NextResponse.json({ error: 'Invalid fulfillment method' }, { status: 400 })
   }
 
   const validationError = validateShippingAddress({
+    fulfillmentMethod,
     shippingBlock,
     shippingUnitNumber,
     shippingStreet,
@@ -84,33 +87,37 @@ export async function POST(req: Request) {
       }
 
       const subtotal = orderItemsData.reduce((sum, i) => sum + i.price * i.quantity, 0)
-      const { gst, total } = calculateTotalWithGST(subtotal)
+      const shippingFee = fulfillmentMethod === 'SELF_COLLECTION' ? SELF_COLLECTION_FEE : SHIPPING_FEE
+      const { gst, total } = calculateTotalWithGST(subtotal, shippingFee)
 
       return tx.order.create({
         data: {
           userId: user.id,
-          shippingBlock,
-          shippingUnitNumber,
-          shippingStreet,
-          shippingPostalCode,
+          fulfillmentMethod,
+          shippingBlock: fulfillmentMethod === 'SELF_COLLECTION' ? null : shippingBlock,
+          shippingUnitNumber: fulfillmentMethod === 'SELF_COLLECTION' ? null : (shippingUnitNumber || null),
+          shippingStreet: fulfillmentMethod === 'SELF_COLLECTION' ? null : shippingStreet,
+          shippingPostalCode: fulfillmentMethod === 'SELF_COLLECTION' ? null : shippingPostalCode,
           subtotal,
+          shippingFee,
           gstAmount: gst,
           total,
           items: { create: orderItemsData },
         },
       })
-    })
+      })
 
+  
     orderId = order.id
 
     const hitpayParams = new URLSearchParams({
       amount: order.total.toString(),
       currency: 'SGD',
       email: user.email,
-      'payment_methods[]': 'card',
+      'payment_methods[]': "paynow_online",
       reference_number: order.id,
       redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success?orderId=${order.id}`,
-      send_email:'true',
+      send_email:'false',
       expires_after:'5 mins',
     })
     if (user.name) {

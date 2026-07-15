@@ -10,15 +10,12 @@ Generated client output: `app/generated/prisma/`
 
 ### Role
 Used on `User.role` to control access.
-```
 CUSTOMER   ← default for all signups
 STAFF      ← future: order fulfillment access
 ADMIN      ← full admin panel access
-```
 
 ### FieldType
 Used on `ProductField.type` to define what kind of input to render.
-```
 TEXT        → standard text input
 RICH_TEXT   → multiline / formatted text
 NUMBER      → numeric input
@@ -33,7 +30,25 @@ VIDEO       → video upload
 JSON        → raw JSON input
 TAG         → comma-separated tags
 COLOR       → color picker (hex)
-```
+
+### OrderStatus
+Used on `Order.status`. Full lifecycle defined upfront (Phase 4 only used the first three) to avoid a second migration when Phase 5 fulfillment work began.
+PENDING_PAYMENT
+PAID
+PAYMENT_FAILED
+PROCESSING
+PACKED
+SHIPPED
+DELIVERED
+COMPLETED
+CANCELLED
+REFUNDED
+**Note (Phase 5):** valid transitions between these are branched by `Order.fulfillmentMethod` at the application layer (not enforced by the enum itself) — see `Order` model below and API_REFERENCE.md. `CANCELLED` is defined in the enum but has no code path that sets it — order cancellation was deliberately not built as a feature; only `REFUNDED` is reachable, and only via manual admin action.
+
+### FulfillmentMethod
+Used on `Order.fulfillmentMethod`. Added Phase 5.
+DELIVERY          ← shipped by the store, flat fee applies (SHIPPING_FEE_SGD)
+SELF_COLLECTION   ← customer picks up in person, free by default but fee is config-driven (SELF_COLLECTION_FEE_SGD)
 
 ---
 
@@ -52,7 +67,7 @@ Synced from Clerk via webhook on `user.created`. Stores app-specific data only �
 | createdAt | DateTime | Auto |
 | updatedAt | DateTime | Auto |
 
-Relations: `addresses Address[]`
+Relations: `addresses Address[]`, `orders Order[]`
 
 ---
 
@@ -171,21 +186,8 @@ Junction table — many-to-many between Category and Product. A product can belo
 | productId | String | FK → Product.id (cascade delete) |
 
 Constraint: `@@unique([categoryId, productId])` — prevents the same product being added twice to the same category (does not limit a product to one category).
-OrderStatus (enum)
-PENDING_PAYMENT
-PAID
-PAYMENT_FAILED
-PROCESSING
-PACKED
-SHIPPED
-DELIVERED
-COMPLETED
-CANCELLED
-REFUNDED
-Full lifecycle defined upfront (Phase 4 only uses the first three) to avoid a second migration when Phase 5 fulfillment work begins.
 
 ---
-
 
 ### Order
 A customer order. Created at checkout with live-verified price/stock; shipping address is snapshotted (not a live FK) so later address-book edits never alter historical orders.
@@ -195,14 +197,17 @@ A customer order. Created at checkout with live-verified price/stock; shipping a
 | id | String (cuid) | Primary key |
 | userId | String | FK → User.id. Required — no guest orders. |
 | status | OrderStatus | Default: PENDING_PAYMENT |
+| fulfillmentMethod | FulfillmentMethod | Default: DELIVERY. Added Phase 5. Determines both the valid status-transition chain and whether a shipping address is required. |
 | hitpayPaymentRequestId | String? | HitPay's own payment request ID; used to poll their Get Payment Status endpoint for reconciliation |
-| shippingBlock | String | Snapshotted at order time |
+| shippingBlock | String? | Snapshotted at order time. **Nullable as of Phase 5** — null for self-collection orders |
 | shippingUnitNumber | String? | Snapshotted at order time; optional (landed properties have no unit) |
-| shippingStreet | String | Snapshotted at order time |
-| shippingPostalCode | String | Snapshotted at order time |
-| subtotal | Float | GST-exclusive |
-| gstAmount | Float | Calculated via `lib/gst.ts` |
-| total | Float | subtotal + gstAmount |
+| shippingStreet | String? | Snapshotted at order time. **Nullable as of Phase 5** — null for self-collection orders |
+| shippingPostalCode | String? | Snapshotted at order time. **Nullable as of Phase 5** — null for self-collection orders |
+| trackingNumber | String? | Added Phase 5. Freely editable by admin at any order status; no format validation (carrier-agnostic, since no courier API is integrated) |
+| subtotal | Float | GST-exclusive, items only |
+| shippingFee | Float | Added Phase 5. Default: 0. Flat delivery fee or self-collection fee, GST-exclusive |
+| gstAmount | Float | Calculated via `lib/gst.ts` on `subtotal + shippingFee` combined (changed Phase 5 — previously subtotal only) |
+| total | Float | subtotal + shippingFee + gstAmount |
 | createdAt | DateTime | Auto |
 | updatedAt | DateTime | Auto |
 
@@ -223,22 +228,24 @@ Line item snapshot — price/name/combination captured live at checkout time, no
 | price | Float | Snapshotted, verified live at checkout (never trusts cart's cached price) |
 | quantity | Int | |
 | sku | String? | Snapshotted |
+
 ---
 
 ## Relationships Diagram
-
-```
 User ──────────────── Address (one to many)
-
+│
+└─────────────── Order (one to many)
+│
+└──── OrderItem (one to many, cascade delete)
 ProductType ─────────── ProductField (one to many, cascade delete)
-     │
-     └─────────────── Product (one to many)
-                          │
-                          └──── ProductVariant (one to many, cascade delete)
-```
+│
+└─────────────── Product (one to many)
+│
+└──── ProductVariant (one to many, cascade delete)
 Category ────────────── CategoryProduct ──────────────── Product
-   (one to many,              (many to one,           (one to many,
-    cascade delete)            cascade delete)          via Product.categoryProducts)
+(one to many,              (many to one,           (one to many,
+cascade delete)            cascade delete)          via Product.categoryProducts)
+
 ---
 
 ## Migrations History
@@ -253,15 +260,15 @@ Category ────────────── CategoryProduct ────
 | add_variant_image_url | Added `ProductVariant.imageUrl` |
 | add_orders | Order, OrderItem models + OrderStatus enum |
 | add_hitpay_payment_request_id | Added `Order.hitpayPaymentRequestId` |
+| add_fulfillment_method_and_shipping | Added `FulfillmentMethod` enum, `Order.fulfillmentMethod`, `Order.shippingFee`, `Order.trackingNumber` |
+| make_shipping_address_optional | Changed `Order.shippingBlock`, `shippingStreet`, `shippingPostalCode` from required to nullable |
 
 ---
 
 ## Planned Models (Not Yet Built)
-
-```
-Shipment          ← courier tracking per order
+Shipment          ← courier tracking per order — DROPPED, see ROADMAP.md Phase 5 (no courier integration planned)
 Payment           ← HitPay transaction references
 Promotion         ← coupons and flash sales
 CMSPage           ← editable static pages (About, FAQ, etc.)
 HomepageSection   ← modular homepage blocks with JSON config
-```
+StoreSettings     ← considered for self-collection address in Phase 5, explicitly rejected as overkill; address is a hardcoded TS constant instead (lib/constants.ts). Revisit only if more store-wide settings accumulate.

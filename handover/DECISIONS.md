@@ -256,3 +256,157 @@ Confirmed via testing: if a customer abandons checkout and never revisits `/chec
 
 Date:
 2026-07-06
+
+---
+
+Decision:
+Vercel Cron job (or any automated background reconciliation) is deferred, not built, despite being scoped as the immediate next task after Session 6.
+
+Reason:
+Two implementation paths were fully scoped: Vercel Cron (limited to once-daily on the project's current Hobby tier — a meaningful weakening of the original "minutes/hours" goal) and a GitHub Actions scheduled workflow (free, tier-independent, can run every few minutes, identified as the better option if this is revisited). Neither was built. Significant time had already gone into this specific gap across sessions, the existing lazy (page-load-triggered) reconciliation already resolves the common case, and the remaining risk — a customer abandoning checkout and never revisiting the confirmation page — was judged acceptable to mitigate with clearer on-page messaging (explicitly telling customers to refresh after completing payment, and not to reuse an old QR code) rather than new infrastructure. This keeps Phase 4 shippable without further delay. Explicitly rejected as an alternative: immediately restoring stock on the cosmetic `status=canceled` redirect — PayNow QR codes remain payable for up to 5 minutes after that redirect fires (no cancel endpoint exists for QR payments), so restoring stock at that point risks overselling if the customer completes payment moments later.
+
+Date:
+2026-07-13
+
+---
+
+Decision:
+Use Resend + React Email for branded transactional emails (order confirmation, payment failed), triggered as a non-blocking side effect after the relevant DB operation resolves, never nested inside a Prisma transaction.
+
+Reason:
+Resend was the provider assumed in prior planning (NEXT_TASK.md) and required no code-level alternative evaluation once the user confirmed they wanted to proceed with it. React Email was chosen over hand-written HTML strings because it's the standard pairing with Resend and easier to iterate on styling. Email sends are deliberately kept outside of DB transactions and wrapped in try/catch that only logs on failure — an external email provider's availability must never affect order-processing correctness (a failed send should never roll back or block a status change). `markOrderFailedAndRestoreStock` in `lib/orders.ts` was chosen as the single trigger point for the payment-failed email specifically because it is already the single centralized place stock restoration happens, covering both the webhook's `failed` path and lazy reconciliation's `expired`/`canceled` path without duplicating the trigger.
+
+Date:
+2026-07-13
+
+---
+
+Decision:
+Reject HitPay's Refund API and reject any order-cancellation feature entirely. Refunds are handled manually — the admin liaises with the customer directly (Telegram/email) and processes the actual refund via HitPay's dashboard or bank transfer, outside the app.
+
+Reason:
+HitPay does have a documented `Create Refund` API endpoint (Payment Request API, PayNow/Card only, confirmed via HitPay's public docs), so automated refunds were technically possible. The admin explicitly chose not to integrate it — refund requests are low-volume enough to handle personally, and doing so avoids building error handling for a real-money external API call (insufficient HitPay balance, refund window expiry, unconfirmed charge, etc.) for a feature that isn't a priority. Order cancellation was rejected outright for the same reason: once an order is confirmed/paid, it stays confirmed in the system; a refund is a separate, manual, out-of-band process, not a status the app itself triggers.
+
+Date:
+2026-07-14
+
+---
+
+Decision:
+"Mark as Refunded" is a manual, admin-triggered, record-keeping-only action. It does not call any HitPay API and does not automatically restore stock.
+
+Reason:
+Given the above, once an admin has manually refunded a customer outside the app, the system still needs *some* way to reflect that — otherwise stock stays permanently locked as "sold" for an order that no longer represents a real sale, `/admin/orders` becomes unreliable as a source of truth, GST/revenue reporting drifts, and there's no audit trail distinguishing a completed sale from a refunded one. A simple status flag solves this without requiring a real payment-API integration. Stock is deliberately NOT auto-restored on refund, because a refund doesn't always mean the item comes back — a faulty-item refund where the customer keeps/discards the item is different from a genuine return, and there's no "Returns" flow (see below) to distinguish the two. Restoring stock automatically risked re-selling inventory that doesn't actually exist. The admin will adjust stock manually, case by case, via Prisma Studio if a refund is genuinely tied to a returned item.
+
+Date:
+2026-07-14
+
+---
+
+Decision:
+Drop "Returns: admin approval flow" from the roadmap entirely, rather than build it as a separate feature.
+
+Reason:
+Given refunds are already handled manually via direct customer contact, a formal in-app Returns approval flow would duplicate that same manual process without adding real value at current scale. If return volume grows enough to need structured tracking later, this can be revisited — but it isn't blocking anything today.
+
+Date:
+2026-07-14
+
+---
+
+Decision:
+Drop courier API integration, shipping label generation, and courier status sync from the roadmap entirely. Replace with a manual, freely-editable tracking number field on `Order`.
+
+Reason:
+The admin self-fulfills all shipping and prints their own shipping labels outside the app — there is no courier account/API to integrate against. Building courier integration would have been speculative work against a system that isn't actually being used. The tracking number field still gives customers *something* to reference (via the order-lifecycle email and their account order page) without requiring any external API.
+
+Date:
+2026-07-14
+
+---
+
+Decision:
+Order fulfillment status transitions are branched by `Order.fulfillmentMethod`. Self-collection orders skip `SHIPPED`/`DELIVERED` and go directly from `PACKED` to `COMPLETED`; delivery orders keep the full original chain.
+
+Reason:
+`SHIPPED`/`DELIVERED` describe a carrier-based delivery event that doesn't apply to a customer physically walking in to collect their order — for self-collection, the meaningful next event after `PACKED` is the customer actually picking it up, which is recorded directly as `COMPLETED`. This was identified only after self-collection existed as a real, buildable option (originally scoped for "later"), requiring both the server-side transition map (`status/route.ts`) and the client-side button logic (`OrderStatusActions.tsx`) to be updated together to stay in sync.
+
+Date:
+2026-07-14
+
+---
+
+Decision:
+Self-collection is built now (checkout toggle, live), not deferred to a future phase as originally scoped.
+
+Reason:
+Mid-session reprioritization — the admin decided self-collection was worth having immediately alongside the shipping-fee/courier-rejection changes, rather than waiting for a dedicated future feature pass. This meant reworking checkout validation, GST calculation, and the `Order` schema (nullable address fields) in the same session rather than as isolated future work.
+
+Date:
+2026-07-14
+
+---
+
+Decision:
+Shipping address fields (`shippingBlock`, `shippingStreet`, `shippingPostalCode`) on `Order` are nullable. `lib/validateAddress.ts`'s `validateShippingAddress()` now requires a `fulfillmentMethod` parameter and short-circuits to valid (no address required) when `SELF_COLLECTION`.
+
+Reason:
+A customer picking up their own order in person has no need to provide a home delivery address. Making these fields required would force meaningless data entry for self-collection orders. This is a breaking signature change to a shared validation function used both client-side (`CheckoutForm.tsx`) and server-side (`app/api/checkout/route.ts`) — both callers were updated together in the same pass to avoid the two drifting out of sync.
+
+Date:
+2026-07-14
+
+---
+
+Decision:
+GST (9%) applies to the flat shipping fee, not just the item subtotal. `lib/gst.ts`'s `calculateTotalWithGST()` now taxes `subtotal + shippingFee` combined.
+
+Reason:
+Explicit confirmation from the admin that shipping is not GST-exempt in this context. The function's signature change (optional second `shippingFee` param, defaulting to `0`) preserves backward compatibility for any caller that doesn't pass it — existing behavior is unchanged unless a fee is explicitly supplied.
+
+Date:
+2026-07-14
+
+---
+
+Decision:
+Self-collection fee defaults to $0 but is read from a dedicated environment variable (`SELF_COLLECTION_FEE_SGD`), not hardcoded to zero in application logic.
+
+Reason:
+The admin wants the option to charge for self-collection in the future without a code change — same reasoning as `SHIPPING_FEE_SGD`. Both fees are exposed via a public `GET /api/checkout/fulfillment-fees` route (env-var-backed, read live per-request) so the checkout UI never shows a stale price after a `.env` change + server restart.
+
+Date:
+2026-07-14
+
+---
+
+Decision:
+The self-collection pickup address is a hardcoded TypeScript constant (`SELF_COLLECTION_ADDRESS` in `lib/constants.ts`), not a database-backed, admin-editable setting.
+
+Reason:
+A `StoreSettings` Prisma model + admin settings page + API route was scoped in detail as the "properly editable" option, but explicitly rejected by the admin as overkill for a single value that changes rarely, if ever. The admin is comfortable editing the constant directly and redeploying when needed. If more store-wide settings accumulate in the future (contact info, business hours, etc.), a proper `StoreSettings` model should be revisited at that point rather than continuing to add one-off constants.
+
+Date:
+2026-07-14
+
+---
+
+Decision:
+`expires_after` on HitPay Payment Request creation is `'5 mins'`, not `'5 min'`.
+
+Reason:
+Supersedes the 2026-07-06 decision above. Re-confirmed by the admin as the correct, working value — the earlier `'5 min'` finding from 2026-07-06 is superseded. The original decision entry is left in place rather than edited, per this file's convention of preserving decision history, but is no longer accurate. Note: this value has now changed once already based on empirical testing; if it needs correcting again in the future, an inline code comment at the call site in `checkout/route.ts` (not just a note in this file) is worth adding so the discrepancy is visible without cross-referencing session history.
+
+Date:
+2026-07-14
+
+---
+
+Decision:
+Bulk order actions (mark packed in bulk, CSV export) are deferred, not built, despite being in the original Phase 5 scope.
+
+Reason:
+Not currently needed at present order volume. Unlike the items dropped outright above (courier integration, Returns flow, HitPay Refund API), this one is explicitly left open to build later if order volume grows enough that one-at-a-time admin actions become a real bottleneck.
+
+Date:
+2026-07-14

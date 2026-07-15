@@ -18,6 +18,14 @@ export const Role = {
 export type Role = (typeof Role)[keyof typeof Role]
 
 
+export const FulfillmentMethod = {
+  DELIVERY: 'DELIVERY',
+  SELF_COLLECTION: 'SELF_COLLECTION'
+} as const
+
+export type FulfillmentMethod = (typeof FulfillmentMethod)[keyof typeof FulfillmentMethod]
+
+
 export const FieldType = {
   TEXT: 'TEXT',
   RICH_TEXT: 'RICH_TEXT',

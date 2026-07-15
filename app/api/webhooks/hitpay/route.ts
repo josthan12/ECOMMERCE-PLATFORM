@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { markOrderFailedAndRestoreStock } from '@/lib/orders'
+import { sendOrderConfirmationEmail } from '@/lib/email/sendOrderEmail';
 
 export async function POST(req: Request) {
   const rawBody = await req.text()
@@ -51,13 +52,14 @@ export async function POST(req: Request) {
   }
 
   if (status === 'completed') {
-    await prisma.order.update({
-      where: { id: orderId },
-      data: { status: 'PAID' },
-    })
-  } else if (status === 'failed') {
-    await markOrderFailedAndRestoreStock(orderId)
-  }
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: 'PAID' },
+  })
+  await sendOrderConfirmationEmail(order.id)
+} else if (status === 'failed') {
+  await markOrderFailedAndRestoreStock(orderId)
+}
 
   return NextResponse.json({ received: true }, { status: 200 })
 }

@@ -1,10 +1,16 @@
 export function validateShippingAddress(input: {
-  shippingBlock: string
+  fulfillmentMethod: 'DELIVERY' | 'SELF_COLLECTION'
+  shippingBlock?: string | null
   shippingUnitNumber?: string | null
-  shippingStreet: string
-  shippingPostalCode: string
+  shippingStreet?: string | null
+  shippingPostalCode?: string | null
 }): string | null {
-  const { shippingBlock, shippingUnitNumber, shippingStreet, shippingPostalCode } = input
+  const { fulfillmentMethod, shippingBlock, shippingUnitNumber, shippingStreet, shippingPostalCode } = input
+
+  // Self-collection orders never need a shipping address.
+  if (fulfillmentMethod === 'SELF_COLLECTION') {
+    return null
+  }
 
   if (!shippingBlock?.trim()) {
     return 'Block number is required.'

@@ -232,8 +232,101 @@ Creates a new category with optional product assignments in a single nested Pris
 **Response:** The created `Category` with nested `products` (each wrapping the related `product`).
 
 **File:** `app/api/admin/categories/route.ts`
+
 ---
+
+## Admin — Orders
+
+### GET /admin/orders (page, not an API route)
+Server Component. Fetches all orders directly via Prisma — no API route, consistent with the "Server Components can use Prisma directly" convention. Supports `?status=` (any `OrderStatus`, or omitted for all) and `?sort=` (`newest` default, `oldest`, `total_desc`, `total_asc`) via `searchParams`, applied directly in the Prisma query (`where`/`orderBy`), not in-memory.
+
+**File:** `app/admin/orders/page.tsx`
+
+---
+
+### GET /admin/orders/[id] (page, not an API route)
+Server Component. Fetches one order by `id` with `items` and `user` included. Calls `notFound()` if the ID doesn't match any order.
+
+**File:** `app/admin/orders/[id]/page.tsx`
+
+---
+
+### PUT /api/admin/orders/[id]/status
+Advances an order exactly one fulfillment stage forward. Never skips stages, never reverses.
+
+**Auth:** Admin only.
+
+**Behavior:**
+- Looks up the order's current `status` and `fulfillmentMethod`
+- Applies one of two transition maps depending on `fulfillmentMethod`:
+  - `DELIVERY`: `PAID→PROCESSING→PACKED→SHIPPED→DELIVERED→COMPLETED`
+  - `SELF_COLLECTION`: `PAID→PROCESSING→PACKED→COMPLETED` (skips `SHIPPED`/`DELIVERED`)
+- `PENDING_PAYMENT`, `PAYMENT_FAILED`, `CANCELLED`, `REFUNDED` have no valid next stage — request rejected with `400`
+- On success, if the new status is `SHIPPED` (delivery) or `COMPLETED` (self-collection, coming from `PACKED`), triggers the corresponding notification email (`sendShippingNotificationEmail` / `sendReadyForCollectionEmail`) as a separate statement after the DB write resolves — never nested inside the Prisma call
+
+**Response:** `200` — `{ "id": "cuid", "status": "PROCESSING" }`
+
+**Errors:** `401` (unauthenticated), `403` (non-admin), `404` (order not found), `400` (no valid transition from current status)
+
+**File:** `app/api/admin/orders/[id]/status/route.ts`
+
+---
+
+### PUT /api/admin/orders/[id]/refund
+Manually marks an order as `Refunded`. **Record-keeping only** — does not call any HitPay API, does not process any payment, does not restore stock.
+
+**Auth:** Admin only.
+
+**Behavior:**
+- Valid only from `PAID`, `PROCESSING`, `PACKED`, `SHIPPED`, `DELIVERED`, or `COMPLETED` (i.e. any order that was actually paid for, at any fulfillment stage)
+- Sets `Order.status = REFUNDED`, nothing else
+- The actual refund is expected to have already happened outside the app (admin liaises with the customer directly via Telegram/email, processes the refund via HitPay's dashboard or bank transfer)
+
+**Response:** `200` — `{ "id": "cuid", "status": "REFUNDED" }`
+
+**Errors:** `401`, `403`, `404`, `400` (order status isn't refundable)
+
+**File:** `app/api/admin/orders/[id]/refund/route.ts`
+
+---
+
+### PUT /api/admin/orders/[id]/tracking
+Sets or updates an order's tracking number. Freely editable at any order status — not gated to a specific fulfillment stage.
+
+**Auth:** Admin only.
+
+**Request body:**
+```json
+{ "trackingNumber": "SF1234567890SG" }
+```
+
+**Notes:**
+- No format validation — carrier-agnostic, since no courier API is integrated
+- Empty string is treated as clearing the field (`null`)
+
+**Response:** `200` — `{ "id": "cuid", "trackingNumber": "SF1234567890SG" }`
+
+**Errors:** `401`, `403`, `404`
+
+**File:** `app/api/admin/orders/[id]/tracking/route.ts`
+
+---
+
 ## Checkout
+
+### GET /api/checkout/fulfillment-fees
+Returns the current flat fees for each fulfillment method, read live from environment variables. Public — no auth required (same trust level as prices shown on product pages).
+
+**Response:**
+```json
+{ "delivery": 5.50, "selfCollection": 0 }
+```
+
+**Why this exists:** lets the checkout form always show the real, current fee without baking it into the client bundle at build time (`NEXT_PUBLIC_*` vars are frozen at build time; this route reads `process.env` per-request, so changing `.env` + restarting the server is enough — no rebuild needed).
+
+**File:** `app/api/checkout/fulfillment-fees/route.ts`
+
+---
 
 ### POST /api/checkout
 Creates an Order from the customer's cart, verifying price/stock live against the DB (never trusts client-supplied values), then creates a HitPay Payment Request and returns its hosted checkout URL.
@@ -244,25 +337,29 @@ Creates an Order from the customer's cart, verifying price/stock live against th
 ```json
 {
   "items": [{ "variantId": "cuid", "quantity": 2 }],
+  "fulfillmentMethod": "DELIVERY",
   "shippingBlock": "123",
   "shippingUnitNumber": "#03-12",
   "shippingStreet": "Example Street",
   "shippingPostalCode": "123456"
 }
 ```
+For `fulfillmentMethod: "SELF_COLLECTION"`, all `shipping*` fields are ignored (can be omitted or `null`) — address is not required.
 
 **Behavior:**
-- Validates shipping address format (`lib/validateAddress.ts`)
+- Validates `fulfillmentMethod` is one of `DELIVERY`/`SELF_COLLECTION`
+- Validates shipping address format (`lib/validateAddress.ts`) — **now branches on `fulfillmentMethod`**: short-circuits to valid (no error) when `SELF_COLLECTION`, otherwise validates as before
 - Atomically checks and decrements stock per variant — rejects `409` if insufficient
 - Snapshots live price/product name/combination onto each `OrderItem`
-- Calculates GST via `lib/gst.ts`
-- Creates `Order` (status `PENDING_PAYMENT`) + nested `OrderItem[]` in one transaction
-- Calls HitPay to create a Payment Request (form-urlencoded, PayNow only, `expires_after: '5 min'`)
+- Computes `shippingFee` from `SHIPPING_FEE_SGD` or `SELF_COLLECTION_FEE_SGD` depending on `fulfillmentMethod`
+- Calculates GST via `lib/gst.ts` on `subtotal + shippingFee` combined (changed Phase 5)
+- Creates `Order` (status `PENDING_PAYMENT`, `fulfillmentMethod`, `shippingFee`, nulled address fields for self-collection) + nested `OrderItem[]` in one transaction
+- Calls HitPay to create a Payment Request (form-urlencoded, PayNow only, `expires_after: '5 mins'`) — amount is `order.total`, which already includes `shippingFee`
 - If the HitPay call fails after Order creation, runs a compensating transaction (`lib/orders.ts` → `markOrderFailedAndRestoreStock`)
 
 **Response:** `201` — `{ "orderId": "cuid", "checkoutUrl": "https://checkout.sandbox.hit-pay.com/..." }`
 
-**Errors:** `400` (empty cart / invalid address / invalid item), `409` (out of stock), `502` (HitPay request creation failed)
+**Errors:** `400` (empty cart / invalid fulfillment method / invalid address / invalid item), `409` (out of stock), `502` (HitPay request creation failed)
 
 **File:** `app/api/checkout/route.ts`
 
@@ -280,10 +377,10 @@ Receives HitPay's payment status webhook, verifies its signature, and updates th
 **Behavior:**
 - Looks up `Order` by `reference_number` (our `Order.id`)
 - Idempotent — no-ops if the order is no longer `PENDING_PAYMENT`
-- `status: "completed"` → `Order.status = PAID`
+- `status: "completed"` → `Order.status = PAID`, triggers `sendOrderConfirmationEmail`
 - `status: "failed"` → `markOrderFailedAndRestoreStock(orderId)`
 
-**Note:** HitPay does not fire this webhook for expired or cancelled requests — only genuine `completed`/`failed` transitions. Expiry is instead handled by lazy reconciliation on the order confirmation page (see `app/checkout/success/page.tsx`), soon to be supplemented by a scheduled cron job.
+**Note:** HitPay does not fire this webhook for expired or cancelled requests — only genuine `completed`/`failed` transitions. Expiry is instead handled by lazy reconciliation on the order confirmation page (see `app/checkout/success/page.tsx`).
 
 **Response:** `200` on success/no-op, `401` (missing/invalid signature), `404` (no matching order)
 
@@ -291,22 +388,23 @@ Receives HitPay's payment status webhook, verifies its signature, and updates th
 
 ---
 
+## Customer — Account
+
+### GET /account/orders (page, not an API route)
+Server Component, auth-gated (any signed-in user, redirects to `/sign-in?redirect_url=/account/orders` if not). Fetches only `where: { userId: <requesting user's id> }`, sorted `createdAt desc`.
+
+**File:** `app/account/orders/page.tsx`
+
+---
+
+### GET /account/orders/[id] (page, not an API route)
+Server Component, auth-gated. Fetches the order and its items, then checks `order.userId === requesting user's id` — calls `notFound()` (not a redirect or a 403 page) if the order doesn't exist OR belongs to someone else, so a customer can't distinguish "not found" from "not yours" by probing IDs.
+
+**File:** `app/account/orders/[id]/page.tsx`
+
+---
+
 ## Planned API Routes (Not Yet Built)
+GET/PUT    /api/admin/orders             Bulk order actions — deferred, see ROADMAP.md Phase 5
 
-These routes need to be created in upcoming phases:
-
-```
-GET/PUT    /api/admin/orders             Order management  
-POST       /api/admin/orders/[id]/ship   Mark order as shipped
-POST       /api/admin/orders/[id]/refund Issue refund via HitPay
-
-POST       /api/cart                     Add to cart
-GET        /api/cart                     Get cart
-
-POST       /api/checkout                 Create HitPay payment request
-POST       /api/webhooks/hitpay          HitPay payment webhook
-
-GET        /api/account/orders           Customer order history
-```
-
-Note: `GET /api/products` and `GET /api/products/[slug]` (listed in earlier planning) were not built as separate API routes. Public category and product browsing (`/category/[slug]`, `/product/[slug]`) are Server Components that query Prisma directly, consistent with the "Server Components can use Prisma directly" convention in PROJECT_OVERVIEW.md — no API route needed since nothing is mutated. Sort/filter on the category page is handled via `searchParams`, not a query API.
+Note: `GET /api/products` and `GET /api/products/[slug]` (listed in earlier planning) were not built as separate API routes. Public category and product browsing (`/category/[slug]`, `/product/[slug]`) are Server Components that query Prisma directly, consistent with the "Server Components can use Prisma directly" convention — no API route needed since nothing is mutated. Sort/filter on the category page is handled via `searchParams`, not a query API. The same pattern now extends to `/admin/orders`, `/admin/orders/[id]`, `/account/orders`, and `/account/orders/[id]`.

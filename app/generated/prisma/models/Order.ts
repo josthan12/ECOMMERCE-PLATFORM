@@ -27,12 +27,14 @@ export type AggregateOrder = {
 }
 
 export type OrderAvgAggregateOutputType = {
+  shippingFee: number | null
   subtotal: number | null
   gstAmount: number | null
   total: number | null
 }
 
 export type OrderSumAggregateOutputType = {
+  shippingFee: number | null
   subtotal: number | null
   gstAmount: number | null
   total: number | null
@@ -47,6 +49,9 @@ export type OrderMinAggregateOutputType = {
   shippingUnitNumber: string | null
   shippingStreet: string | null
   shippingPostalCode: string | null
+  fulfillmentMethod: $Enums.FulfillmentMethod | null
+  shippingFee: number | null
+  trackingNumber: string | null
   subtotal: number | null
   gstAmount: number | null
   total: number | null
@@ -63,6 +68,9 @@ export type OrderMaxAggregateOutputType = {
   shippingUnitNumber: string | null
   shippingStreet: string | null
   shippingPostalCode: string | null
+  fulfillmentMethod: $Enums.FulfillmentMethod | null
+  shippingFee: number | null
+  trackingNumber: string | null
   subtotal: number | null
   gstAmount: number | null
   total: number | null
@@ -79,6 +87,9 @@ export type OrderCountAggregateOutputType = {
   shippingUnitNumber: number
   shippingStreet: number
   shippingPostalCode: number
+  fulfillmentMethod: number
+  shippingFee: number
+  trackingNumber: number
   subtotal: number
   gstAmount: number
   total: number
@@ -89,12 +100,14 @@ export type OrderCountAggregateOutputType = {
 
 
 export type OrderAvgAggregateInputType = {
+  shippingFee?: true
   subtotal?: true
   gstAmount?: true
   total?: true
 }
 
 export type OrderSumAggregateInputType = {
+  shippingFee?: true
   subtotal?: true
   gstAmount?: true
   total?: true
@@ -109,6 +122,9 @@ export type OrderMinAggregateInputType = {
   shippingUnitNumber?: true
   shippingStreet?: true
   shippingPostalCode?: true
+  fulfillmentMethod?: true
+  shippingFee?: true
+  trackingNumber?: true
   subtotal?: true
   gstAmount?: true
   total?: true
@@ -125,6 +141,9 @@ export type OrderMaxAggregateInputType = {
   shippingUnitNumber?: true
   shippingStreet?: true
   shippingPostalCode?: true
+  fulfillmentMethod?: true
+  shippingFee?: true
+  trackingNumber?: true
   subtotal?: true
   gstAmount?: true
   total?: true
@@ -141,6 +160,9 @@ export type OrderCountAggregateInputType = {
   shippingUnitNumber?: true
   shippingStreet?: true
   shippingPostalCode?: true
+  fulfillmentMethod?: true
+  shippingFee?: true
+  trackingNumber?: true
   subtotal?: true
   gstAmount?: true
   total?: true
@@ -240,10 +262,13 @@ export type OrderGroupByOutputType = {
   userId: string
   status: $Enums.OrderStatus
   hitpayPaymentRequestId: string | null
-  shippingBlock: string
+  shippingBlock: string | null
   shippingUnitNumber: string | null
-  shippingStreet: string
-  shippingPostalCode: string
+  shippingStreet: string | null
+  shippingPostalCode: string | null
+  fulfillmentMethod: $Enums.FulfillmentMethod
+  shippingFee: number
+  trackingNumber: string | null
   subtotal: number
   gstAmount: number
   total: number
@@ -279,10 +304,13 @@ export type OrderWhereInput = {
   userId?: Prisma.StringFilter<"Order"> | string
   status?: Prisma.EnumOrderStatusFilter<"Order"> | $Enums.OrderStatus
   hitpayPaymentRequestId?: Prisma.StringNullableFilter<"Order"> | string | null
-  shippingBlock?: Prisma.StringFilter<"Order"> | string
+  shippingBlock?: Prisma.StringNullableFilter<"Order"> | string | null
   shippingUnitNumber?: Prisma.StringNullableFilter<"Order"> | string | null
-  shippingStreet?: Prisma.StringFilter<"Order"> | string
-  shippingPostalCode?: Prisma.StringFilter<"Order"> | string
+  shippingStreet?: Prisma.StringNullableFilter<"Order"> | string | null
+  shippingPostalCode?: Prisma.StringNullableFilter<"Order"> | string | null
+  fulfillmentMethod?: Prisma.EnumFulfillmentMethodFilter<"Order"> | $Enums.FulfillmentMethod
+  shippingFee?: Prisma.FloatFilter<"Order"> | number
+  trackingNumber?: Prisma.StringNullableFilter<"Order"> | string | null
   subtotal?: Prisma.FloatFilter<"Order"> | number
   gstAmount?: Prisma.FloatFilter<"Order"> | number
   total?: Prisma.FloatFilter<"Order"> | number
@@ -297,10 +325,13 @@ export type OrderOrderByWithRelationInput = {
   userId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   hitpayPaymentRequestId?: Prisma.SortOrderInput | Prisma.SortOrder
-  shippingBlock?: Prisma.SortOrder
+  shippingBlock?: Prisma.SortOrderInput | Prisma.SortOrder
   shippingUnitNumber?: Prisma.SortOrderInput | Prisma.SortOrder
-  shippingStreet?: Prisma.SortOrder
-  shippingPostalCode?: Prisma.SortOrder
+  shippingStreet?: Prisma.SortOrderInput | Prisma.SortOrder
+  shippingPostalCode?: Prisma.SortOrderInput | Prisma.SortOrder
+  fulfillmentMethod?: Prisma.SortOrder
+  shippingFee?: Prisma.SortOrder
+  trackingNumber?: Prisma.SortOrderInput | Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   gstAmount?: Prisma.SortOrder
   total?: Prisma.SortOrder
@@ -318,10 +349,13 @@ export type OrderWhereUniqueInput = Prisma.AtLeast<{
   userId?: Prisma.StringFilter<"Order"> | string
   status?: Prisma.EnumOrderStatusFilter<"Order"> | $Enums.OrderStatus
   hitpayPaymentRequestId?: Prisma.StringNullableFilter<"Order"> | string | null
-  shippingBlock?: Prisma.StringFilter<"Order"> | string
+  shippingBlock?: Prisma.StringNullableFilter<"Order"> | string | null
   shippingUnitNumber?: Prisma.StringNullableFilter<"Order"> | string | null
-  shippingStreet?: Prisma.StringFilter<"Order"> | string
-  shippingPostalCode?: Prisma.StringFilter<"Order"> | string
+  shippingStreet?: Prisma.StringNullableFilter<"Order"> | string | null
+  shippingPostalCode?: Prisma.StringNullableFilter<"Order"> | string | null
+  fulfillmentMethod?: Prisma.EnumFulfillmentMethodFilter<"Order"> | $Enums.FulfillmentMethod
+  shippingFee?: Prisma.FloatFilter<"Order"> | number
+  trackingNumber?: Prisma.StringNullableFilter<"Order"> | string | null
   subtotal?: Prisma.FloatFilter<"Order"> | number
   gstAmount?: Prisma.FloatFilter<"Order"> | number
   total?: Prisma.FloatFilter<"Order"> | number
@@ -336,10 +370,13 @@ export type OrderOrderByWithAggregationInput = {
   userId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   hitpayPaymentRequestId?: Prisma.SortOrderInput | Prisma.SortOrder
-  shippingBlock?: Prisma.SortOrder
+  shippingBlock?: Prisma.SortOrderInput | Prisma.SortOrder
   shippingUnitNumber?: Prisma.SortOrderInput | Prisma.SortOrder
-  shippingStreet?: Prisma.SortOrder
-  shippingPostalCode?: Prisma.SortOrder
+  shippingStreet?: Prisma.SortOrderInput | Prisma.SortOrder
+  shippingPostalCode?: Prisma.SortOrderInput | Prisma.SortOrder
+  fulfillmentMethod?: Prisma.SortOrder
+  shippingFee?: Prisma.SortOrder
+  trackingNumber?: Prisma.SortOrderInput | Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   gstAmount?: Prisma.SortOrder
   total?: Prisma.SortOrder
@@ -360,10 +397,13 @@ export type OrderScalarWhereWithAggregatesInput = {
   userId?: Prisma.StringWithAggregatesFilter<"Order"> | string
   status?: Prisma.EnumOrderStatusWithAggregatesFilter<"Order"> | $Enums.OrderStatus
   hitpayPaymentRequestId?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
-  shippingBlock?: Prisma.StringWithAggregatesFilter<"Order"> | string
+  shippingBlock?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
   shippingUnitNumber?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
-  shippingStreet?: Prisma.StringWithAggregatesFilter<"Order"> | string
-  shippingPostalCode?: Prisma.StringWithAggregatesFilter<"Order"> | string
+  shippingStreet?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
+  shippingPostalCode?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
+  fulfillmentMethod?: Prisma.EnumFulfillmentMethodWithAggregatesFilter<"Order"> | $Enums.FulfillmentMethod
+  shippingFee?: Prisma.FloatWithAggregatesFilter<"Order"> | number
+  trackingNumber?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
   subtotal?: Prisma.FloatWithAggregatesFilter<"Order"> | number
   gstAmount?: Prisma.FloatWithAggregatesFilter<"Order"> | number
   total?: Prisma.FloatWithAggregatesFilter<"Order"> | number
@@ -375,10 +415,13 @@ export type OrderCreateInput = {
   id?: string
   status?: $Enums.OrderStatus
   hitpayPaymentRequestId?: string | null
-  shippingBlock: string
+  shippingBlock?: string | null
   shippingUnitNumber?: string | null
-  shippingStreet: string
-  shippingPostalCode: string
+  shippingStreet?: string | null
+  shippingPostalCode?: string | null
+  fulfillmentMethod?: $Enums.FulfillmentMethod
+  shippingFee?: number
+  trackingNumber?: string | null
   subtotal: number
   gstAmount: number
   total: number
@@ -393,10 +436,13 @@ export type OrderUncheckedCreateInput = {
   userId: string
   status?: $Enums.OrderStatus
   hitpayPaymentRequestId?: string | null
-  shippingBlock: string
+  shippingBlock?: string | null
   shippingUnitNumber?: string | null
-  shippingStreet: string
-  shippingPostalCode: string
+  shippingStreet?: string | null
+  shippingPostalCode?: string | null
+  fulfillmentMethod?: $Enums.FulfillmentMethod
+  shippingFee?: number
+  trackingNumber?: string | null
   subtotal: number
   gstAmount: number
   total: number
@@ -409,10 +455,13 @@ export type OrderUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
   hitpayPaymentRequestId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingBlock?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingBlock?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   shippingUnitNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingStreet?: Prisma.StringFieldUpdateOperationsInput | string
-  shippingPostalCode?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingStreet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shippingPostalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fulfillmentMethod?: Prisma.EnumFulfillmentMethodFieldUpdateOperationsInput | $Enums.FulfillmentMethod
+  shippingFee?: Prisma.FloatFieldUpdateOperationsInput | number
+  trackingNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   gstAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   total?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -427,10 +476,13 @@ export type OrderUncheckedUpdateInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
   hitpayPaymentRequestId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingBlock?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingBlock?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   shippingUnitNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingStreet?: Prisma.StringFieldUpdateOperationsInput | string
-  shippingPostalCode?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingStreet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shippingPostalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fulfillmentMethod?: Prisma.EnumFulfillmentMethodFieldUpdateOperationsInput | $Enums.FulfillmentMethod
+  shippingFee?: Prisma.FloatFieldUpdateOperationsInput | number
+  trackingNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   gstAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   total?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -444,10 +496,13 @@ export type OrderCreateManyInput = {
   userId: string
   status?: $Enums.OrderStatus
   hitpayPaymentRequestId?: string | null
-  shippingBlock: string
+  shippingBlock?: string | null
   shippingUnitNumber?: string | null
-  shippingStreet: string
-  shippingPostalCode: string
+  shippingStreet?: string | null
+  shippingPostalCode?: string | null
+  fulfillmentMethod?: $Enums.FulfillmentMethod
+  shippingFee?: number
+  trackingNumber?: string | null
   subtotal: number
   gstAmount: number
   total: number
@@ -459,10 +514,13 @@ export type OrderUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
   hitpayPaymentRequestId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingBlock?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingBlock?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   shippingUnitNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingStreet?: Prisma.StringFieldUpdateOperationsInput | string
-  shippingPostalCode?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingStreet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shippingPostalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fulfillmentMethod?: Prisma.EnumFulfillmentMethodFieldUpdateOperationsInput | $Enums.FulfillmentMethod
+  shippingFee?: Prisma.FloatFieldUpdateOperationsInput | number
+  trackingNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   gstAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   total?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -475,10 +533,13 @@ export type OrderUncheckedUpdateManyInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
   hitpayPaymentRequestId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingBlock?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingBlock?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   shippingUnitNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingStreet?: Prisma.StringFieldUpdateOperationsInput | string
-  shippingPostalCode?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingStreet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shippingPostalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fulfillmentMethod?: Prisma.EnumFulfillmentMethodFieldUpdateOperationsInput | $Enums.FulfillmentMethod
+  shippingFee?: Prisma.FloatFieldUpdateOperationsInput | number
+  trackingNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   gstAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   total?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -505,6 +566,9 @@ export type OrderCountOrderByAggregateInput = {
   shippingUnitNumber?: Prisma.SortOrder
   shippingStreet?: Prisma.SortOrder
   shippingPostalCode?: Prisma.SortOrder
+  fulfillmentMethod?: Prisma.SortOrder
+  shippingFee?: Prisma.SortOrder
+  trackingNumber?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   gstAmount?: Prisma.SortOrder
   total?: Prisma.SortOrder
@@ -513,6 +577,7 @@ export type OrderCountOrderByAggregateInput = {
 }
 
 export type OrderAvgOrderByAggregateInput = {
+  shippingFee?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   gstAmount?: Prisma.SortOrder
   total?: Prisma.SortOrder
@@ -527,6 +592,9 @@ export type OrderMaxOrderByAggregateInput = {
   shippingUnitNumber?: Prisma.SortOrder
   shippingStreet?: Prisma.SortOrder
   shippingPostalCode?: Prisma.SortOrder
+  fulfillmentMethod?: Prisma.SortOrder
+  shippingFee?: Prisma.SortOrder
+  trackingNumber?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   gstAmount?: Prisma.SortOrder
   total?: Prisma.SortOrder
@@ -543,6 +611,9 @@ export type OrderMinOrderByAggregateInput = {
   shippingUnitNumber?: Prisma.SortOrder
   shippingStreet?: Prisma.SortOrder
   shippingPostalCode?: Prisma.SortOrder
+  fulfillmentMethod?: Prisma.SortOrder
+  shippingFee?: Prisma.SortOrder
+  trackingNumber?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   gstAmount?: Prisma.SortOrder
   total?: Prisma.SortOrder
@@ -551,6 +622,7 @@ export type OrderMinOrderByAggregateInput = {
 }
 
 export type OrderSumOrderByAggregateInput = {
+  shippingFee?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   gstAmount?: Prisma.SortOrder
   total?: Prisma.SortOrder
@@ -607,6 +679,10 @@ export type EnumOrderStatusFieldUpdateOperationsInput = {
   set?: $Enums.OrderStatus
 }
 
+export type EnumFulfillmentMethodFieldUpdateOperationsInput = {
+  set?: $Enums.FulfillmentMethod
+}
+
 export type OrderCreateNestedOneWithoutItemsInput = {
   create?: Prisma.XOR<Prisma.OrderCreateWithoutItemsInput, Prisma.OrderUncheckedCreateWithoutItemsInput>
   connectOrCreate?: Prisma.OrderCreateOrConnectWithoutItemsInput
@@ -625,10 +701,13 @@ export type OrderCreateWithoutUserInput = {
   id?: string
   status?: $Enums.OrderStatus
   hitpayPaymentRequestId?: string | null
-  shippingBlock: string
+  shippingBlock?: string | null
   shippingUnitNumber?: string | null
-  shippingStreet: string
-  shippingPostalCode: string
+  shippingStreet?: string | null
+  shippingPostalCode?: string | null
+  fulfillmentMethod?: $Enums.FulfillmentMethod
+  shippingFee?: number
+  trackingNumber?: string | null
   subtotal: number
   gstAmount: number
   total: number
@@ -641,10 +720,13 @@ export type OrderUncheckedCreateWithoutUserInput = {
   id?: string
   status?: $Enums.OrderStatus
   hitpayPaymentRequestId?: string | null
-  shippingBlock: string
+  shippingBlock?: string | null
   shippingUnitNumber?: string | null
-  shippingStreet: string
-  shippingPostalCode: string
+  shippingStreet?: string | null
+  shippingPostalCode?: string | null
+  fulfillmentMethod?: $Enums.FulfillmentMethod
+  shippingFee?: number
+  trackingNumber?: string | null
   subtotal: number
   gstAmount: number
   total: number
@@ -687,10 +769,13 @@ export type OrderScalarWhereInput = {
   userId?: Prisma.StringFilter<"Order"> | string
   status?: Prisma.EnumOrderStatusFilter<"Order"> | $Enums.OrderStatus
   hitpayPaymentRequestId?: Prisma.StringNullableFilter<"Order"> | string | null
-  shippingBlock?: Prisma.StringFilter<"Order"> | string
+  shippingBlock?: Prisma.StringNullableFilter<"Order"> | string | null
   shippingUnitNumber?: Prisma.StringNullableFilter<"Order"> | string | null
-  shippingStreet?: Prisma.StringFilter<"Order"> | string
-  shippingPostalCode?: Prisma.StringFilter<"Order"> | string
+  shippingStreet?: Prisma.StringNullableFilter<"Order"> | string | null
+  shippingPostalCode?: Prisma.StringNullableFilter<"Order"> | string | null
+  fulfillmentMethod?: Prisma.EnumFulfillmentMethodFilter<"Order"> | $Enums.FulfillmentMethod
+  shippingFee?: Prisma.FloatFilter<"Order"> | number
+  trackingNumber?: Prisma.StringNullableFilter<"Order"> | string | null
   subtotal?: Prisma.FloatFilter<"Order"> | number
   gstAmount?: Prisma.FloatFilter<"Order"> | number
   total?: Prisma.FloatFilter<"Order"> | number
@@ -702,10 +787,13 @@ export type OrderCreateWithoutItemsInput = {
   id?: string
   status?: $Enums.OrderStatus
   hitpayPaymentRequestId?: string | null
-  shippingBlock: string
+  shippingBlock?: string | null
   shippingUnitNumber?: string | null
-  shippingStreet: string
-  shippingPostalCode: string
+  shippingStreet?: string | null
+  shippingPostalCode?: string | null
+  fulfillmentMethod?: $Enums.FulfillmentMethod
+  shippingFee?: number
+  trackingNumber?: string | null
   subtotal: number
   gstAmount: number
   total: number
@@ -719,10 +807,13 @@ export type OrderUncheckedCreateWithoutItemsInput = {
   userId: string
   status?: $Enums.OrderStatus
   hitpayPaymentRequestId?: string | null
-  shippingBlock: string
+  shippingBlock?: string | null
   shippingUnitNumber?: string | null
-  shippingStreet: string
-  shippingPostalCode: string
+  shippingStreet?: string | null
+  shippingPostalCode?: string | null
+  fulfillmentMethod?: $Enums.FulfillmentMethod
+  shippingFee?: number
+  trackingNumber?: string | null
   subtotal: number
   gstAmount: number
   total: number
@@ -750,10 +841,13 @@ export type OrderUpdateWithoutItemsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
   hitpayPaymentRequestId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingBlock?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingBlock?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   shippingUnitNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingStreet?: Prisma.StringFieldUpdateOperationsInput | string
-  shippingPostalCode?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingStreet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shippingPostalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fulfillmentMethod?: Prisma.EnumFulfillmentMethodFieldUpdateOperationsInput | $Enums.FulfillmentMethod
+  shippingFee?: Prisma.FloatFieldUpdateOperationsInput | number
+  trackingNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   gstAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   total?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -767,10 +861,13 @@ export type OrderUncheckedUpdateWithoutItemsInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
   hitpayPaymentRequestId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingBlock?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingBlock?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   shippingUnitNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingStreet?: Prisma.StringFieldUpdateOperationsInput | string
-  shippingPostalCode?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingStreet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shippingPostalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fulfillmentMethod?: Prisma.EnumFulfillmentMethodFieldUpdateOperationsInput | $Enums.FulfillmentMethod
+  shippingFee?: Prisma.FloatFieldUpdateOperationsInput | number
+  trackingNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   gstAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   total?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -782,10 +879,13 @@ export type OrderCreateManyUserInput = {
   id?: string
   status?: $Enums.OrderStatus
   hitpayPaymentRequestId?: string | null
-  shippingBlock: string
+  shippingBlock?: string | null
   shippingUnitNumber?: string | null
-  shippingStreet: string
-  shippingPostalCode: string
+  shippingStreet?: string | null
+  shippingPostalCode?: string | null
+  fulfillmentMethod?: $Enums.FulfillmentMethod
+  shippingFee?: number
+  trackingNumber?: string | null
   subtotal: number
   gstAmount: number
   total: number
@@ -797,10 +897,13 @@ export type OrderUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
   hitpayPaymentRequestId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingBlock?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingBlock?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   shippingUnitNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingStreet?: Prisma.StringFieldUpdateOperationsInput | string
-  shippingPostalCode?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingStreet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shippingPostalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fulfillmentMethod?: Prisma.EnumFulfillmentMethodFieldUpdateOperationsInput | $Enums.FulfillmentMethod
+  shippingFee?: Prisma.FloatFieldUpdateOperationsInput | number
+  trackingNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   gstAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   total?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -813,10 +916,13 @@ export type OrderUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
   hitpayPaymentRequestId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingBlock?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingBlock?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   shippingUnitNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingStreet?: Prisma.StringFieldUpdateOperationsInput | string
-  shippingPostalCode?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingStreet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shippingPostalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fulfillmentMethod?: Prisma.EnumFulfillmentMethodFieldUpdateOperationsInput | $Enums.FulfillmentMethod
+  shippingFee?: Prisma.FloatFieldUpdateOperationsInput | number
+  trackingNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   gstAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   total?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -829,10 +935,13 @@ export type OrderUncheckedUpdateManyWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
   hitpayPaymentRequestId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingBlock?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingBlock?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   shippingUnitNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  shippingStreet?: Prisma.StringFieldUpdateOperationsInput | string
-  shippingPostalCode?: Prisma.StringFieldUpdateOperationsInput | string
+  shippingStreet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shippingPostalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fulfillmentMethod?: Prisma.EnumFulfillmentMethodFieldUpdateOperationsInput | $Enums.FulfillmentMethod
+  shippingFee?: Prisma.FloatFieldUpdateOperationsInput | number
+  trackingNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
   gstAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   total?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -880,6 +989,9 @@ export type OrderSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   shippingUnitNumber?: boolean
   shippingStreet?: boolean
   shippingPostalCode?: boolean
+  fulfillmentMethod?: boolean
+  shippingFee?: boolean
+  trackingNumber?: boolean
   subtotal?: boolean
   gstAmount?: boolean
   total?: boolean
@@ -899,6 +1011,9 @@ export type OrderSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   shippingUnitNumber?: boolean
   shippingStreet?: boolean
   shippingPostalCode?: boolean
+  fulfillmentMethod?: boolean
+  shippingFee?: boolean
+  trackingNumber?: boolean
   subtotal?: boolean
   gstAmount?: boolean
   total?: boolean
@@ -916,6 +1031,9 @@ export type OrderSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   shippingUnitNumber?: boolean
   shippingStreet?: boolean
   shippingPostalCode?: boolean
+  fulfillmentMethod?: boolean
+  shippingFee?: boolean
+  trackingNumber?: boolean
   subtotal?: boolean
   gstAmount?: boolean
   total?: boolean
@@ -933,6 +1051,9 @@ export type OrderSelectScalar = {
   shippingUnitNumber?: boolean
   shippingStreet?: boolean
   shippingPostalCode?: boolean
+  fulfillmentMethod?: boolean
+  shippingFee?: boolean
+  trackingNumber?: boolean
   subtotal?: boolean
   gstAmount?: boolean
   total?: boolean
@@ -940,7 +1061,7 @@ export type OrderSelectScalar = {
   updatedAt?: boolean
 }
 
-export type OrderOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "status" | "hitpayPaymentRequestId" | "shippingBlock" | "shippingUnitNumber" | "shippingStreet" | "shippingPostalCode" | "subtotal" | "gstAmount" | "total" | "createdAt" | "updatedAt", ExtArgs["result"]["order"]>
+export type OrderOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "status" | "hitpayPaymentRequestId" | "shippingBlock" | "shippingUnitNumber" | "shippingStreet" | "shippingPostalCode" | "fulfillmentMethod" | "shippingFee" | "trackingNumber" | "subtotal" | "gstAmount" | "total" | "createdAt" | "updatedAt", ExtArgs["result"]["order"]>
 export type OrderInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   items?: boolean | Prisma.Order$itemsArgs<ExtArgs>
@@ -964,10 +1085,13 @@ export type $OrderPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     userId: string
     status: $Enums.OrderStatus
     hitpayPaymentRequestId: string | null
-    shippingBlock: string
+    shippingBlock: string | null
     shippingUnitNumber: string | null
-    shippingStreet: string
-    shippingPostalCode: string
+    shippingStreet: string | null
+    shippingPostalCode: string | null
+    fulfillmentMethod: $Enums.FulfillmentMethod
+    shippingFee: number
+    trackingNumber: string | null
     subtotal: number
     gstAmount: number
     total: number
@@ -1406,6 +1530,9 @@ export interface OrderFieldRefs {
   readonly shippingUnitNumber: Prisma.FieldRef<"Order", 'String'>
   readonly shippingStreet: Prisma.FieldRef<"Order", 'String'>
   readonly shippingPostalCode: Prisma.FieldRef<"Order", 'String'>
+  readonly fulfillmentMethod: Prisma.FieldRef<"Order", 'FulfillmentMethod'>
+  readonly shippingFee: Prisma.FieldRef<"Order", 'Float'>
+  readonly trackingNumber: Prisma.FieldRef<"Order", 'String'>
   readonly subtotal: Prisma.FieldRef<"Order", 'Float'>
   readonly gstAmount: Prisma.FieldRef<"Order", 'Float'>
   readonly total: Prisma.FieldRef<"Order", 'Float'>

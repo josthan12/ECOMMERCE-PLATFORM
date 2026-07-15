@@ -2,41 +2,14 @@ import { auth } from '@clerk/nextjs/server'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { markOrderFailedAndRestoreStock } from '@/lib/orders'
+import { reconcileOrderIfStale } from '@/lib/reconcileOrder'
+
 
 type Props = {
   searchParams: Promise<{ orderId?: string; status?: string }>
 }
 
-async function reconcileIfStale(orderId: string) {
-  const order = await prisma.order.findUnique({ where: { id: orderId } })
 
-  if (!order || order.status !== 'PENDING_PAYMENT' || !order.hitpayPaymentRequestId) {
-    return order
-  }
-
-  const res = await fetch(
-    `${process.env.HITPAY_API_BASE_URL}/payment-requests/${order.hitpayPaymentRequestId}`,
-    { headers: { 'X-BUSINESS-API-KEY': process.env.HITPAY_API_KEY! }, cache: 'no-store' }
-  )
-
-  if (!res.ok) {
-    return order
-  }
-
-  const hitpayData = await res.json()
-  
-  console.log('[hitpay reconcile]', orderId, hitpayData.status, hitpayData)
-
-  if (hitpayData.status === 'completed') {
-    return prisma.order.update({ where: { id: orderId }, data: { status: 'PAID' } })
-  }
-
-  if (['failed', 'canceled', 'expired'].includes(hitpayData.status)) {
-    return markOrderFailedAndRestoreStock(orderId)
-  }
-
-  return order
-}
 
 
 export default async function CheckoutSuccessPage({ searchParams }: Props) {
@@ -56,7 +29,7 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
     notFound()
   }
 
-  const reconciled = await reconcileIfStale(orderId)
+  const reconciled = await reconcileOrderIfStale(orderId)
 
   if (!reconciled || reconciled.userId !== user.id) {
     notFound()
@@ -74,8 +47,10 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
         <h1 className="text-2xl font-semibold mb-2">Payment Cancelled</h1>
         <p className="text-gray-500">Order ID: {orderId}</p>
         <p className="mt-4 text-sm text-gray-600">
-          Your payment was not completed. If you had already scanned a QR code, please
-          allow a few minutes for it to process before trying again.
+          If you already completed the payment (e.g. via the PayNow QR code) before
+          clicking back, this page may not reflect that yet. Please refresh this
+          page after completing payment to see the updated order status. Do not
+          scan or pay using the same QR code again.
         </p>
       </div>
     )

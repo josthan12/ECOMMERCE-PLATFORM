@@ -12,6 +12,10 @@ enum Role {
   STAFF
   ADMIN
 }
+enum FulfillmentMethod {
+  DELIVERY
+  SELF_COLLECTION
+}
 
 model User {
   id        String    @id @default(cuid())
@@ -152,11 +156,13 @@ model Order {
   status             OrderStatus @default(PENDING_PAYMENT)
   hitpayPaymentRequestId String?
   // Shipping address — snapshotted at order time, immutable afterward
-  shippingBlock      String
+  shippingBlock      String?
   shippingUnitNumber String?
-  shippingStreet     String
-  shippingPostalCode String
-
+  shippingStreet     String?
+  shippingPostalCode String?
+  fulfillmentMethod FulfillmentMethod @default(DELIVERY)
+  shippingFee       Float             @default(0)
+  trackingNumber    String?
   subtotal           Float
   gstAmount          Float
   total              Float
