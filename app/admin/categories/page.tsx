@@ -44,7 +44,7 @@ export default async function CategoriesPage() {
                   <td className="px-6 py-4">{category._count.products}</td>
                   <td className="px-6 py-4">
                     <Link
-                      href={`/admin/categories/${category.id}`}
+                      href={`/admin/categories/${category.id}/edit`}
                       className="text-blue-600 hover:underline"
                     >
                       Edit
