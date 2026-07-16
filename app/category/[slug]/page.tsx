@@ -1,8 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
 import type { Metadata } from 'next'
 import BackButton from '../../components/BackButton'
+import ProductCard, { totalStock } from '../../components/ProductCard'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -41,18 +41,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 function minPrice(variants: { price: number }[]) {
   if (variants.length === 0) return 0
   return Math.min(...variants.map((v) => v.price))
-}
-
-function formatPrice(variants: { price: number }[]) {
-  if (variants.length === 0) return '—'
-  const prices = variants.map((v) => v.price)
-  const min = Math.min(...prices)
-  const max = Math.max(...prices)
-  return min === max ? `$${min.toFixed(2)}` : `$${min.toFixed(2)} – $${max.toFixed(2)}`
-}
-
-function totalStock(variants: { stock: number }[]) {
-  return variants.reduce((sum, v) => sum + v.stock, 0)
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
@@ -153,39 +141,9 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           </div>
         ) : (
           <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-            {products.map((product) => {
-              const outOfStock = totalStock(product.variants) === 0
-
-              return (
-                <Link
-                  key={product.id}
-                  href={`/product/${product.slug}`}
-                  className="bg-white rounded-lg shadow overflow-hidden relative block hover:shadow-md transition-shadow"
-                >
-                  {outOfStock && (
-                    <span className="absolute top-2 right-2 bg-gray-800 text-white text-xs px-2 py-1 rounded">
-                      Out of Stock
-                    </span>
-                  )}
-                  <div className="h-40 bg-gray-100">
-                    {product.imageUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={product.imageUrl}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <h2 className="font-medium text-gray-800">{product.name}</h2>
-                    <p className="mt-1 text-sm text-gray-600">
-                      {formatPrice(product.variants)}
-                    </p>
-                  </div>
-                </Link>
-              )
-            })}
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} headingLevel="h2" />
+            ))}
           </div>
         )}
       </div>

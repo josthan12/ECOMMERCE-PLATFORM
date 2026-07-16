@@ -8,6 +8,7 @@ import {
   UserButton,
 } from '@clerk/nextjs'
 import { useCartStore } from '@/lib/store/cart'
+import SearchBar from './SearchBar'
 
 export default function Header() {
   const [hasMounted, setHasMounted] = useState(false)
@@ -18,10 +19,12 @@ export default function Header() {
   }, [])
 
   return (
-    <header className="border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+    <header className="border-b border-gray-200 px-4 py-3 flex items-center gap-4">
       <Link href="/" className="font-semibold text-lg">
         Store
       </Link>
+
+      <SearchBar />
 
       <div className="flex items-center gap-6">
         <Link href="/account/orders">My Orders</Link>
