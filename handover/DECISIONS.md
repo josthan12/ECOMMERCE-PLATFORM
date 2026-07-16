@@ -410,3 +410,47 @@ Not currently needed at present order volume. Unlike the items dropped outright 
 
 Date:
 2026-07-14
+
+---
+
+Decision:
+Reverse the 2026-07-13 decision to defer automatic background reconciliation. It is now built and live, using an external cron-ping service (cron-job.org) hitting a new `/api/cron/reconcile-orders` route every 5 minutes.
+
+Reason:
+The 2026-07-13 deferral accepted a specific, named risk: a customer who abandons checkout and never revisits `/checkout/success` would leave their order stuck at `PENDING_PAYMENT` indefinitely, with stock held. That risk was assessed as low-probability enough to mitigate with clearer on-page messaging instead of new infrastructure. Real usage proved otherwise: the browser's native Back button (as opposed to HitPay's "Back to Merchant" button) bypasses `redirect_url` entirely, meaning `/checkout/success`'s lazy reconciliation never fires for that path at all — this isn't a rare edge case, it's a completely normal way for someone to abandon a payment, and it left orders permanently stuck until manually corrected in Prisma Studio. The original entry is left in place per this file's history-preservation convention, but its conclusion — that lazy reconciliation was sufficient — is superseded by this entry.
+
+Date:
+2026-07-15
+
+---
+
+Decision:
+Use an external cron-ping service (cron-job.org) as the trigger for scheduled reconciliation, rather than GitHub Actions or Vercel Cron — both of which were previously identified (2026-07-13) as the two "real" options.
+
+Reason:
+Both previously-scoped options required either editing CI configuration (GitHub Actions, a `.yml` workflow file + secrets management) or a paid plan upgrade (Vercel Cron on Hobby tier is limited to once-daily, far too infrequent for a 5-minute payment expiry window). A free external cron-ping service achieves the same result — an HTTP call to one protected route on a fixed schedule — with meaningfully less setup: no repo changes, no new paid plan, and the schedule can be changed at any time without a deploy. The underlying reconciliation logic (`lib/reconcileOrder.ts`) is trigger-agnostic, so switching to GitHub Actions or Vercel Cron later remains possible without touching this logic, only the scheduler configuration.
+
+Date:
+2026-07-15
+
+---
+
+Decision:
+The reconciliation cron route (`/api/cron/reconcile-orders`) only reconciles orders older than 6 minutes since creation, and reconciliation is a fixed-interval sweep (every 5 minutes) over all currently-matching orders, not a per-order scheduled check.
+
+Reason:
+HitPay's PayNow requests expire after exactly 5 minutes (`expires_after: '5 mins'`); checking orders younger than that would waste API calls on payments that are still legitimately in progress. A single sweep-based model (query for everything currently stale, reconcile all matches) was chosen over a per-order timer because it requires no additional scheduling infrastructure beyond the one recurring cron call — the tradeoff is that an order which goes stale immediately after a sweep completes won't be caught until the next sweep (~5 minutes later), which was judged an acceptable worst case for this store's order volume.
+
+Date:
+2026-07-15
+
+---
+
+Decision:
+Deploy to Vercel using the default `*.vercel.app` URL, with environment variables matching local `.env` values (same dev Clerk instance, same dev Neon database branch), rather than fully provisioning a distinct production environment or connecting the custom domain in the same pass.
+
+Reason:
+The immediate goal was unblocking the reconciliation cron job with a stable, non-ngrok public URL — ngrok tunnels change on every restart and actively block non-browser automated callers (cron pingers) with a bot-protection interstitial page, making them unsuitable for this specific feature regardless of any other production-readiness work. Fully provisioning a genuine production environment (separate Clerk prod instance, separate Neon prod branch, live HitPay keys, custom domain DNS) is explicitly Phase 9 (Launch) scope per ROADMAP.md and was deliberately not pulled forward in the same session as debugging a specific reconciliation bug, to keep the session's scope contained. This means local dev and the current Vercel deployment share the same underlying database and Clerk instance — acceptable for now, but should be revisited with genuinely separate prod credentials before real customer traffic is expected.
+
+Date:
+2026-07-15

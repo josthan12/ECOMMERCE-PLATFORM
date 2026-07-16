@@ -68,7 +68,7 @@ Phases 0–5 = shippable store (real products, real payments, real order fulfill
 - [x] HMAC signature verification on HitPay webhook
 - [x] Order status: Pending Payment → Paid / Payment Failed
 - [x] Order confirmation page (real breakdown + access control), cancellation messaging updated to instruct customers to refresh after completing payment via QR
-- [~] Automatic background reconciliation for abandoned/expired orders (Vercel Cron) — **deliberately deferred**, not planned for MVP; current lazy/page-load reconciliation only resolves an order if someone revisits its confirmation page. See DECISIONS.md (2026-07-13). Mitigated via clearer cancellation-page messaging instead. Revisit via GitHub Actions scheduled workflow if this becomes a real problem post-launch.
+- [x] Automatic background reconciliation for abandoned/expired orders — **RESOLVED 2026-07-15**. Originally deferred (2026-07-13), reversed after real usage confirmed the browser-Back-button gap was a genuine recurring problem, not a theoretical one. Implemented as a scheduled sweep (`/api/cron/reconcile-orders`, every 5 minutes via cron-job.org) rather than GitHub Actions/Vercel Cron — see DECISIONS.md (2026-07-15).
 - [x] Custom branded order confirmation + payment-failed emails (Resend + React Email) — HitPay's built-in receipt retained as a secondary receipt
 - [x] Test: PayNow QR flow (sandbox) — including abandonment/expiry path, fully verified
 - [ ] Test: Card flow (sandbox) — blocked, requires bank account setup on HitPay account

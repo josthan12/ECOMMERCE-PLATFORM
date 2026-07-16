@@ -715,3 +715,167 @@ self-collection) that emerged mid-session.
 See NEXT_TASK.md — Phase 6 (Search & AI Shopping Assistant) starting point,
 or revisit deferred Bulk Actions if order volume has grown enough to warrant
 it.
+
+## Session 9
+
+Date: 2026-07-15
+
+### Objective
+Fix a real production gap discovered in the field: orders stuck permanently
+at `PENDING_PAYMENT` (holding stock hostage) when a customer abandons a
+PayNow QR payment via the browser Back button, since that path never
+triggers HitPay's `redirect_url` and therefore never reaches the lazy
+reconciliation on `/checkout/success`. This required reversing a previously
+deferred decision (automatic background reconciliation) and, as a
+consequence, deploying the project to Vercel for the first time.
+
+### Completed
+- Root-caused the stuck-order issue: browser Back bypasses `redirect_url`
+  entirely (it's a raw browser-history navigation, not a HitPay-initiated
+  redirect), so `/checkout/success`'s lazy, page-load-triggered
+  reconciliation never runs for that path. This was the exact risk accepted
+  in the 2026-07-13 deferral decision, now confirmed as a real operational
+  problem rather than a theoretical one.
+- Extracted the reconciliation check from `app/checkout/success/page.tsx`
+  into a shared `lib/reconcileOrder.ts` (`reconcileOrderIfStale`), so both
+  the page-load path and the new scheduled path use identical logic
+- New route: `app/api/cron/reconcile-orders/route.ts` — queries all
+  `PENDING_PAYMENT` orders older than 6 minutes (5-minute HitPay expiry +
+  buffer) with a `hitpayPaymentRequestId`, reconciles each via
+  `reconcileOrderIfStale`, protected by a `CRON_SECRET` shared-secret check
+  (header or query param) rather than Clerk auth, since the caller is an
+  external scheduler with no Clerk session
+- **Trigger mechanism decision:** chose a free external cron-ping service
+  (cron-job.org) over GitHub Actions or Vercel Cron — least setup (no repo
+  YAML, no paid tier), same underlying reconciliation logic regardless of
+  which service calls the URL. Schedule set to every 5 minutes.
+- **Reversed the 2026-07-13 deferral decision** — automatic background
+  reconciliation is now live, not deferred. See DECISIONS.md.
+- **Full production deployment to Vercel**, first time this project has had
+  a working production deploy despite Vercel being connected since Session
+  1. Root domain (`biggyballs69.gay`, already live on Cloudflare for
+  Resend email) was considered but **deliberately not connected yet** —
+  running on Vercel's default `*.vercel.app` URL for now, to unblock the
+  cron fix without the added complexity of DNS propagation and Cloudflare
+  proxy configuration in the same session
+- **Environment strategy decided:** Vercel deployment currently uses the
+  *same* values as local `.env` (same dev Clerk instance, same dev Neon
+  database) — a deliberate "get it working" choice, not a mistake. Two
+  separate Clerk webhook endpoints and two separate HitPay webhook
+  endpoints now exist (one pointed at the local ngrok tunnel, one pointed
+  at the Vercel URL), each with its own signing secret, kept in the
+  respective environment's variables only — **local `.env` and Vercel's
+  env vars are not meant to match on webhook secrets or `NEXT_PUBLIC_APP_URL`**,
+  this was explicitly confirmed and is intentional, not a config drift bug
+- End-to-end tested on the live Vercel URL: manually triggered the cron
+  route via direct browser visit, confirmed `{"checked": 11, "succeeded":
+  11, "failed": 0}` on the first real run against 11 pre-existing stuck
+  orders — all flipped to `PAYMENT_FAILED` with stock restored
+- Deliberately tested the abandon-and-expire path end-to-end on production:
+  started a real checkout, abandoned it via Back button (not "Back to
+  Merchant"), waited past the 6-minute threshold, manually triggered the
+  cron route, confirmed the specific order reconciled correctly and the
+  payment-failed email arrived
+
+### Files Modified
+- `lib/reconcileOrder.ts` — created (extracted from `checkout/success/page.tsx`)
+- `app/checkout/success/page.tsx` — local `reconcileIfStale` function
+  replaced with an import from `lib/reconcileOrder.ts`; now-unused
+  `markOrderFailedAndRestoreStock` import removed
+- `app/api/cron/reconcile-orders/route.ts` — created
+- `.env` / `.env.example` (local) — `CRON_SECRET` added
+- Vercel environment variables (production) — full set added, including
+  separate `CLERK_WEBHOOK_SECRET`, `HITPAY_WEBHOOK_SALT`, and
+  `NEXT_PUBLIC_APP_URL` values distinct from local `.env`
+
+### Bugs Found
+- N/A this session in the sense of new code bugs — the core issue was a
+  pre-existing, previously-documented, deliberately-accepted gap
+  (2026-07-13 deferral), not a regression introduced this session
+- Deployment friction (not a code bug): initial cron-job.org test URL had a
+  duplicated `https://https://` protocol typo, and a separate attempt to
+  test against the ngrok tunnel directly hit `ERR_NGROK_6024` (ngrok's
+  free-tier bot-warning interstitial page, which intercepts requests from
+  non-browser clients like cron pingers before they reach the actual app)
+
+### Bugs Fixed
+- Both deployment-friction issues above resolved by correcting the URL typo
+  and by moving off ngrok entirely in favor of the real Vercel URL, rather
+  than working around the ngrok interstitial
+
+### Technical Decisions
+- **Automatic background reconciliation is no longer deferred — it's live.**
+  See DECISIONS.md for the formal reversal of the 2026-07-13 entry.
+- **Reconciliation trigger: external cron-ping service (cron-job.org),
+  not GitHub Actions or Vercel Cron** — chosen for lowest setup overhead;
+  the underlying route logic is trigger-agnostic, so switching services
+  later requires no code change, only re-pointing the scheduler.
+- **Sweep model, not per-order timers.** The cron route doesn't schedule
+  anything per individual order — it's a single fixed-interval sweep that
+  queries for *any* order matching the staleness criteria at the moment it
+  runs, and reconciles all matches found in that pass.
+- **Vercel deployment uses local-equivalent (dev) credentials for now.**
+  Not a mistake — a deliberate choice to get a stable public URL working
+  quickly for the cron fix, deferring the "real" production
+  environment (prod Clerk instance, prod Neon branch, live HitPay keys) to
+  Phase 9 (Launch) as originally scoped in ROADMAP.md. This means the
+  Vercel deployment and local dev currently share the same underlying
+  database — acceptable for now, worth revisiting before genuine customer
+  traffic is expected.
+- **Custom domain connection deliberately deferred**, not because of any
+  blocker, but to keep this session focused on the reconciliation fix
+  without also debugging DNS propagation and Cloudflare-proxy-vs-Vercel
+  interactions in the same sitting.
+
+### Lessons Learned
+- A deferred-risk decision logged in `DECISIONS.md` is worth periodically
+  re-checking against real usage, not just left as permanently accepted —
+  the 2026-07-13 entry correctly identified the exact failure mode (browser
+  back button bypassing `redirect_url`) as a *theoretical* risk at the time;
+  it took real customer-like testing to confirm it as an *actual* recurring
+  problem worth reversing the deferral for.
+- Free tunneling services (ngrok) are fine for browser-driven manual testing
+  but actively hostile to non-browser automated callers (cron pingers,
+  webhooks from third parties) due to bot-protection interstitials — this
+  is a structural reason production-facing automation needs a real
+  deployment, not just "good enough for now" tunnel testing.
+- When a project has two parallel environments (local + deployed) sharing
+  some config but not other config (webhook secrets, app URL), it's worth
+  being explicit and deliberate about exactly which variables are meant to
+  diverge — otherwise it's easy to either break one environment by
+  "syncing" secrets that shouldn't be synced, or to leave a variable
+  un-updated by assuming it should match when it shouldn't.
+
+### Outstanding Issues
+- Custom domain (`biggyballs69.gay`) not yet connected to Vercel — running
+  on the default `*.vercel.app` URL
+- Vercel deployment shares the same dev Clerk instance and dev Neon
+  database as local development — fine for now, needs revisiting before
+  real customer traffic
+- Successful payment path (checkout → PAID → confirmation email) not yet
+  explicitly re-verified on the Vercel deployment specifically — only the
+  failed/expired reconciliation path was tested end-to-end this session
+- Not yet confirmed that every env var (`GST_RATE_PERCENT`,
+  `SHIPPING_FEE_SGD`, `SELF_COLLECTION_FEE_SGD`,
+  `NEXT_PUBLIC_CLERK_SIGN_IN_URL`, `NEXT_PUBLIC_CLERK_SIGN_UP_URL`) made it
+  into Vercel's environment variables — only the ones directly involved in
+  debugging (Clerk/HitPay webhook secrets, `NEXT_PUBLIC_APP_URL`) were
+  explicitly confirmed
+- Not yet confirmed both Clerk and both HitPay webhook endpoints
+  (ngrok + Vercel) show as simultaneously active in their respective
+  dashboards, rather than one having silently replaced the other
+- Admin panel (`/admin/orders`) not yet explicitly re-tested on the Vercel
+  URL
+- Cron route's use of `Promise.allSettled` over all matched stale orders in
+  one invocation could theoretically approach Vercel Hobby tier's 10-second
+  serverless function timeout if the stale-order count grows large (e.g.
+  after an extended period without reconciliation running) — not a problem
+  at current volume (11 orders processed without issue), flagged for
+  awareness only
+
+### Recommended Next Task
+Run through the outstanding-issues checklist above (successful payment path
+on Vercel, env var completeness, dual webhook confirmation, admin panel
+check) before considering this deployment fully verified. Then either
+connect the custom domain, or proceed to the still-undecided Phase 6 vs.
+Bulk Actions choice from NEXT_TASK.md.

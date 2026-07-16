@@ -1,27 +1,73 @@
 import { auth } from '@clerk/nextjs/server'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { markOrderFailedAndRestoreStock } from '@/lib/orders'
+//import { markOrderFailedAndRestoreStock } from '@/lib/orders'
 import { reconcileOrderIfStale } from '@/lib/reconcileOrder'
 
 
 type Props = {
-  searchParams: Promise<{ orderId?: string; status?: string }>
+  searchParams: Promise<{ orderId?: string; status?: string; reference?: string }>
 }
 
 
 
 
 export default async function CheckoutSuccessPage({ searchParams }: Props) {
-  const { orderId, status } = await searchParams
+  const { orderId, status, reference } = await searchParams
 
   if (!orderId) {
     notFound()
   }
 
   const { userId: clerkId } = await auth()
+
   if (!clerkId) {
-    notFound()
+    // Not signed in on this device — common with QR-based payments where the
+    // customer scans with their phone while checking out on another device.
+    // We can't show real order details without an authenticated session, but
+    // we CAN safely confirm payment succeeded if the visitor holds HitPay's
+    // own reference for this specific payment (proof they came from the real
+    // redirect, not just guessing an orderId) — checked against the order's
+    // stored hitpayPaymentRequestId. Deliberately not calling
+    // reconcileOrderIfStale here: this branch is read-only by design, and
+    // reconciliation already runs via the webhook and the authenticated flow.
+    let verifiedPaid = false
+
+    if (reference) {
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        select: { hitpayPaymentRequestId: true, status: true },
+      })
+      verifiedPaid = !!order && order.hitpayPaymentRequestId === reference && order.status === 'PAID'
+    }
+
+    const signInParams = new URLSearchParams({ orderId })
+    if (status) signInParams.set('status', status)
+    if (reference) signInParams.set('reference', reference)
+    const redirectUrl = encodeURIComponent(`/checkout/success?${signInParams.toString()}`)
+
+   return (
+  <div className="max-w-2xl mx-auto px-6 py-16 text-center">
+    <h1 className="text-2xl font-semibold mb-2">
+      {verifiedPaid ? 'Payment received!' : 'Payment Status'}
+    </h1>
+
+    <p className="text-gray-500">Order ID: {orderId}</p>
+
+    <p className="mt-4 text-sm text-gray-600">
+      {verifiedPaid
+        ? "We've received your payment. A confirmation email is on its way — if you don't see it in a few minutes, check your spam folder."
+        : "We're finalizing your order status. You'll receive an email confirmation once it's done."}
+    </p>
+
+    <a
+      href={`/sign-in?redirect_url=${redirectUrl}`}
+      className="inline-block mt-6 text-sm underline"
+    >
+      Sign in to view your order details
+    </a>
+  </div>
+)
   }
 
   const user = await prisma.user.findUnique({ where: { clerkId } })
