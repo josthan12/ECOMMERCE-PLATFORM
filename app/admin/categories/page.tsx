@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import CategoryActions from './CategoryActions'
 
 export default async function CategoriesPage() {
   const categories = await prisma.category.findMany({
@@ -43,12 +44,18 @@ export default async function CategoriesPage() {
                   <td className="px-6 py-4 text-gray-500">{category.slug}</td>
                   <td className="px-6 py-4">{category._count.products}</td>
                   <td className="px-6 py-4">
-                    <Link
-                      href={`/admin/categories/${category.id}/edit`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      Edit
-                    </Link>
+                    <div className="flex items-center gap-4">
+                      <Link
+                        href={`/admin/categories/${category.id}/edit`}
+                        className="text-blue-600 hover:underline"
+                      >
+                        Edit
+                      </Link>
+                      <CategoryActions
+                        categoryId={category.id}
+                        productCount={category._count.products}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}

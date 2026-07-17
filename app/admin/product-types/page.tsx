@@ -46,7 +46,7 @@ export default async function ProductTypesPage() {
                   <td className="px-6 py-4 text-gray-500">{type._count.products} products</td>
                   <td className="px-6 py-4">
                     <Link
-                      href={`/admin/product-types/${type.id}`}
+                      href={`/admin/product-types/${type.id}/edit`}
                       className="text-blue-600 hover:underline"
                     >
                       Edit

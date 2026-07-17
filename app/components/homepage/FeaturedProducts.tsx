@@ -3,6 +3,7 @@ import ProductCard from '../ProductCard'
 
 export default async function FeaturedProducts() {
   const products = await prisma.product.findMany({
+    where: { archived: false },
     include: { variants: true },
     orderBy: { createdAt: 'desc' },
     take: 4,

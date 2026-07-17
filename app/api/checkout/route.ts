@@ -59,7 +59,7 @@ export async function POST(req: Request) {
         }
 
         const result = await tx.productVariant.updateMany({
-          where: { id: variantId, stock: { gte: quantity } },
+          where: { id: variantId, stock: { gte: quantity }, product: { archived: false } },
           data: { stock: { decrement: quantity } },
         })
 

@@ -14,6 +14,11 @@ async function getCategory(slug: string) {
     where: { slug },
     include: {
       products: {
+        where: {
+          product: {
+            archived: false,
+          },
+        },
         include: {
           product: {
             include: {

@@ -50,9 +50,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ error: 'Category not found' }, { status: 404 })
   }
 
-  // Slug is intentionally NOT regenerated on edit — the category's public URL
-  // (/category/[slug]) may already be linked/bookmarked externally; silently
-  // changing it on a name edit would break those links.
   const category = await prisma.$transaction(async (tx) => {
     await tx.categoryProduct.deleteMany({ where: { categoryId: id } })
 
@@ -75,4 +72,22 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   })
 
   return NextResponse.json(category)
+}
+
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const authResult = await requireAdmin()
+  if (authResult.error) return authResult.error
+
+  const { id } = await params
+
+  const existing = await prisma.category.findUnique({ where: { id } })
+  if (!existing) {
+    return NextResponse.json({ error: 'Category not found' }, { status: 404 })
+  }
+
+  // CategoryProduct cascades automatically — this only unassigns products
+  // from this category, never touches the Product rows themselves.
+  await prisma.category.delete({ where: { id } })
+
+  return NextResponse.json({ success: true })
 }

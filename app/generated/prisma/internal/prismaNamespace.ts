@@ -1256,7 +1256,8 @@ export const ProductScalarFieldEnum = {
   variantOptions: 'variantOptions',
   imageUrl: 'imageUrl',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  archived: 'archived'
 } as const
 
 export type ProductScalarFieldEnum = (typeof ProductScalarFieldEnum)[keyof typeof ProductScalarFieldEnum]

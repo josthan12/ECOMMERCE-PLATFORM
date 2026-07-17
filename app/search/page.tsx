@@ -13,6 +13,7 @@ export default async function SearchPage({ searchParams }: Props) {
   const products = query
     ? await prisma.product.findMany({
         where: {
+          archived: false,
           OR: [
             { name: { contains: query, mode: 'insensitive' } },
             { description: { contains: query, mode: 'insensitive' } },

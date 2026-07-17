@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import ProductActions from './ProductActions'
 
 export default async function ProductsPage() {
   const products = await prisma.product.findMany({
@@ -54,18 +55,28 @@ export default async function ProductsPage() {
             <tbody>
               {products.map((product) => (
                 <tr key={product.id} className="border-b hover:bg-gray-50">
-                  <td className="px-6 py-4 font-medium">{product.name}</td>
+                  <td className="px-6 py-4 font-medium">
+                    {product.name}
+                    {product.archived && (
+                      <span className="ml-2 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
+                        Archived
+                      </span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-gray-500">{product.productType.name}</td>
                   <td className="px-6 py-4">{formatPrice(product.variants)}</td>
                   <td className="px-6 py-4">{totalStock(product.variants)}</td>
                   <td className="px-6 py-4 text-gray-500">{product.variants.length}</td>
                   <td className="px-6 py-4">
-                    <Link
-                      href={`/admin/products/${product.id}`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      Edit
-                    </Link>
+                    <div className="flex items-center gap-4">
+                      <Link
+                        href={`/admin/products/${product.id}/edit`}
+                        className="text-blue-600 hover:underline"
+                      >
+                        Edit
+                      </Link>
+                      <ProductActions productId={product.id} archived={product.archived} />
+                    </div>
                   </td>
                 </tr>
               ))}
