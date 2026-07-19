@@ -454,3 +454,124 @@ The immediate goal was unblocking the reconciliation cron job with a stable, non
 
 Date:
 2026-07-15
+
+---
+
+Decision:
+Connect the custom domain (`biggyballs69.gay`) to Vercel now, rather than continuing to defer it as previously planned.
+
+Reason:
+A real deliverability issue was found this session: transactional emails were landing in the mobile Gmail app's Spam folder, where links become non-interactive. Investigating why surfaced that emails sent from `orders@biggyballs69.gay` contained links pointing to the `.vercel.app` deployment URL — a mismatch between sending domain and linked domain that spam filters (Gmail included) treat as a real signal, since it's a pattern spammers use. Beyond fixing that specific mismatch, moving off the default Vercel URL onto a real, permanent domain is generally correct production hygiene the project would need before launch regardless. Implemented as an apex-domain `A` record added directly in Cloudflare (DNS-only, not proxied, to avoid conflicting with Vercel's automatic SSL issuance) rather than migrating nameservers to Vercel, to avoid disturbing the existing Resend email DNS records (MX/TXT/DKIM) already live in the same Cloudflare zone.
+
+Date:
+2026-07-17
+
+---
+
+Decision:
+On `/checkout/success`, an unauthenticated visitor who holds a valid `reference` query-param value (matched against `Order.hitpayPaymentRequestId`) sees a genuine, verified "Payment received!" confirmation instead of a bare 404. Without a valid `reference`, they see a generic "still processing" message that reveals nothing about whether the order exists, its real status, or who it belongs to.
+
+Reason:
+A real production bug, found via live testing: a customer who scans the PayNow QR code with a different device than the one used to check out (e.g. phone scans, laptop was signed in) lands on this page with no Clerk session at all, since the page previously required one with no fallback — result was a bare 404 immediately after a successful payment, which looks exactly like the order failed even though it didn't. `Order.hitpayPaymentRequestId` was confirmed (via direct empirical testing, not assumed) to match the `reference` value HitPay appends to its own redirect URL, making it usable as a lightweight, unguessable bearer-token-style credential that proves the visitor came from the genuine HitPay redirect rather than someone probing order IDs. This avoids requiring a full Clerk sign-in just to see a payment confirmation, without weakening the real security boundary (the full order-detail view, still fully gated behind Clerk auth + ownership check, is completely unchanged). The real order-processing path (webhook → DB status → confirmation email) was already correct and unaffected by this bug — this fix only changes what an unauthenticated visitor to this one specific page sees.
+
+Date:
+2026-07-17
+
+---
+
+Decision:
+Defer the AI Shopping Assistant; build the plain search bar alone first, as its own complete, shippable increment.
+
+Reason:
+ROADMAP.md's Phase 6 already lists these as two separate checklist items. Scoping revealed the AI assistant pulls in real additional complexity (tool-calling architecture, hallucination-avoidance, PDPA consent flow, memory storage) that doesn't need to block a working search bar, which is independently useful on its own. Sequencing them — search first, proven and shipped, AI assistant as a clearly separate next increment — keeps to the project's "one feature at a time" principle rather than conflating two genuinely different pieces of work into one pass.
+
+Date:
+2026-07-17
+
+---
+
+Decision:
+Skip Meilisearch entirely (both the hosted Cloud option and self-hosting) for the plain search bar. Use Prisma's case-insensitive `contains` matching directly against the existing Postgres database instead.
+
+Reason:
+The admin explicitly confirmed typo tolerance is not a requirement for this store ("users need to type correctly"). Typo tolerance, relevance ranking, and faceted search at scale are Meilisearch's core value proposition over plain Postgres text matching — with typo tolerance explicitly ruled out, adopting Meilisearch would mean taking on a new external service (a recurring cost if hosted, or a new persistent server to run and maintain if self-hosted — this project's stack is otherwise entirely serverless/managed, so self-hosting would be a first-of-its-kind operational commitment) with no corresponding benefit at this store's current or expected near-term catalog size. Revisit if the catalog grows large enough that Postgres `contains` search becomes a genuine performance concern, or if typo tolerance becomes a requirement later.
+
+Date:
+2026-07-17
+
+---
+
+Decision:
+Add full edit capability to the admin panel for Categories, Products, and Product Types — none of which existed before this session — plus delete (Categories) and archive (Products), even though none of this was part of the original ROADMAP.md at any phase.
+
+Reason:
+Discovered mid-session, prompted by a direct question, that no admin entity anywhere in the app had any edit capability at all — Categories, Products, and Product Types were all create-and-list only, with the only way to fix a mistake (a typo, a wrong price, a wrong image URL) being direct, unvalidated access via Prisma Studio. This was judged a genuine, unplanned gap in the admin panel's core usability rather than a deferred nice-to-have, and worth closing before continuing further storefront-facing feature work (Phase 6/7), since ongoing store operation depends on it.
+
+Date:
+2026-07-17
+
+---
+
+Decision:
+`Category.slug` and `Product.slug` are never regenerated on edit, even when the name changes — both fields are effectively locked once a record is created, though not enforced at the database level.
+
+Reason:
+`/category/[slug]` and `/product/[slug]` are real, public, potentially already-bookmarked or externally-linked URLs. Silently changing a slug whenever an admin edits a name (consistent with the "always server-generate slugs" coding standard used at creation time) would break those links with no warning and no redirect in place. If a slug genuinely needs to change in the future, that would need to be a deliberate, separate, explicit action (e.g. a "regenerate slug" button with a clear warning) — not an automatic side effect of an unrelated name edit.
+
+Date:
+2026-07-17
+
+---
+
+Decision:
+`Product.productTypeId` is not editable via the Product edit page — a product's type is fixed for its lifetime.
+
+Reason:
+`Product.attributes` is a JSON blob shaped entirely by its current `ProductType`'s field definitions, with no database-level relationship enforcing that shape. There is no defined logic for what should happen to existing attribute data if the type changed underneath a product — old keys wouldn't necessarily correspond to anything in the new type's fields. Building a real field-remapping UI (for each field in the new type: pull from an old field, start blank, or require manual entry?) was considered out of scope for this pass. If a product genuinely needs a different type, the current path is to create a new product under the correct type.
+
+Date:
+2026-07-17
+
+---
+
+Decision:
+`ProductField.key` and `ProductField.type` are locked and cannot be changed via the Product Type edit page once a field already exists (rather than merely disabled in the UI as a suggestion) — the API re-derives both values server-side from the existing database record regardless of what the client submits. Removing a field entirely is blocked server-side, with a clear error, if any product of that type still holds a non-empty value for it.
+
+Reason:
+Both `key` and `type` are structural — `Product.attributes` is a JSON object keyed by `ProductField.key`, and rendered/validated according to `ProductField.type`. Changing a key after products already store data under the old key would make that data silently invisible (the spec table renders from the current field schema, so it would simply stop appearing) without actually deleting it, which is a confusing, hard-to-debug state. Changing a type (e.g. TEXT → DROPDOWN) could leave existing free-text values that are no longer valid options under the new type. Locking both closes the risk entirely rather than only warning about it. The field-removal guard closes the equivalent risk for outright deletion, following the same pattern already established for order-status transitions and refund eligibility: the server is the source of truth for what's allowed, never the client, even when the UI already tries to prevent the action.
+
+Date:
+2026-07-17
+
+---
+
+Decision:
+Products use an `archived` flag (soft delete / hide) rather than real hard deletion, matching Shopify's own product-deletion model.
+
+Reason:
+Deleting a `Product` cascades to delete all of its `ProductVariant` rows in this schema. While historical `OrderItem` data is safe either way (deliberately snapshotted, not a live FK — see the 2026-07-06 OrderItem decision above), a hard delete would also destroy the product record itself permanently — no way to see what was once sold, no way to relist a seasonal item, no undo. Researched how Shopify (the dominant reference point for "how big stores handle this") actually handles product deletion rather than guessing, and confirmed they draw exactly this distinction: archiving hides a product from the storefront and inventory tracking while fully preserving it (and all related order/customer data) and remaining reversible at any time; true deletion is a separate, much more restricted action they clearly don't want used routinely. `Product.archived` (Boolean, default `false`) was added to the schema; every customer-facing product query must now explicitly filter `archived: false` (this is deliberately not a global Prisma default/middleware, to keep each query's intent explicit); `/api/checkout` also rejects an archived product if it's still sitting in a stale client-side cart. Admin-facing surfaces (the products list, the edit page) are entirely unaffected by the flag and can archive/unarchive freely.
+
+Date:
+2026-07-17
+
+---
+
+Decision:
+Categories use real hard delete (`DELETE /api/admin/categories/[id]`), not an archive system.
+
+Reason:
+Unlike `Product`, nothing else in the schema has a required, structurally load-bearing dependency on a `Category` — `CategoryProduct` cascades cleanly on delete and only ever unassigns products from the deleted category, never touching the products themselves. There's no historical-data argument either (categories aren't referenced by `Order`/`OrderItem` at all). The added complexity of an archive system, which was genuinely justified for Products, has no equivalent justification here — the simpler action is used because the underlying risk that justified the more complex one for Products simply doesn't exist for Categories.
+
+Date:
+2026-07-17
+
+---
+
+Decision:
+`ProductType` gets no delete feature and no type-reassignment feature at all — not merely deferred, a deliberate permanent decision for now.
+
+Reason:
+`Product.productTypeId` is a required (non-nullable) foreign key, and `Product` does not cascade from `ProductType` in this schema — meaning a `ProductType` genuinely cannot be safely deleted while even one `Product` still references it, without either a raw, unhandled foreign-key constraint error, or (in a hypothetically misconfigured cascade) silent destruction of real product inventory. Unlike `Product`, there's also no meaningful "archive" concept here, since a `ProductType` is purely a backend template — it's never customer-facing on its own, so hiding it from the storefront (the whole point of archiving a Product) doesn't apply. A genuine reassignment feature (moving an existing product to a different type, safely remapping its `attributes` to the new type's field schema) was discussed and explicitly not built — it would require real per-field mapping decisions (pull from an old field, start blank, or require manual entry, for each field in the new type) that don't exist today, for a need judged to be rare and low-volume for this store. If ever genuinely needed: recreate the product under the correct type from scratch, or hand-edit `productTypeId` and `attributes` directly in Prisma Studio (bypasses all app-level validation entirely — acceptable only for rare, deliberate one-off fixes, never as a routine workflow).
+
+Date:
+2026-07-17

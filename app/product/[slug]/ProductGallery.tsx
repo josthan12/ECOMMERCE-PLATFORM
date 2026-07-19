@@ -1,7 +1,10 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { CheckCircle2, XCircle, ShoppingBag, Check } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
+import { cn } from '@/lib/cn'
+import Button from '../../components/ui/Button'
 
 type Variant = {
   id: string
@@ -122,31 +125,28 @@ export default function ProductGallery({
 
   return (
     <div>
-      <div className="h-96 bg-gray-100 rounded-lg overflow-hidden mb-6">
+      <div className="aspect-square overflow-hidden rounded-lg border border-border-light bg-surface-muted">
         {displayImageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={displayImageUrl}
-            alt=""
-            className="w-full h-full object-cover"
-          />
+          <img src={displayImageUrl} alt="" className="h-full w-full object-cover" />
         ) : null}
       </div>
 
       {optionKeys.map((key) => (
-        <div key={key} className="mb-4">
-          <div className="text-sm font-medium text-gray-700 mb-2">{key}</div>
+        <div key={key} className="mt-6">
+          <div className="mb-2 text-sm font-medium text-text">{key}</div>
           <div className="flex flex-wrap gap-2">
             {variantOptions[key].map((value) => (
               <button
                 key={value}
                 type="button"
                 onClick={() => handleSelect(key, value)}
-                className={`px-3 py-1.5 text-sm rounded border ${
+                className={cn(
+                  'rounded-md border px-3.5 py-2 text-sm font-medium transition-colors duration-150 ease-out',
                   selected[key] === value
-                    ? 'border-blue-600 bg-blue-50 text-blue-700'
-                    : 'border-gray-300 text-gray-700 hover:border-gray-400'
-                }`}
+                    ? 'border-accent bg-accent-light text-primary'
+                    : 'border-border text-text-muted hover:border-border-strong hover:text-text'
+                )}
               >
                 {value}
               </button>
@@ -155,50 +155,56 @@ export default function ProductGallery({
         </div>
       ))}
 
-      <div className="mt-6 pt-6 border-t">
+      <div className="mt-8 border-t border-border-light pt-6">
         {matchedVariant ? (
           <>
-            <div className="text-2xl font-bold text-gray-800">
+            <div className="font-display text-3xl font-semibold text-primary">
               ${matchedVariant.price.toFixed(2)}
             </div>
-            <div className="mt-1 text-sm">
+
+            <div className="mt-2 flex items-center gap-1.5 text-sm">
               {matchedVariant.stock > 0 ? (
-                <span className="text-green-600">{matchedVariant.stock} in stock</span>
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
+                  <span className="text-success">{matchedVariant.stock} in stock</span>
+                </>
               ) : (
-                <span className="text-gray-500">Out of stock</span>
+                <>
+                  <XCircle className="h-4 w-4 text-text-light" aria-hidden="true" />
+                  <span className="text-text-muted">Out of stock</span>
+                </>
               )}
             </div>
+
             {matchedVariant.sku && (
-              <div className="mt-1 text-xs text-gray-400">SKU: {matchedVariant.sku}</div>
+              <div className="mt-1 text-xs text-text-light">SKU: {matchedVariant.sku}</div>
             )}
 
-            <div className="mt-4 flex items-center gap-3">
+            <div className="mt-5 flex items-center gap-3">
               <input
                 type="number"
                 min={1}
                 max={remaining}
                 value={quantity}
                 onChange={(e) => handleQuantityChange(parseInt(e.target.value, 10) || 0)}
-                className="w-16 border border-gray-300 px-2 py-1 rounded"
+                className="min-h-[44px] w-16 rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
               />
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={remaining <= 0}
-                className="px-4 py-2 bg-black text-white text-sm rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
+              <Button type="button" onClick={handleAddToCart} disabled={remaining <= 0} className="gap-2">
+                <ShoppingBag className="h-4 w-4" aria-hidden="true" />
                 {remaining <= 0 ? 'Max in cart' : 'Add to Cart'}
-              </button>
+              </Button>
             </div>
-            {quantityWarning && (
-              <p className="mt-2 text-sm text-amber-600">{quantityWarning}</p>
-            )}
+
+            {quantityWarning && <p className="mt-3 text-sm text-warning">{quantityWarning}</p>}
             {justAdded && (
-              <p className="mt-2 text-sm text-green-600">Added to cart.</p>
+              <p className="mt-3 flex items-center gap-1.5 text-sm text-success">
+                <Check className="h-4 w-4" aria-hidden="true" />
+                Added to cart.
+              </p>
             )}
           </>
         ) : (
-          <div className="text-sm text-gray-500">This combination is unavailable.</div>
+          <div className="text-sm text-text-muted">This combination is unavailable.</div>
         )}
       </div>
     </div>

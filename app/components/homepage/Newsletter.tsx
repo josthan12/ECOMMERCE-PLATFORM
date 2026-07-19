@@ -2,31 +2,34 @@
 
 // Non-functional for now — no email provider wired up yet.
 // Submit handler intentionally does nothing beyond preventing default.
+import ScrollReveal from '../ScrollReveal'
+import Button from '../ui/Button'
+
 export default function Newsletter() {
   return (
-    <div className="bg-gray-800 py-12">
-      <div className="max-w-6xl mx-auto px-6 text-center">
-        <h2 className="text-2xl font-bold text-white">Stay in the loop</h2>
-        <p className="mt-2 text-gray-300">
-          Get updates on new arrivals and promotions.
+    <section className="bg-primary py-16">
+      <ScrollReveal className="mx-auto max-w-[1400px] px-4 text-center md:px-8">
+        <h2 className="font-display text-2xl font-semibold text-text-inverse md:text-3xl">
+          Stay in the loop
+        </h2>
+        <p className="mt-2 text-text-inverse/70">
+          Get updates on new arrivals and collector favorites.
         </p>
         <form
           onSubmit={(e) => e.preventDefault()}
-          className="mt-6 flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto"
+          className="mx-auto mt-6 flex max-w-md flex-col justify-center gap-3 sm:flex-row"
         >
           <input
             type="email"
             placeholder="Enter your email"
-            className="flex-1 border rounded px-4 py-2 text-sm"
+            required
+            className="flex-1 rounded-md border border-transparent bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-light focus:outline-none focus:ring-2 focus:ring-accent"
           />
-          <button
-            type="submit"
-            className="bg-blue-600 text-white px-6 py-2 rounded text-sm font-medium hover:bg-blue-700"
-          >
+          <Button type="submit" variant="accent">
             Subscribe
-          </button>
+          </Button>
         </form>
-      </div>
-    </div>
+      </ScrollReveal>
+    </section>
   )
 }

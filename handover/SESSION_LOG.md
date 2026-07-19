@@ -879,3 +879,323 @@ on Vercel, env var completeness, dual webhook confirmation, admin panel
 check) before considering this deployment fully verified. Then either
 connect the custom domain, or proceed to the still-undecided Phase 6 vs.
 Bulk Actions choice from NEXT_TASK.md.
+
+---
+
+## Session 10
+
+Date: 2026-07-17
+
+### Objective
+Close out deployment verification from Session 9, then begin Phase 6.
+Along the way: connect the custom domain (prompted by a real email
+deliverability finding), fix a real production bug on the checkout-success
+page, scope and build Phase 6's search bar (deliberately without Meilisearch
+or the AI assistant), and — as a significant unplanned detour — build full
+edit/delete/archive capability for all three core admin entities, none of
+which had ever had it.
+
+### Completed
+- **Deployment verification checklist — closed.** Full successful payment
+  path re-tested on the live Vercel URL through to `PAID` + confirmation
+  email; env var completeness, dual webhook registration (Clerk + HitPay,
+  ngrok + Vercel), and the admin panel were all confirmed working, per the
+  admin's own direct testing.
+- **Root-caused a mobile Gmail issue**, initially reported as "email buttons
+  don't work on mobile" — confirmed via the admin viewing the email's raw
+  source that the link itself was well-formed; further investigation
+  revealed the real cause was Gmail's mobile app disabling link
+  interactivity specifically for messages sitting in Spam (confirmed by the
+  admin: works normally once moved to Inbox). Not a code bug.
+- **Diagnosed a related, genuine deliverability issue** while investigating
+  the above: transactional emails link to the `.vercel.app` deployment URL
+  while sending from `orders@biggyballs69.gay` — a sending-domain/linked-
+  domain mismatch that spam filters (Gmail included) treat as a real
+  signal. This, plus general production hygiene, motivated connecting the
+  custom domain this session rather than continuing to defer it.
+- **Custom domain connected:** `biggyballs69.gay` added to Vercel (apex
+  domain), one DNS-only `A` record added directly in Cloudflare (existing
+  Resend email DNS records for the same domain left untouched), SSL
+  auto-issued by Vercel. `NEXT_PUBLIC_APP_URL` updated to
+  `https://biggyballs69.gay` and redeployed (build-time-baked var — a
+  dashboard edit alone doesn't take effect without a rebuild, same lesson
+  as Session 7's `localhost` bug).
+- **Found and fixed a real production bug** on `/checkout/success`: a
+  customer who scans the PayNow QR with a different device than the one
+  used to check out (e.g. phone scans a laptop-displayed code) lands on
+  this page with no Clerk session, since the page previously had no
+  fallback for that case — result was a bare 404 immediately after a
+  genuinely successful payment. Fixed by empirically confirming (the admin
+  compared values directly in Prisma Studio) that the `reference` query
+  param HitPay appends to its redirect matches `Order.hitpayPaymentRequestId`,
+  then using that match as a lightweight, unguessable verification token:
+  an unauthenticated visitor with a valid, matching `reference` now sees a
+  genuine "Payment received!" message; anyone without one sees an
+  identical generic "still processing" message, indistinguishable whether
+  the order exists, is unpaid, or belongs to someone else. No order details
+  are ever shown without full Clerk auth + ownership check, which remains
+  completely unchanged. Deployed via `git push origin main`; a mid-deploy
+  branch/merge situation (terminal closed during a `git pull`) was resolved
+  safely — `git status` showed "All conflicts fixed but you are still
+  merging," so only `git commit --no-edit` was needed to finish, no work
+  lost.
+- **Phase 6 scoped down deliberately, then built partially:** the AI
+  Shopping Assistant was discussed at length — initially considered
+  stuffing the full catalog into an LLM's context per-request, rejected
+  (hallucination risk, cost/latency scaling, doesn't cover a plain search
+  bar at all); the real alternative (tool-calling against a real product
+  API, whether Meilisearch- or Prisma-backed) was identified but the whole
+  AI assistant was deliberately deferred as its own increment, in favor of
+  shipping the plain search bar alone first.
+- **Meilisearch evaluated for the search bar and explicitly rejected**:
+  after confirming typo tolerance is not a requirement for this store,
+  Meilisearch's core value over plain Postgres search disappears, leaving
+  only pure infrastructure overhead (a new external service — either a
+  recurring hosted cost or, self-hosted, this project's first persistent
+  server to run and maintain, a real departure from its otherwise fully
+  managed/serverless stack). Decided to use Prisma's `contains`/
+  `mode: insensitive` directly against Postgres instead.
+- **Search built:** `/search` results page (plain GET `?q=`, same
+  convention as category-page sort/filter); a shared `ProductCard`
+  component extracted from the category page and `FeaturedProducts` once
+  `/search` needed the same card a third time (accepts `headingLevel` and
+  `showOutOfStockBadge` props to preserve each page's exact prior
+  behavior); a debounced (300ms) live-suggestion dropdown
+  (`SearchBar.tsx` in the Header + `/api/search/suggestions`, top 6
+  results, later extended to show category + formatted price alongside
+  image/name).
+- **Bug found and fixed during search build:** `/api/search/suggestions`
+  initially 404'd when called from the debounced fetch — root cause was
+  the admin having placed the route file at the wrong path (not nested
+  correctly under `search/suggestions/`), the same class of bug as the
+  Session 8 tracking-route miss. Confirmed via a direct address-bar test
+  bypassing the debounce/fetch logic entirely, which isolated the problem
+  to routing rather than `SearchBar.tsx`'s logic.
+- **Admin CRUD gap discovered and closed, in full — the majority of this
+  session's work.** Prompted by a direct question about admin edit pages;
+  checking ROADMAP.md and API_REFERENCE.md confirmed none of Categories,
+  Products, or Product Types had ever had edit capability at any phase —
+  all three were create-and-list only, with Prisma Studio as the only
+  existing way to fix a mistake. Built in order of increasing risk:
+  - **Categories:** `PUT`/`GET /api/admin/categories/[id]` + edit page,
+    slug locked after creation (URL-stability reasoning, same class as the
+    Product decision below). Found and fixed a pre-existing dead "Edit"
+    link on the categories list page (pointed at a path with no matching
+    route) while wiring the new edit page in — a bug that predated this
+    session, just never previously exercised.
+  - **Products:** `PUT`/`GET /api/admin/products/[id]` + edit page,
+    including full variant editing (add/edit/remove price/stock/SKU/image
+    per combination). `productTypeId` and `slug` both locked after
+    creation. The create form's "Generate Combinations" button was
+    changed from replace-the-whole-table to merge-only-new-rows for the
+    edit context specifically, to avoid silently wiping out price/stock
+    edits already made to existing variants.
+  - **Product Types:** `PUT`/`GET /api/admin/product-types/[id]` + edit
+    page. Explicitly scoped as the riskiest of the three before building,
+    since editing field definitions can silently corrupt data on products
+    already using them. `ProductField.key` and `.type` locked once a
+    field exists (both disabled client-side AND re-derived server-side
+    from the DB, never trusted from the client); removing a field is
+    blocked server-side with a clear error if any product of that type
+    still holds a non-empty value for it; a duplicate-key guard was also
+    added across the final field set.
+  - The admin independently found and fixed the same class of dead
+    "Edit"-link bug on both the Products and Product Types list pages
+    while wiring their respective edit pages in, without needing it
+    pointed out this time.
+- **Deletion discussion, which reframed the whole remaining scope:** the
+  admin's actual initial need turned out to be one-time pre-launch test-
+  data cleanup, not necessarily a permanent admin feature — redirected to
+  Prisma Studio for that specific need (confirmed safe: `OrderItem` isn't a
+  live FK, so no constraint blocks deleting test Products/Orders; the one
+  real caution flagged was not deleting the admin's own `User` row). When
+  the admin then confirmed they *do* want a permanent delete feature for
+  ongoing use, the recommendation was revised: researched how Shopify
+  actually handles this (rather than guessing) and confirmed they draw
+  exactly the archive-vs-delete distinction this session ended up building
+  — archiving hides a product from the storefront/inventory while fully
+  preserving order history and staying reversible; hard deletion is a
+  separate, much more restricted action Shopify itself guards heavily
+  (blocking deletion of orders with processed payments entirely).
+- **Products: archive system built** (not hard delete). Migration
+  `add_product_archived` (`Product.archived Boolean @default(false)`);
+  `PATCH /api/admin/products/[id]/archive` (single-purpose, toggles only
+  the flag); `ProductActions.tsx` (archive/unarchive button with a
+  `window.confirm` guard, following the `OrderStatusActions.tsx`
+  precedent); the products list page shows an "Archived" badge. Every
+  customer-facing product query updated to filter `archived: false`:
+  `FeaturedProducts.tsx`, `category/[slug]/page.tsx`, `search/page.tsx`,
+  `api/search/suggestions/route.ts`; `product/[slug]/page.tsx` now 404s an
+  archived product's direct URL, same as an unknown slug. A gap was also
+  found and closed in the same pass: `/api/checkout`'s atomic stock
+  check-and-decrement didn't previously exclude archived products at all —
+  an archived item sitting in a stale client-side cart would have still
+  been purchasable; now correctly rejected via the same `409` path used
+  for genuine out-of-stock items.
+- **Categories: real hard delete built** (`DELETE
+  /api/admin/categories/[id]` + `CategoryActions.tsx`) — no archive system
+  needed, since nothing else structurally depends on a Category the way
+  Products depend on ProductType, or the way order history depends on
+  product identity.
+- **Product Types: deliberately given no delete and no reassignment
+  feature at all**, discussed at length and confirmed as a permanent
+  decision, not a deferral. `Product.productTypeId` is required
+  (non-nullable) with no cascade from `ProductType`, so safe deletion
+  isn't structurally possible without first building a real product-type-
+  reassignment feature (remapping `attributes` to a new field schema),
+  which was judged not worth building for an expected rare, low-volume
+  need. Documented workaround if ever needed: recreate the product under
+  the correct type, or a careful manual Prisma Studio edit.
+- **Debugged a stale-Prisma-client/runtime error during the archive
+  migration** — a `PrismaClientValidationError` on `archived` persisted
+  even after the standard `.next` cache clear + regenerate + restart
+  sequence that has resolved this exact class of issue three times before
+  in this project (Sessions 2, 5, 8); walked through verifying each link in
+  the chain (schema file content, `prisma migrate status`, a fresh
+  `prisma generate` run) rather than blindly repeating the same fix — root
+  cause not fully narrated back, but confirmed resolved by the admin.
+- Full end-of-session documentation pass: CURRENT_STATE.md, SESSION_LOG.md
+  (this entry), DATABASE_SCHEMA.md, API_REFERENCE.md, ARCHITECTURE.md,
+  DECISIONS.md, ROADMAP.md, and NEXT_TASK.md all updated to reflect
+  everything above.
+
+### Files Modified
+- `app/checkout/success/page.tsx` — unauthenticated-visitor verification
+  view added (`reference` param + `hitpayPaymentRequestId` match)
+- `app/components/ProductCard.tsx` — created (shared card, extracted)
+- `app/search/page.tsx` — created
+- `app/components/homepage/FeaturedProducts.tsx` — refactored to use
+  `ProductCard`; later filtered `archived: false`
+- `app/category/[slug]/page.tsx` — refactored to use `ProductCard`; later
+  filtered `archived: false` on its nested product include
+- `app/components/Header.tsx` — `SearchBar` added
+- `app/components/SearchBar.tsx` — created
+- `app/api/search/suggestions/route.ts` — created (initially at a wrong
+  path, corrected); later extended with category + formatted price
+- `app/admin/categories/[id]/edit/page.tsx` — created
+- `app/api/admin/categories/[id]/route.ts` — created (GET, PUT; DELETE
+  added later in the same session)
+- `app/admin/categories/page.tsx` — dead Edit link fixed; delete action +
+  `CategoryActions.tsx` added later
+- `app/admin/categories/CategoryActions.tsx` — created
+- `app/admin/products/[id]/edit/page.tsx` — created
+- `app/api/admin/products/[id]/route.ts` — created (GET, PUT)
+- `app/admin/products/page.tsx` — dead Edit link fixed (by the admin);
+  archive badge + `ProductActions` added later
+- `app/admin/products/ProductActions.tsx` — created
+- `app/api/admin/products/[id]/archive/route.ts` — created
+- `app/admin/product-types/[id]/edit/page.tsx` — created
+- `app/api/admin/product-types/[id]/route.ts` — created (GET, PUT)
+- `app/admin/product-types/page.tsx` — dead Edit link fixed (by the admin)
+- `app/product/[slug]/page.tsx` — 404s on `archived` products
+- `app/api/checkout/route.ts` — atomic stock check now excludes archived
+  products
+- `prisma/schema.prisma` — `Product.archived Boolean @default(false)`
+  added
+- `app/generated/prisma/` — regenerated after the archive migration
+- Vercel — custom domain added; `NEXT_PUBLIC_APP_URL` updated; redeployed
+- Cloudflare — one DNS-only `A` record added for the apex domain
+
+### Bugs Found
+- Mobile Gmail app showing dead (non-interactive) buttons — root cause:
+  Gmail's mobile app disables link taps specifically for messages in Spam;
+  not a code bug, confirmed via direct device testing
+- Transactional email links pointing at `.vercel.app` while sending from
+  `orders@biggyballs69.gay` — a genuine sending/linked-domain mismatch,
+  a real (if partial) contributor to spam-folder placement
+- `/checkout/success` 404s for any unauthenticated visitor — real
+  production bug, most commonly triggered by QR-scan-on-a-different-device
+  payments; see Completed above for the fix
+- `/api/search/suggestions` 404 — route file placed at the wrong path;
+  admin's own mistake, caught via a direct address-bar test
+- Pre-existing dead "Edit" links on the Categories, Products, and Product
+  Types admin list pages — all three pointed at paths with no matching
+  route, latent since whenever those list pages were first built (Session
+  2/4), only surfaced now that edit pages actually exist to link to
+- `PrismaClientValidationError: Unknown argument 'archived'` at runtime,
+  persisting after the standard cache-clear/regenerate/restart sequence —
+  required verifying schema file content, migration status, and a fresh
+  `prisma generate` run individually rather than assuming the standard fix
+  would work blindly a fourth time
+
+### Bugs Fixed
+- All of the above resolved within-session, confirmed via the admin's own
+  direct testing in each case (checkout-success fix tested live in
+  production on a real device split; search suggestions confirmed working
+  after the path correction; dead Edit links confirmed fixed; archive
+  migration confirmed working after the deeper verification pass)
+
+### Technical Decisions
+See DECISIONS.md (2026-07-17 entries) for full reasoning on each — summary
+list: connect the custom domain now rather than continue deferring it;
+verified-but-unauthenticated cosmetic confirmation view on
+`/checkout/success`; defer the AI Shopping Assistant, ship search alone
+first; skip Meilisearch entirely for search, use Prisma directly; add full
+admin edit capability across all three core entities, outside the original
+roadmap; lock `Category.slug`/`Product.slug` on edit; lock
+`Product.productTypeId` on edit; lock `ProductField.key`/`.type` on edit
+plus guard in-use field removal; Products use archive not hard delete
+(Shopify-modeled); Categories use real hard delete; Product Types get no
+delete or reassignment feature at all, by deliberate permanent decision.
+
+### Lessons Learned
+- A user-reported symptom ("buttons don't work on mobile") can have a
+  completely different root cause than the first hypothesis (malformed
+  link vs. spam-folder platform behavior vs. a genuine deliverability
+  issue) — this session moved through all three before landing on the
+  real, combined picture; asking "what exactly happens" and "can you check
+  the raw source" early narrowed it faster than guessing at fixes.
+  Prompted-but-unconfirmed information (raw email source unavailable on
+  the mobile Gmail app specifically) needed a different verification path
+  (long-press test, then direct confirmation) rather than stalling on the
+  original ask.
+- Real-world testing continues to surface gaps that pure code review
+  wouldn't — the checkout-success 404 only appeared because a real
+  multi-device QR payment was actually tested live, not simulated.
+- When a person's stated request ("can I delete products") turns out to be
+  motivated by a narrower, different underlying need ("I want to clear
+  test data before launch"), it's worth surfacing the actual simplest tool
+  for that specific need (Prisma Studio) rather than immediately building
+  the more general feature implied by the literal request — but also worth
+  explicitly checking whether the general feature is still wanted
+  separately, rather than assuming the narrower need was the whole story.
+- Researching how an established, high-scale platform (Shopify) actually
+  handles an analogous problem (archive vs. delete) produced a
+  meaningfully better-justified design than reasoning from first
+  principles alone would have — worth doing before committing to a schema
+  change, not just as a nice-to-have confirmation afterward.
+- The same class of bug (a dead link pointing at a path with no matching
+  route, first seen in Session 8's tracking-number route) recurred three
+  times in a row across Categories/Products/Product Types this session —
+  worth treating "does the Edit link on the list page actually match the
+  new edit page's real path" as a standard checklist item any time a new
+  admin edit page is added, rather than rediscovering it fresh each time.
+- Locking a field outright (slug, productTypeId, ProductField key/type)
+  is a more robust pattern than validating-after-the-fact whenever an
+  incorrect edit's failure mode is silent data corruption rather than a
+  loud, immediately-visible error — worth reaching for as a default in
+  this category of situation, not just for the specific fields locked this
+  session.
+
+### Outstanding Issues
+- AI Shopping Assistant — deliberately deferred, not started. Architecture
+  direction decided (tool-calling against Prisma directly), nothing built.
+- Storefront/admin styling still bare Tailwind — raised again this session
+  as a real complaint ("ugly"), with meaningfully more surface area now
+  accumulated since it was last noted. Worth weighing against continuing
+  Phase 6 at the start of the next session — see NEXT_TASK.md.
+- Product Type deletion/reassignment — permanently out of scope for now,
+  by deliberate decision, not a bug or gap to revisit unless a real need
+  for it emerges.
+- Vercel deployment still on dev-equivalent credentials (Clerk dev
+  instance, Neon dev branch) — unchanged, still explicitly Phase 9 scope.
+- All Phase 4/5 outstanding issues not touched this session (card payment
+  testing, unverified `failed` webhook path, SSL driver warning, unedited
+  `layout.tsx` metadata, self-collection address as a hardcoded constant,
+  deferred bulk actions) remain open, unchanged.
+
+### Recommended Next Task
+See NEXT_TASK.md. Decide at session start: resume Phase 6 by scoping the
+AI Shopping Assistant, or shift to Phase 7 (theming) given the repeated UI
+complaints this session and the amount of new unstyled surface area that's
+accumulated since Phase 7 was last deferred.

@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { ImageOff } from 'lucide-react'
+import { cn } from '@/lib/cn'
 
 export type ProductCardVariant = { price: number; stock: number }
 
@@ -39,22 +41,38 @@ export default function ProductCard({
   return (
     <Link
       href={`/product/${product.slug}`}
-      className="bg-white rounded-lg shadow overflow-hidden relative block hover:shadow-md transition-shadow"
+      className={cn(
+        'group relative block overflow-hidden rounded-lg border border-border-light bg-surface shadow-card',
+        'transition-all duration-250 ease-out',
+        'hover:-translate-y-1.5 hover:border-accent hover:shadow-dropdown'
+      )}
     >
       {showOutOfStockBadge && outOfStock && (
-        <span className="absolute top-2 right-2 bg-gray-800 text-white text-xs px-2 py-1 rounded">
+        <span className="absolute right-2.5 top-2.5 z-10 rounded-pill bg-primary/90 px-2.5 py-1 text-xs font-medium text-text-inverse">
           Out of Stock
         </span>
       )}
-      <div className="h-40 bg-gray-100">
-        {product.imageUrl && (
+
+      <div className="aspect-[3/4] overflow-hidden bg-surface-muted">
+        {product.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.imageUrl} alt="" className="w-full h-full object-cover" />
+          <img
+            src={product.imageUrl}
+            alt=""
+            className="h-full w-full object-cover transition-transform duration-[350ms] ease-out group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <ImageOff className="h-6 w-6 text-text-light" aria-hidden="true" />
+          </div>
         )}
       </div>
+
       <div className="p-4">
-        <Heading className="font-medium text-gray-800">{product.name}</Heading>
-        <p className="mt-1 text-sm text-gray-600">{formatPrice(product.variants)}</p>
+        <Heading className="line-clamp-2 text-sm font-medium text-text">
+          {product.name}
+        </Heading>
+        <p className="mt-1.5 font-medium text-primary">{formatPrice(product.variants)}</p>
       </div>
     </Link>
   )

@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { ImageOff } from 'lucide-react'
+import ScrollReveal from '../ScrollReveal'
 
 export default async function CategoryGrid() {
   const categories = await prisma.category.findMany({
@@ -9,31 +11,40 @@ export default async function CategoryGrid() {
   if (categories.length === 0) return null
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-12">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Shop by Category</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-        {categories.map((category) => (
-          <Link
-            key={category.id}
-            href={`/category/${category.slug}`}
-            className="bg-white rounded-lg shadow overflow-hidden block hover:shadow-md transition-shadow"
-          >
-            <div className="h-32 bg-gray-100">
-              {category.bannerImageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={category.bannerImageUrl}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-              )}
-            </div>
-            <div className="p-4">
-              <h3 className="font-medium text-gray-800">{category.name}</h3>
-            </div>
-          </Link>
+    <section className="mx-auto max-w-[1400px] px-4 py-12 md:px-8 md:py-16">
+      <ScrollReveal>
+        <h2 className="font-display text-2xl font-semibold text-primary md:text-3xl">
+          Shop by Category
+        </h2>
+      </ScrollReveal>
+      <div className="mt-8 grid grid-cols-2 gap-5 sm:grid-cols-3 md:gap-6 md:grid-cols-4">
+        {categories.map((category, index) => (
+          <ScrollReveal key={category.id} delayMs={index * 60}>
+            <Link
+              href={`/category/${category.slug}`}
+              className="group block overflow-hidden rounded-lg border border-border-light bg-surface shadow-card transition-all duration-250 ease-out hover:-translate-y-1.5 hover:border-accent hover:shadow-dropdown"
+            >
+              <div className="aspect-[4/3] overflow-hidden bg-surface-muted">
+                {category.bannerImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={category.bannerImageUrl}
+                    alt=""
+                    className="h-full w-full object-cover transition-transform duration-[350ms] ease-out group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <ImageOff className="h-5 w-5 text-text-light" aria-hidden="true" />
+                  </div>
+                )}
+              </div>
+              <div className="p-4">
+                <h3 className="font-medium text-text">{category.name}</h3>
+              </div>
+            </Link>
+          </ScrollReveal>
         ))}
       </div>
-    </div>
+    </section>
   )
 }

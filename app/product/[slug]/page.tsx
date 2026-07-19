@@ -45,10 +45,10 @@ export default async function ProductPage({ params }: Props) {
   const attributeEntries = Object.entries(attributes)
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
+    <div className="mx-auto max-w-[1400px] px-4 py-8 md:px-8 md:py-12">
       <BackButton />
 
-      <div className="grid md:grid-cols-2 gap-10">
+      <div className="mt-4 grid gap-10 md:mt-6 md:grid-cols-2 md:gap-14">
         <ProductGallery
           productId={product.id}
           productName={product.name}
@@ -56,25 +56,27 @@ export default async function ProductPage({ params }: Props) {
           variantOptions={variantOptions}
           variants={product.variants}
           fallbackImageUrl={product.imageUrl}
-          />
+        />
 
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">{product.name}</h1>
+          <h1 className="font-display text-3xl font-semibold text-primary md:text-4xl">
+            {product.name}
+          </h1>
           {product.description && (
-            <p className="mt-2 text-gray-600">{product.description}</p>
+            <p className="mt-3 leading-relaxed text-text-muted">{product.description}</p>
           )}
         </div>
       </div>
 
       {attributeEntries.length > 0 && (
-        <div className="mt-12">
-          <h2 className="text-lg font-semibold text-gray-800 mb-3">Specifications</h2>
-          <table className="w-full text-sm border-t">
+        <div className="mt-14">
+          <h2 className="font-display text-xl font-semibold text-primary">Specifications</h2>
+          <table className="mt-4 w-full border-t border-border-light text-sm">
             <tbody>
               {attributeEntries.map(([key, value]) => (
-                <tr key={key} className="border-b">
-                  <td className="py-2 pr-4 text-gray-500 w-1/3">{key}</td>
-                  <td className="py-2 text-gray-800">{String(value)}</td>
+                <tr key={key} className="border-b border-border-light">
+                  <td className="w-1/3 py-3 pr-4 text-text-muted">{key}</td>
+                  <td className="py-3 text-text">{String(value)}</td>
                 </tr>
               ))}
             </tbody>

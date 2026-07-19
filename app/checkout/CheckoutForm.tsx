@@ -1,13 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
 import { calculateTotalWithGST } from '@/lib/gst'
 import { validateShippingAddress } from '@/lib/validateAddress'
 import { SELF_COLLECTION_ADDRESS } from '@/lib/constants'
+import { cn } from '@/lib/cn'
+import Button from '../components/ui/Button'
 
 export default function CheckoutForm() {
-  
   const items = useCartStore((state) => state.items)
   const clearCart = useCartStore((state) => state.clearCart)
 
@@ -29,7 +31,7 @@ export default function CheckoutForm() {
   }, [])
 
   if (items.length === 0) {
-    return <p className="text-gray-500">No items in cart.</p>
+    return <p className="mt-6 text-text-muted">No items in cart.</p>
   }
 
   const estimatedSubtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
@@ -88,120 +90,158 @@ export default function CheckoutForm() {
   }
 
   return (
-    <div>
-      <div className="mb-6">
-        <h2 className="font-medium mb-2">Fulfillment</h2>
-        <div className="flex flex-col gap-2">
-          <label className="flex items-center justify-between border border-gray-300 rounded px-3 py-2 cursor-pointer">
-            <span className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="fulfillmentMethod"
-                checked={fulfillmentMethod === 'DELIVERY'}
-                onChange={() => setFulfillmentMethod('DELIVERY')}
-              />
-              Delivery
-            </span>
-            <span className="text-sm text-gray-500">
-              {fees ? `$${fees.delivery.toFixed(2)}` : '...'}
-            </span>
-          </label>
-          <label className="flex items-center justify-between border border-gray-300 rounded px-3 py-2 cursor-pointer">
-            <span className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="fulfillmentMethod"
-                checked={fulfillmentMethod === 'SELF_COLLECTION'}
-                onChange={() => setFulfillmentMethod('SELF_COLLECTION')}
-              />
-              Self Collection
-            </span>
-            <span className="text-sm text-gray-500">
-              {fees ? (fees.selfCollection === 0 ? 'Free' : `$${fees.selfCollection.toFixed(2)}`) : '...'}
-            </span>
-          </label>
+    <div className="mt-6">
+      <section>
+        <h2 className="font-medium text-text">Fulfillment</h2>
+        <div className="mt-3 flex flex-col gap-3">
+          {(['DELIVERY', 'SELF_COLLECTION'] as const).map((method) => (
+            <label
+              key={method}
+              className={cn(
+                'flex cursor-pointer items-center justify-between rounded-md border px-4 py-3 transition-colors duration-150 ease-out',
+                fulfillmentMethod === method
+                  ? 'border-accent bg-accent-light/40'
+                  : 'border-border hover:border-border-strong'
+              )}
+            >
+              <span className="flex items-center gap-2.5 text-text">
+                <input
+                  type="radio"
+                  name="fulfillmentMethod"
+                  checked={fulfillmentMethod === method}
+                  onChange={() => setFulfillmentMethod(method)}
+                  className="h-4 w-4 accent-primary"
+                />
+                {method === 'DELIVERY' ? 'Delivery' : 'Self Collection'}
+              </span>
+              <span className="text-sm text-text-muted">
+                {fees
+                  ? method === 'DELIVERY'
+                    ? `$${fees.delivery.toFixed(2)}`
+                    : fees.selfCollection === 0
+                      ? 'Free'
+                      : `$${fees.selfCollection.toFixed(2)}`
+                  : '…'}
+              </span>
+            </label>
+          ))}
           {fulfillmentMethod === 'SELF_COLLECTION' && (
-  <p className="text-xs text-gray-500 pl-1">
-    Pickup location: {SELF_COLLECTION_ADDRESS}
-  </p>
-)}
+            <p className="pl-1 text-xs text-text-muted">
+              Pickup location: {SELF_COLLECTION_ADDRESS}
+            </p>
+          )}
         </div>
-      </div>
+      </section>
 
-      <div className="mb-6">
-        <h2 className="font-medium mb-2">Order Summary</h2>
-        {items.map((item) => (
-          <div key={item.variantId} className="flex justify-between text-sm py-1">
-            <span>
-              {item.productName} × {item.quantity}
-            </span>
-            <span>${(item.price * item.quantity).toFixed(2)}</span>
-          </div>
-        ))}
-        <div className="mt-3 pt-3 border-t text-sm space-y-1">
-          <div className="flex justify-between">
-            <span>Subtotal</span>
-            <span>${subtotal.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>{fulfillmentMethod === 'SELF_COLLECTION' ? 'Self Collection' : 'Shipping'}</span>
-            <span>${shippingFee.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>GST (9%)</span>
-            <span>${gst.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between font-semibold">
-            <span>Total</span>
-            <span>${total.toFixed(2)}</span>
+      <section className="mt-8">
+        <h2 className="font-medium text-text">Order Summary</h2>
+        <div className="mt-3 rounded-lg border border-border-light bg-surface p-4">
+          {items.map((item) => (
+            <div key={item.variantId} className="flex justify-between py-1 text-sm text-text">
+              <span>
+                {item.productName} × {item.quantity}
+              </span>
+              <span>${(item.price * item.quantity).toFixed(2)}</span>
+            </div>
+          ))}
+          <div className="mt-3 space-y-1.5 border-t border-border-light pt-3 text-sm">
+            <div className="flex justify-between text-text-muted">
+              <span>Subtotal</span>
+              <span>${subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-text-muted">
+              <span>{fulfillmentMethod === 'SELF_COLLECTION' ? 'Self Collection' : 'Shipping'}</span>
+              <span>${shippingFee.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-text-muted">
+              <span>GST (9%)</span>
+              <span>${gst.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between border-t border-border-light pt-1.5 font-semibold text-primary">
+              <span>Total</span>
+              <span>${total.toFixed(2)}</span>
+            </div>
           </div>
         </div>
-        <p className="mt-2 text-xs text-gray-400">
+        <p className="mt-2 text-xs text-text-light">
           Final price and stock confirmed at order placement.
         </p>
-      </div>
+      </section>
 
       {fulfillmentMethod === 'DELIVERY' && (
-        <div className="mb-6">
-          <h2 className="font-medium mb-2">Shipping Address</h2>
-          <div className="flex flex-col gap-2">
-            <input
-              placeholder="Block / Building No."
-              value={block}
-              onChange={(e) => setBlock(e.target.value)}
-              className="border border-gray-300 px-3 py-2 rounded"
-            />
-            <input
-              placeholder="Unit Number (optional)"
-              value={unitNumber}
-              onChange={(e) => setUnitNumber(e.target.value)}
-              className="border border-gray-300 px-3 py-2 rounded"
-            />
-            <input
-              placeholder="Street"
-              value={street}
-              onChange={(e) => setStreet(e.target.value)}
-              className="border border-gray-300 px-3 py-2 rounded"
-            />
-            <input
-              placeholder="Postal Code"
-              value={postalCode}
-              onChange={(e) => setPostalCode(e.target.value)}
-              className="border border-gray-300 px-3 py-2 rounded"
-            />
+        <section className="mt-8">
+          <h2 className="font-medium text-text">Shipping Address</h2>
+          <div className="mt-3 flex flex-col gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor="block" className="sr-only">Block / Building No.</label>
+                <input
+                  id="block"
+                  placeholder="Block / Building No."
+                  value={block}
+                  onChange={(e) => setBlock(e.target.value)}
+                  className="min-h-[44px] w-full rounded-md border border-border bg-surface px-3 text-sm text-text placeholder:text-text-light focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
+                />
+              </div>
+              <div>
+                <label htmlFor="unitNumber" className="sr-only">Unit Number (optional)</label>
+                <input
+                  id="unitNumber"
+                  placeholder="Unit Number (optional)"
+                  value={unitNumber}
+                  onChange={(e) => setUnitNumber(e.target.value)}
+                  className="min-h-[44px] w-full rounded-md border border-border bg-surface px-3 text-sm text-text placeholder:text-text-light focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
+                />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="street" className="sr-only">Street</label>
+              <input
+                id="street"
+                placeholder="Street"
+                value={street}
+                onChange={(e) => setStreet(e.target.value)}
+                className="min-h-[44px] w-full rounded-md border border-border bg-surface px-3 text-sm text-text placeholder:text-text-light focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+            </div>
+            <div>
+              <label htmlFor="postalCode" className="sr-only">Postal Code</label>
+              <input
+                id="postalCode"
+                placeholder="Postal Code"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+                className="min-h-[44px] w-full rounded-md border border-border bg-surface px-3 text-sm text-text placeholder:text-text-light focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+            </div>
           </div>
-        </div>
+        </section>
       )}
 
-      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+      {error && (
+        <p className="mt-6 flex items-center gap-1.5 text-sm text-error">
+          <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          {error}
+        </p>
+      )}
 
-      <button
+      <Button
         onClick={handlePlaceOrder}
         disabled={submitting}
-        className="w-full bg-black text-white py-2.5 rounded disabled:bg-gray-300"
+        className="mt-6 w-full gap-2"
       >
-        {submitting ? 'Placing Order...' : 'Place Order'}
-      </button>
+        {submitting ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            Placing Order…
+          </>
+        ) : (
+          <>
+            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+            Place Order
+          </>
+        )}
+      </Button>
     </div>
   )
 }

@@ -1,8 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import { PackageSearch } from 'lucide-react'
 import BackButton from '../../components/BackButton'
 import ProductCard, { totalStock } from '../../components/ProductCard'
+import ScrollReveal from '../../components/ScrollReveal'
+import Button from '../../components/ui/Button'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -14,18 +17,8 @@ async function getCategory(slug: string) {
     where: { slug },
     include: {
       products: {
-        where: {
-          product: {
-            archived: false,
-          },
-        },
-        include: {
-          product: {
-            include: {
-              variants: true,
-            },
-          },
-        },
+        where: { product: { archived: false } },
+        include: { product: { include: { variants: true } } },
       },
     },
   })
@@ -85,69 +78,74 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   return (
     <div>
       {category.bannerImageUrl && (
-        <div className="w-full h-64 bg-gray-100">
+        <div className="h-56 w-full bg-surface-muted md:h-72">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={category.bannerImageUrl}
-            alt={category.name}
-            className="w-full h-full object-cover"
-          />
+          <img src={category.bannerImageUrl} alt={category.name} className="h-full w-full object-cover" />
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="mx-auto max-w-[1400px] px-4 py-8 md:px-8 md:py-12">
         <BackButton />
 
-        <h1 className="text-3xl font-bold text-gray-800">{category.name}</h1>
+        <h1 className="mt-4 font-display text-3xl font-semibold text-primary md:mt-6 md:text-4xl">
+          {category.name}
+        </h1>
         {category.description && (
-          <p className="mt-2 text-gray-600 max-w-2xl">{category.description}</p>
+          <p className="mt-2 max-w-2xl text-text-muted">{category.description}</p>
         )}
 
         {hasProducts && (
           <form method="GET" className="mt-6 flex flex-wrap items-center gap-4">
-            <div>
-              <label className="text-sm text-gray-600 mr-2">Sort by</label>
+            <div className="flex items-center gap-2">
+              <label htmlFor="sort" className="text-sm text-text-muted">
+                Sort by
+              </label>
               <select
+                id="sort"
                 name="sort"
                 defaultValue={sort}
-                className="border rounded px-3 py-1.5 text-sm"
+                className="min-h-[44px] rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
               >
-                <option value="newest">Newest (Default)</option>
+                <option value="newest">Newest</option>
                 <option value="price-asc">Price: Low to High</option>
                 <option value="price-desc">Price: High to Low</option>
                 <option value="name">Name: A to Z</option>
               </select>
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-gray-600">
+            <label className="flex items-center gap-2 text-sm text-text-muted">
               <input
                 type="checkbox"
                 name="inStock"
                 value="true"
                 defaultChecked={inStock === 'true'}
+                className="h-4 w-4 rounded border-border text-primary focus:ring-2 focus:ring-accent"
               />
               In stock only
             </label>
 
-            <button
-              type="submit"
-              className="bg-gray-800 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-gray-900"
-            >
+            <Button type="submit" size="sm">
               Apply
-            </button>
+            </Button>
           </form>
         )}
 
         {products.length === 0 ? (
-          <div className="mt-10 bg-white rounded-lg p-8 text-center text-gray-500">
-            {hasProducts
-              ? 'No products match your filters.'
-              : 'No products in this category yet.'}
+          <div className="mt-12 flex flex-col items-center rounded-lg border border-border-light bg-surface py-16 text-center">
+            <PackageSearch className="h-8 w-8 text-text-light" aria-hidden="true" />
+            <p className="mt-3 font-display text-lg text-primary">
+              {hasProducts ? "This binder page doesn't have a match." : 'Looks like this binder page is empty.'}
+            </p>
+            <p className="mt-1 text-sm text-text-muted">
+              {hasProducts ? 'Try adjusting your filters.' : 'Check back soon for new arrivals.'}
+            </p>
           </div>
         ) : (
-          <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} headingLevel="h2" />
+          <div className="mt-8 grid grid-cols-2 gap-5 sm:grid-cols-3 md:gap-6 lg:grid-cols-4">
+            {products.map((product, index) => (
+              <ScrollReveal key={product.id} delayMs={index * 60}>
+                <ProductCard product={product} headingLevel="h2" />
+              </ScrollReveal>
             ))}
           </div>
         )}

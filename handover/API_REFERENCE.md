@@ -107,10 +107,55 @@ Creates a new product type with its fields in a single nested Prisma create.
 
 ---
 
+### GET /api/admin/product-types/[id]
+Returns one product type with its fields, ordered.
+
+**Auth:** Admin only.
+
+**Response:** Same shape as a single item from the list endpoint above.
+
+**Errors:** `401`, `403`, `404`
+
+**File:** `app/api/admin/product-types/[id]/route.ts`
+
+---
+
+### PUT /api/admin/product-types/[id]
+Updates a product type's name/description and its field set (add, edit, remove, reorder). Added 2026-07-17.
+
+**Auth:** Admin only.
+
+**Request body:**
+```json
+{
+  "name": "Laptop",
+  "description": "Optional description",
+  "fields": [
+    { "id": "existing-field-cuid", "label": "Brand (updated label)", "key": "brand", "type": "TEXT", "required": true, "options": "" },
+    { "label": "New Field", "key": "warranty_months", "type": "NUMBER", "required": false, "options": "" }
+  ]
+}
+```
+Fields with an `id` are treated as existing fields to update; fields without one are created new. Any existing field whose `id` is missing from the submitted array is deleted (subject to the guard below).
+
+**Behavior:**
+- `key` and `type` on an existing field (has an `id`) are **never taken from the request body** — always re-derived from the field's current stored values, even though the edit UI already disables those inputs client-side. Only `label`, `required`, `options`, and `order` (array position) are actually updated on existing fields.
+- Before deleting any field, checks whether any `Product` of this type has a non-empty value for that field's `key` in `attributes`. If so, the entire request is rejected — no fields are deleted or updated — with a `400` naming the affected field(s) and how many products use each.
+- Checks for duplicate keys across the final field set (existing fields being kept + any newly added ones) — rejects with `400` if found, since two fields sharing a key would silently collide in `attributes`.
+- `name`/`description` update, and all field create/update/delete, happen in one `$transaction`.
+
+**Response:** `200` — the updated `ProductType` with nested `fields`.
+
+**Errors:** `401`, `403`, `404` (type not found), `400` (missing name, non-array fields, in-use field removal blocked, duplicate keys)
+
+**File:** `app/api/admin/product-types/[id]/route.ts`
+
+---
+
 ## Admin — Products
 
 ### GET /api/admin/products
-Returns all products with their product type.
+Returns all products with their product type. Includes archived products — this endpoint is admin-only and archived filtering is deliberately NOT applied here, since admins need full visibility.
 
 **Auth:** Admin only.
 
@@ -122,6 +167,7 @@ Returns all products with their product type.
     "name": "MacBook Pro 14",
     "slug": "macbook-pro-14",
     "imageUrl": "https://...",
+    "archived": false,
     "attributes": { "brand": "Apple", "ram": "16GB" },
     "variantOptions": { "Color": ["Silver", "Black"], "Storage": ["512GB", "1TB"] },
     "productType": { "id": "cuid", "name": "Laptop" },
@@ -173,10 +219,82 @@ Creates a new product with its variants in a single nested Prisma create. Requir
 - `imageUrl` on each variant is optional; when set, the storefront product page shows it in place of the product's `imageUrl` once that variant is selected
 - `variants` array must contain at least one entry — request is rejected with `400` if empty, or if any variant is missing `price`/`stock`
 - Variants are created via nested Prisma `create` in the same transaction as the `Product`
+- `archived` defaults to `false` and is not settable at creation — a product is always created visible; use the archive endpoint below to hide it afterward
 
 **Response:** The created `Product` with nested `variants`.
 
 **File:** `app/api/admin/products/route.ts`
+
+---
+
+### GET /api/admin/products/[id]
+Returns one product with its product type (including field definitions, ordered) and variants. Added 2026-07-17.
+
+**Auth:** Admin only.
+
+**Response:** Product shape as above, plus `productType.fields[]`.
+
+**Errors:** `401`, `403`, `404`
+
+**File:** `app/api/admin/products/[id]/route.ts`
+
+---
+
+### PUT /api/admin/products/[id]
+Updates a product's name/description/image/attributes/variantOptions and its variant set (add, edit, remove). Added 2026-07-17. Does **not** accept `productTypeId` or `slug` — both are locked after creation (see DECISIONS.md) and silently ignored if present in the request body.
+
+**Auth:** Admin only.
+
+**Request body:**
+```json
+{
+  "name": "Nike Air Force 1",
+  "description": "Updated description",
+  "imageUrl": "https://...",
+  "attributes": { "brand": "Nike", "material": "Leather" },
+  "variantOptions": { "Size": ["7", "8", "9"], "Color": ["Red", "Blue"] },
+  "variants": [
+    { "id": "existing-variant-cuid", "combination": { "Size": "7", "Color": "Red" }, "price": "125.00", "stock": "4", "sku": "AF1-7-RED", "imageUrl": "" },
+    { "combination": { "Size": "9", "Color": "Blue" }, "price": "120.00", "stock": "6", "sku": "", "imageUrl": "" }
+  ]
+}
+```
+
+**Behavior:**
+- Variants with an `id` are updated in place; variants without one are created new; any existing variant whose `id` is missing from the submitted array is deleted.
+- Safe to delete a variant even if historical orders reference it — `OrderItem.productVariantId` is a snapshot, not a live FK (see DATABASE_SCHEMA.md).
+- At least one variant required overall; every variant needs `price` and `stock`, same validation as creation.
+- All variant create/update/delete plus the product's own field update happen in one Prisma nested `update` call.
+
+**Response:** `200` — the updated `Product` with nested `variants`.
+
+**Errors:** `401`, `403`, `404` (product not found), `400` (missing name, no variants, missing price/stock on a variant)
+
+**File:** `app/api/admin/products/[id]/route.ts`
+
+---
+
+### PATCH /api/admin/products/[id]/archive
+Toggles a product's `archived` flag only — no other fields are touched. Added 2026-07-17.
+
+**Auth:** Admin only.
+
+**Request body:**
+```json
+{ "archived": true }
+```
+
+**Behavior:**
+- Hides the product from every customer-facing surface (category pages, `FeaturedProducts`, `/search`, `/api/search/suggestions`) and causes `/api/checkout` to reject it if still present in a stale client-side cart.
+- Does NOT affect: historical orders (already snapshotted), admin panel visibility/editability, or the product's variants/data in any way. Fully reversible by calling again with `archived: false`.
+
+**Response:** `200` — `{ "id": "cuid", ...otherProductFields, "archived": true }`
+
+**Errors:** `401`, `403`, `404`, `400` (`archived` missing or not a boolean)
+
+**File:** `app/api/admin/products/[id]/archive/route.ts`
+
+---
 
 ## Admin — Categories
 
@@ -232,6 +350,53 @@ Creates a new category with optional product assignments in a single nested Pris
 **Response:** The created `Category` with nested `products` (each wrapping the related `product`).
 
 **File:** `app/api/admin/categories/route.ts`
+
+---
+
+### GET /api/admin/categories/[id]
+Returns one category, plus `productIds` (flattened from its `CategoryProduct` rows) for pre-filling the edit form's product checklist. Added 2026-07-17.
+
+**Auth:** Admin only.
+
+**Errors:** `401`, `403`, `404`
+
+**File:** `app/api/admin/categories/[id]/route.ts`
+
+---
+
+### PUT /api/admin/categories/[id]
+Updates a category's fields and product assignments. Added 2026-07-17. Does **not** accept or regenerate `slug` — locked after creation (see DECISIONS.md).
+
+**Auth:** Admin only.
+
+**Request body:** Same shape as `POST /api/admin/categories`, minus `slug` (ignored if present).
+
+**Behavior:**
+- Replaces the category's `CategoryProduct` assignments entirely (delete-all-then-recreate from the submitted `productIds`) rather than diffing — simpler and safe, since `CategoryProduct` carries no data beyond the relationship itself.
+- Runs in one `$transaction`.
+
+**Response:** `200` — the updated `Category` with nested `products`.
+
+**Errors:** `401`, `403`, `404`, `400` (missing name)
+
+**File:** `app/api/admin/categories/[id]/route.ts`
+
+---
+
+### DELETE /api/admin/categories/[id]
+Permanently deletes a category. Added 2026-07-17. Real hard delete — no archive system for Categories (see DECISIONS.md).
+
+**Auth:** Admin only.
+
+**Behavior:**
+- `CategoryProduct` rows cascade automatically — this only unassigns products from the deleted category. The `Product` rows themselves are never touched or deleted.
+- No confirmation/guard needed server-side (unlike Product Type field removal) — nothing else structurally depends on a Category. Client-side confirmation dialog (`window.confirm`) is handled in `CategoryActions.tsx`.
+
+**Response:** `200` — `{ "success": true }`
+
+**Errors:** `401`, `403`, `404`
+
+**File:** `app/api/admin/categories/[id]/route.ts`
 
 ---
 
@@ -312,6 +477,38 @@ Sets or updates an order's tracking number. Freely editable at any order status 
 
 ---
 
+## Storefront — Search
+
+### GET /search (page, not an API route)
+Server Component. Added 2026-07-17. Reads `?q=` from `searchParams`. Case-insensitive Prisma `contains` match against `Product.name` and `Product.description` (`OR`'d together), filtered to `archived: false`. No typo tolerance by deliberate choice — see DECISIONS.md. Renders results via the shared `ProductCard` component. Empty/missing `q` shows a prompt state rather than querying.
+
+**File:** `app/search/page.tsx`
+
+---
+
+### GET /api/search/suggestions
+Live-typing autocomplete dropdown backing `SearchBar.tsx` in the header. Added 2026-07-17. Public — no auth required, same trust level as any other storefront browsing.
+
+**Query params:** `?q=<search text>`
+
+**Behavior:**
+- Same match logic as `/search` (case-insensitive `contains` on name/description, `archived: false`), capped to the 6 most recent matches (`take: 6`, `orderBy: createdAt desc`)
+- Returns a lighter-weight shape than the full search page: `id`, `name`, `slug`, `imageUrl`, a formatted `price` string (via the shared `formatPrice` helper from `ProductCard.tsx`), and `category` (the first assigned category's name, or `null` — a product can belong to multiple categories, but only one is shown here to keep the row compact)
+- Empty/missing `q` returns `{ "results": [] }` immediately, no DB query
+
+**Response:**
+```json
+{
+  "results": [
+    { "id": "cuid", "name": "Nike Air Force 1", "slug": "nike-air-force-1", "imageUrl": "https://...", "price": "$120.00", "category": "Sneakers" }
+  ]
+}
+```
+
+**File:** `app/api/search/suggestions/route.ts`
+
+---
+
 ## Checkout
 
 ### GET /api/checkout/fulfillment-fees
@@ -348,8 +545,8 @@ For `fulfillmentMethod: "SELF_COLLECTION"`, all `shipping*` fields are ignored (
 
 **Behavior:**
 - Validates `fulfillmentMethod` is one of `DELIVERY`/`SELF_COLLECTION`
-- Validates shipping address format (`lib/validateAddress.ts`) — **now branches on `fulfillmentMethod`**: short-circuits to valid (no error) when `SELF_COLLECTION`, otherwise validates as before
-- Atomically checks and decrements stock per variant — rejects `409` if insufficient
+- Validates shipping address format (`lib/validateAddress.ts`) — branches on `fulfillmentMethod`: short-circuits to valid when `SELF_COLLECTION`, otherwise validates as before
+- Atomically checks and decrements stock per variant — rejects `409` if insufficient. **As of 2026-07-17, this same atomic check also excludes archived products** (`product: { archived: false }` added to the `updateMany` where-clause) — an archived item still sitting in a stale client-side cart is rejected with the same `409 OUT_OF_STOCK`-style response as a genuinely out-of-stock item, rather than a new error type
 - Snapshots live price/product name/combination onto each `OrderItem`
 - Computes `shippingFee` from `SHIPPING_FEE_SGD` or `SELF_COLLECTION_FEE_SGD` depending on `fulfillmentMethod`
 - Calculates GST via `lib/gst.ts` on `subtotal + shippingFee` combined (changed Phase 5)
@@ -359,9 +556,25 @@ For `fulfillmentMethod: "SELF_COLLECTION"`, all `shipping*` fields are ignored (
 
 **Response:** `201` — `{ "orderId": "cuid", "checkoutUrl": "https://checkout.sandbox.hit-pay.com/..." }`
 
-**Errors:** `400` (empty cart / invalid fulfillment method / invalid address / invalid item), `409` (out of stock), `502` (HitPay request creation failed)
+**Errors:** `400` (empty cart / invalid fulfillment method / invalid address / invalid item), `409` (out of stock, or an archived product still in cart), `502` (HitPay request creation failed)
 
 **File:** `app/api/checkout/route.ts`
+
+---
+
+### GET /checkout/success (page, not an API route)
+Order confirmation page. `?orderId=`, `?status=`, and `?reference=` are all read from `searchParams` (`reference` added 2026-07-17 — appended by HitPay itself to the `redirect_url` on a real redirect, not something this app generates).
+
+**Behavior:**
+- **Authenticated visitor, order belongs to them:** full behavior unchanged from Phase 4/5 — reconciles if stale, shows the cosmetic `status=canceled` message, a pending/failed status message, or the full paid order breakdown, depending on the order's real status.
+- **Authenticated visitor, order does NOT belong to them, or order doesn't exist:** `notFound()` (404) — unchanged, a real security boundary.
+- **Unauthenticated visitor (added 2026-07-17):** no `notFound()` fallback anymore. Instead:
+  - If `reference` is present AND matches that order's `Order.hitpayPaymentRequestId` AND the order's real status is `PAID` → shows a genuine "Payment received!" message. No order details (items, address, total) are shown or fetched beyond the one comparison needed.
+  - Otherwise (no `reference`, wrong `reference`, order not actually `PAID` yet, or order doesn't exist at all) → shows an identical generic "still processing" message. Deliberately indistinguishable from the outside whether the order exists, is unpaid, or belongs to someone else — this can't be used to probe order IDs or leak payment status.
+  - Either way, a "Sign in to view your order details" link is shown, preserving `orderId`/`status`/`reference` via `redirect_url` so the visitor lands back on this same page (now with a real session) after signing in.
+  - Deliberately does NOT call `reconcileOrderIfStale` in this branch — this is a read-only, best-effort display path; the real reconciliation already runs via the webhook and via the authenticated flow.
+
+**File:** `app/checkout/success/page.tsx`
 
 ---
 
@@ -372,7 +585,7 @@ Receives HitPay's payment status webhook, verifies its signature, and updates th
 
 **Auth:** HMAC-SHA256 signature over the raw request body using `HITPAY_WEBHOOK_SALT`, compared against the `Hitpay-Signature` header (timing-safe comparison).
 
-**Registered via:** HitPay Dashboard (Developers → Webhook Endpoints), subscribed to `payment_request.completed` and `payment_request.failed`. NOT via the `webhook` parameter on Payment Request creation (deprecated).
+**Registered via:** HitPay Dashboard (Developers → Webhook Endpoints), subscribed to `payment_request.completed` and `payment_request.failed`. NOT via the `webhook` parameter on Payment Request creation (deprecated). As of 2026-07-17, two endpoints are registered — the ngrok-tunneled local dev URL and the live `biggyballs69.gay` URL — confirmed simultaneously active in HitPay's dashboard.
 
 **Behavior:**
 - Looks up `Order` by `reference_number` (our `Order.id`)
@@ -380,11 +593,26 @@ Receives HitPay's payment status webhook, verifies its signature, and updates th
 - `status: "completed"` → `Order.status = PAID`, triggers `sendOrderConfirmationEmail`
 - `status: "failed"` → `markOrderFailedAndRestoreStock(orderId)`
 
-**Note:** HitPay does not fire this webhook for expired or cancelled requests — only genuine `completed`/`failed` transitions. Expiry is instead handled by lazy reconciliation on the order confirmation page (see `app/checkout/success/page.tsx`).
+**Note:** HitPay does not fire this webhook for expired or cancelled requests — only genuine `completed`/`failed` transitions. Expiry is instead handled by lazy reconciliation on the order confirmation page (see `app/checkout/success/page.tsx`) and by the scheduled cron sweep (`app/api/cron/reconcile-orders/route.ts`).
 
 **Response:** `200` on success/no-op, `401` (missing/invalid signature), `404` (no matching order)
 
 **File:** `app/api/webhooks/hitpay/route.ts`
+
+---
+
+## Background Jobs
+
+### GET or POST /api/cron/reconcile-orders
+Scheduled sweep that reconciles any `PENDING_PAYMENT` order older than 6 minutes against HitPay's real status, restoring stock and marking the order `PAYMENT_FAILED` where appropriate. Triggered every 5 minutes by cron-job.org (external, non-browser caller).
+
+**Auth:** `CRON_SECRET` shared-secret check, via `Authorization: Bearer <secret>` header or `?secret=` query param — not Clerk auth, since the caller has no browser session.
+
+**Behavior:** Uses the shared `reconcileOrderIfStale` implementation from `lib/reconcileOrder.ts` (the same function `/checkout/success` calls), processed via `Promise.allSettled` across all matching orders in one invocation.
+
+**Response:** `200` — `{ "checked": number, "succeeded": number, "failed": number }`
+
+**File:** `app/api/cron/reconcile-orders/route.ts`
 
 ---
 
@@ -407,4 +635,4 @@ Server Component, auth-gated. Fetches the order and its items, then checks `orde
 ## Planned API Routes (Not Yet Built)
 GET/PUT    /api/admin/orders             Bulk order actions — deferred, see ROADMAP.md Phase 5
 
-Note: `GET /api/products` and `GET /api/products/[slug]` (listed in earlier planning) were not built as separate API routes. Public category and product browsing (`/category/[slug]`, `/product/[slug]`) are Server Components that query Prisma directly, consistent with the "Server Components can use Prisma directly" convention — no API route needed since nothing is mutated. Sort/filter on the category page is handled via `searchParams`, not a query API. The same pattern now extends to `/admin/orders`, `/admin/orders/[id]`, `/account/orders`, and `/account/orders/[id]`.
+Note: `GET /api/products` and `GET /api/products/[slug]` (listed in earlier planning) were not built as separate API routes. Public category and product browsing (`/category/[slug]`, `/product/[slug]`, `/search`) are Server Components that query Prisma directly, consistent with the "Server Components can use Prisma directly" convention — no API route needed since nothing is mutated. Sort/filter on the category page, and the query on the search page, are both handled via `searchParams`, not a query API. `/api/search/suggestions` is the one storefront exception, since it's called from a Client Component (`SearchBar.tsx`) that can't call Prisma directly. The same overall pattern extends to `/admin/orders`, `/admin/orders/[id]`, `/account/orders`, and `/account/orders/[id]`.

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { ImageOff, Trash2 } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
 
 export default function CartPage() {
@@ -24,9 +25,13 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="p-8 text-center">
-        <p className="text-gray-500 mb-4">Your cart is empty.</p>
-        <Link href="/" className="underline">
+      <div className="mx-auto max-w-md px-4 py-24 text-center">
+        <p className="font-display text-2xl text-primary">Your binder is empty.</p>
+        <p className="mt-2 text-text-muted">Add a few favorites to get started.</p>
+        <Link
+          href="/"
+          className="mt-6 inline-flex min-h-[44px] items-center justify-center rounded-md bg-primary px-6 text-text-inverse transition-all duration-150 ease-out hover:-translate-y-0.5 hover:bg-accent hover:text-primary"
+        >
           Continue shopping
         </Link>
       </div>
@@ -34,41 +39,47 @@ export default function CartPage() {
   }
 
   return (
-    <div className="p-4 max-w-2xl mx-auto">
-      <h1 className="text-xl font-semibold mb-4">Your Cart</h1>
+    <div className="mx-auto max-w-2xl px-4 py-8 md:px-8 md:py-12">
+      <h1 className="font-display text-2xl font-semibold text-primary md:text-3xl">Your Cart</h1>
 
-      <div className="flex flex-col gap-4">
+      <div className="mt-6 flex flex-col gap-5">
         {items.map((item) => (
           <div
             key={item.variantId}
-            className="flex items-center gap-4 border-b border-gray-200 pb-4"
+            className="flex items-center gap-4 border-b border-border-light pb-5"
           >
-            {item.imageUrl ? (
-              <img
-                src={item.imageUrl}
-                alt={item.productName}
-                className="w-20 h-20 object-cover"
-              />
-            ) : (
-              <div className="w-20 h-20 bg-gray-100" />
-            )}
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-muted">
+              {item.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <ImageOff className="h-5 w-5 text-text-light" aria-hidden="true" />
+              )}
+            </div>
 
-            <div className="flex-1">
-              <Link href={`/product/${item.productSlug}`} className="font-medium">
+            <div className="flex-1 min-w-0">
+              <Link
+                href={`/product/${item.productSlug}`}
+                className="font-medium text-text transition-colors hover:text-primary"
+              >
                 {item.productName}
               </Link>
-              <p className="text-sm text-gray-500">
+              <p className="mt-0.5 text-sm text-text-muted">
                 {Object.entries(item.combination)
                   .map(([key, value]) => `${key}: ${value}`)
                   .join(', ')}
               </p>
-              <p className="text-sm">${item.price.toFixed(2)}</p>
+              <p className="mt-1 font-medium text-primary">${item.price.toFixed(2)}</p>
               {warnings[item.variantId] && (
-                <p className="text-sm text-amber-600 mt-1">{warnings[item.variantId]}</p>
+                <p className="mt-1 text-sm text-warning">{warnings[item.variantId]}</p>
               )}
             </div>
 
+            <label className="sr-only" htmlFor={`qty-${item.variantId}`}>
+              Quantity for {item.productName}
+            </label>
             <input
+              id={`qty-${item.variantId}`}
               type="number"
               min={1}
               max={item.stock}
@@ -76,24 +87,28 @@ export default function CartPage() {
               onChange={(e) =>
                 handleQuantityChange(item.variantId, parseInt(e.target.value, 10) || 0, item.stock)
               }
-              className="w-16 border border-gray-300 px-2 py-1"
+              className="min-h-[44px] w-16 rounded-md border border-border bg-surface px-2 text-center text-sm text-text focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
             />
 
             <button
               onClick={() => removeItem(item.variantId)}
-              className="text-sm text-red-600 underline"
+              aria-label={`Remove ${item.productName} from cart`}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-text-light transition-colors hover:bg-surface-muted hover:text-error"
             >
-              Remove
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         ))}
       </div>
 
-      <div className="mt-6 flex justify-between items-center">
-        <span className="font-semibold">Subtotal: ${subtotal.toFixed(2)}</span>
+      <div className="mt-6 flex items-center justify-between border-t border-border-light pt-6">
+        <div>
+          <span className="text-sm text-text-muted">Subtotal</span>
+          <p className="font-display text-xl font-semibold text-primary">${subtotal.toFixed(2)}</p>
+        </div>
         <Link
           href="/checkout"
-          className="px-4 py-2 bg-black text-white text-sm rounded"
+          className="inline-flex min-h-[44px] items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-text-inverse transition-all duration-150 ease-out hover:-translate-y-0.5 hover:bg-accent hover:text-primary"
         >
           Checkout
         </Link>

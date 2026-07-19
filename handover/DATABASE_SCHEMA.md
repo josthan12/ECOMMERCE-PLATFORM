@@ -31,6 +31,13 @@ JSON        → raw JSON input
 TAG         → comma-separated tags
 COLOR       → color picker (hex)
 
+**Note (2026-07-17):** once a `ProductField` exists, `type` is treated as
+immutable at the application layer (not enforced by the DB) — the admin
+Product Type edit page disables this input for existing fields, and the API
+re-derives it server-side rather than trusting the client. Changing a
+field's type after products already have data in it could make existing
+values invalid for the new input type. See DECISIONS.md.
+
 ### OrderStatus
 Used on `Order.status`. Full lifecycle defined upfront (Phase 4 only used the first three) to avoid a second migration when Phase 5 fulfillment work began.
 PENDING_PAYMENT
@@ -88,7 +95,7 @@ Singapore-specific address format.
 ---
 
 ### ProductType
-Admin-defined templates that determine what fields a product has. Created with zero code changes via admin UI.
+Admin-defined templates that determine what fields a product has. Created with zero code changes via admin UI. As of 2026-07-17, name/description/fields are all editable after creation — see `ProductField` notes below for what remains locked.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -100,6 +107,8 @@ Admin-defined templates that determine what fields a product has. Created with z
 | updatedAt | DateTime | Auto |
 
 Relations: `fields ProductField[]`, `products Product[]`
+
+**Note (2026-07-17):** `ProductType` has no delete or type-reassignment feature, by deliberate design decision — `Product.productTypeId` is required and does not cascade from `ProductType`, so a type cannot be safely deleted while any product depends on it, and there's no defined mapping for moving a product to a different type. See DECISIONS.md.
 
 ---
 
@@ -118,6 +127,8 @@ Individual field definitions belonging to a ProductType. Drives the dynamic form
 | order | Int | Display order, default: 0 |
 | createdAt | DateTime | Auto |
 
+**Note (2026-07-17):** `key` and `type` are immutable once a field exists — enforced at the application layer (`PUT /api/admin/product-types/[id]` re-derives both from the existing DB record rather than trusting client input). Removing a field is blocked server-side if any `Product` of that type still has a non-empty value for it in `attributes`. `label`, `required`, `options`, and `order` remain freely editable. See DECISIONS.md.
+
 ---
 
 ### Product
@@ -126,19 +137,22 @@ A specific product created using a ProductType template. Type-specific fields st
 | Column | Type | Notes |
 |---|---|---|
 | id | String (cuid) | Primary key |
-| productTypeId | String | FK → ProductType.id |
+| productTypeId | String | FK → ProductType.id. **Locked after creation** (2026-07-17) — not editable via the Product edit page, since `attributes` is shaped entirely by the type's field definitions with no defined remapping. |
 | name | String | e.g. "MacBook Pro 14" |
-| slug | String | Unique, auto-generated |
+| slug | String | Unique, auto-generated. **Locked after creation** (2026-07-17) — never regenerated on edit, to avoid breaking already-linked/bookmarked `/product/[slug]` URLs. |
 | description | String? | Optional |
 | attributes | Json | Type-specific fields e.g. `{"brand":"Apple","ram":"16GB"}` |
 | variantOptions | Json? | Option definitions e.g. `{"Color":["Red","Blue"],"Size":["7","8","9"]}` |
 | imageUrl | String? | Optional product image URL (fallback/default; set via admin form) |
+| archived | Boolean | **Added 2026-07-17.** Default: `false`. Hides the product from every customer-facing surface (category pages, `FeaturedProducts`, `/search`, `/api/search/suggestions`) and blocks it at checkout if still sitting in a stale client-side cart, without deleting it — order history, admin visibility, and editability are all unaffected. Modeled on Shopify's archive pattern. See DECISIONS.md. |
 | createdAt | DateTime | Auto |
 | updatedAt | DateTime | Auto |
 
 Relations: `variants ProductVariant[]`
 
 **Important:** `price` and `stock` do NOT exist on Product — they live on each `ProductVariant`.
+
+**Note (2026-07-17):** any *new* Prisma query anywhere in the app that lists products for customer-facing display must explicitly add `where: { archived: false }` (or merge it into an existing `where` clause) — this filter is not global/automatic. Admin-facing queries (the products list, the edit page) deliberately do NOT filter on `archived`, since admins need to see and manage archived products too.
 
 ---
 
@@ -157,6 +171,8 @@ A specific sellable combination of a product's options. Each variant tracks its 
 | createdAt | DateTime | Auto |
 | updatedAt | DateTime | Auto |
 
+**Note (2026-07-17):** the Product edit page supports adding new variants, editing price/stock/SKU/imageUrl on existing ones, and removing variants outright. Safe to remove a variant even with historical orders referencing it — `OrderItem.productVariantId` is a snapshot, not a live FK (see `OrderItem` below).
+
 ### Category
 Admin-defined product groupings with SEO and landing page fields.
 
@@ -164,7 +180,7 @@ Admin-defined product groupings with SEO and landing page fields.
 |---|---|---|
 | id | String (cuid) | Primary key |
 | name | String | Unique, e.g. "Sneakers" |
-| slug | String | Unique, auto-generated |
+| slug | String | Unique, auto-generated. **Locked after creation** (2026-07-17) — never regenerated on edit, same reasoning as `Product.slug` above. |
 | description | String? | Optional |
 | bannerImageUrl | String? | Optional banner image URL |
 | seoTitle | String? | Optional, defaults to name if empty |
@@ -173,6 +189,8 @@ Admin-defined product groupings with SEO and landing page fields.
 | updatedAt | DateTime | Auto |
 
 Relations: `products CategoryProduct[]`
+
+**Note (2026-07-17):** `Category` supports real hard delete (`DELETE /api/admin/categories/[id]`) — safe, since `CategoryProduct` cascades cleanly and only unassigns products, never deletes them. Unlike `Product`, no archive system was needed here.
 
 ---
 
@@ -198,7 +216,7 @@ A customer order. Created at checkout with live-verified price/stock; shipping a
 | userId | String | FK → User.id. Required — no guest orders. |
 | status | OrderStatus | Default: PENDING_PAYMENT |
 | fulfillmentMethod | FulfillmentMethod | Default: DELIVERY. Added Phase 5. Determines both the valid status-transition chain and whether a shipping address is required. |
-| hitpayPaymentRequestId | String? | HitPay's own payment request ID; used to poll their Get Payment Status endpoint for reconciliation |
+| hitpayPaymentRequestId | String? | HitPay's own payment request ID; used to poll their Get Payment Status endpoint for reconciliation. **Also used (2026-07-17) as a verification token** on `/checkout/success` for unauthenticated visitors — matched against the `reference` query param HitPay appends to its redirect, to safely confirm payment success without requiring a Clerk session. See API_REFERENCE.md and DECISIONS.md. |
 | shippingBlock | String? | Snapshotted at order time. **Nullable as of Phase 5** — null for self-collection orders |
 | shippingUnitNumber | String? | Snapshotted at order time; optional (landed properties have no unit) |
 | shippingStreet | String? | Snapshotted at order time. **Nullable as of Phase 5** — null for self-collection orders |
@@ -216,7 +234,7 @@ Relations: `items OrderItem[]`
 ---
 
 ### OrderItem
-Line item snapshot — price/name/combination captured live at checkout time, not joined from the current catalog, so historical orders remain accurate even if products are later renamed/repriced/deleted.
+Line item snapshot — price/name/combination captured live at checkout time, not joined from the current catalog, so historical orders remain accurate even if products are later renamed/repriced/deleted/archived.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -262,6 +280,7 @@ cascade delete)            cascade delete)          via Product.categoryProducts
 | add_hitpay_payment_request_id | Added `Order.hitpayPaymentRequestId` |
 | add_fulfillment_method_and_shipping | Added `FulfillmentMethod` enum, `Order.fulfillmentMethod`, `Order.shippingFee`, `Order.trackingNumber` |
 | make_shipping_address_optional | Changed `Order.shippingBlock`, `shippingStreet`, `shippingPostalCode` from required to nullable |
+| add_product_archived | **(2026-07-17)** Added `Product.archived` (Boolean, default `false`) — enables the archive-not-delete pattern for Products; see `Product` model notes above and DECISIONS.md |
 
 ---
 
