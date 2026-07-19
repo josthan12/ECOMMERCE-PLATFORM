@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { Trash2 } from 'lucide-react'
 
 export default function CategoryActions({
   categoryId,
@@ -40,8 +41,9 @@ export default function CategoryActions({
     <button
       onClick={handleDelete}
       disabled={loading}
-      className="text-red-500 hover:text-red-700 disabled:opacity-50"
+      className="flex items-center gap-1.5 text-error transition-colors hover:text-error/80 disabled:opacity-50"
     >
+      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
       {loading ? 'Deleting...' : 'Delete'}
     </button>
   )

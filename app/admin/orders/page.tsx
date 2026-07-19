@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { STATUS_STYLES, formatStatus } from '@/lib/orderStatus';
+import { ClipboardList } from 'lucide-react';
+import Button from '../../components/ui/Button';
 
 const ORDER_STATUSES = [
   'PENDING_PAYMENT',
@@ -41,16 +43,19 @@ export default async function AdminOrdersPage({
   });
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-4">Orders</h1>
+    <div>
+      <h1 className="font-display text-2xl font-semibold text-primary md:text-3xl mb-6">Orders</h1>
 
-      <form method="GET" className="flex items-end gap-4 mb-6">
+      <form method="GET" className="flex flex-wrap items-end gap-4 mb-6">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+          <label htmlFor="status" className="mb-1 block text-xs font-medium text-text-muted">
+            Status
+          </label>
           <select
+            id="status"
             name="status"
             defaultValue={selectedStatus}
-            className="border border-gray-300 rounded px-3 py-1.5 text-sm"
+            className="min-h-[44px] rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="ALL">All</option>
             {ORDER_STATUSES.map((s) => (
@@ -62,11 +67,14 @@ export default async function AdminOrdersPage({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Sort</label>
+          <label htmlFor="sort" className="mb-1 block text-xs font-medium text-text-muted">
+            Sort
+          </label>
           <select
+            id="sort"
             name="sort"
             defaultValue={selectedSort}
-            className="border border-gray-300 rounded px-3 py-1.5 text-sm"
+            className="min-h-[44px] rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="newest">Newest first</option>
             <option value="oldest">Oldest first</option>
@@ -75,17 +83,14 @@ export default async function AdminOrdersPage({
           </select>
         </div>
 
-        <button
-          type="submit"
-          className="px-4 py-1.5 text-sm font-medium rounded bg-gray-900 text-white hover:bg-gray-700"
-        >
+        <Button type="submit" size="sm">
           Apply
-        </button>
+        </Button>
 
         {(selectedStatus !== 'ALL' || selectedSort !== 'newest') && (
           <Link
             href="/admin/orders"
-            className="text-sm text-gray-500 hover:underline pb-1.5"
+            className="pb-1.5 text-sm text-text-muted transition-colors hover:text-primary"
           >
             Clear filters
           </Link>
@@ -93,58 +98,63 @@ export default async function AdminOrdersPage({
       </form>
 
       {orders.length === 0 ? (
-        <p className="text-gray-500">
-          {selectedStatus === 'ALL' ? 'No orders yet.' : `No orders with status "${formatStatus(selectedStatus)}".`}
-        </p>
+        <div className="flex flex-col items-center rounded-lg border border-border-light bg-surface py-16 text-center">
+          <ClipboardList className="h-8 w-8 text-text-light" aria-hidden="true" />
+          <p className="mt-3 font-display text-lg text-primary">
+            {selectedStatus === 'ALL' ? 'No orders yet.' : `No orders with status "${formatStatus(selectedStatus)}".`}
+          </p>
+        </div>
       ) : (
-        <div className="overflow-x-auto border rounded-lg">
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="text-left px-4 py-2 font-medium text-gray-600">Order ID</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-600">Customer</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-600">Status</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-600">Total</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-600">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((order) => (
-                <tr
-                  key={order.id}
-                  className="border-b last:border-0 hover:bg-gray-50"
-                >
-                  <td className="px-4 py-2 font-mono text-xs text-gray-500">
-                    <Link href={`/admin/orders/${order.id}`} className="hover:underline">
-                      {order.id.slice(0, 8)}…
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2">
-                    {order.user.name || order.user.email}
-                  </td>
-                  <td className="px-4 py-2">
-                    <span
-                      className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                        STATUS_STYLES[order.status] ?? 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {formatStatus(order.status)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    ${order.total.toFixed(2)}
-                  </td>
-                  <td className="px-4 py-2 text-gray-500">
-                    {order.createdAt.toLocaleDateString('en-SG', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                  </td>
+        <div className="overflow-hidden rounded-lg border border-border-light bg-surface shadow-card">
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="sticky top-0 border-b border-border-light bg-surface-muted">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium text-text-muted">Order ID</th>
+                  <th className="px-4 py-3 text-left font-medium text-text-muted">Customer</th>
+                  <th className="px-4 py-3 text-left font-medium text-text-muted">Status</th>
+                  <th className="px-4 py-3 text-right font-medium text-text-muted">Total</th>
+                  <th className="px-4 py-3 text-left font-medium text-text-muted">Date</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {orders.map((order, i) => (
+                  <tr
+                    key={order.id}
+                    className={`border-b border-border-light transition-colors last:border-b-0 hover:bg-surface-hover ${
+                      i % 2 === 1 ? 'bg-surface-muted/40' : ''
+                    }`}
+                  >
+                    <td className="px-4 py-3 font-mono text-xs text-text-muted">
+                      <Link href={`/admin/orders/${order.id}`} className="transition-colors hover:text-primary">
+                        {order.id.slice(0, 8)}…
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-text">{order.user.name || order.user.email}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-block rounded-pill px-2.5 py-0.5 text-xs font-medium ${
+                          STATUS_STYLES[order.status] ?? 'bg-surface-muted text-text'
+                        }`}
+                      >
+                        {formatStatus(order.status)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-medium text-primary">
+                      ${order.total.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 text-text-muted">
+                      {order.createdAt.toLocaleDateString('en-SG', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Trash2 } from 'lucide-react'
 
 export default function ExpenseActions({ expenseId }: { expenseId: string }) {
   const router = useRouter()
@@ -29,8 +30,9 @@ export default function ExpenseActions({ expenseId }: { expenseId: string }) {
     <button
       onClick={handleDelete}
       disabled={deleting}
-      className="text-red-600 hover:underline disabled:text-gray-400"
+      className="flex items-center gap-1.5 text-error transition-colors hover:text-error/80 disabled:opacity-50"
     >
+      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
       {deleting ? 'Deleting...' : 'Delete'}
     </button>
   )

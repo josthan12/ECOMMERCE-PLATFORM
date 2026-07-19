@@ -5,6 +5,7 @@ import { CheckCircle2, XCircle, ShoppingBag, Check } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
 import { cn } from '@/lib/cn'
 import Button from '../../components/ui/Button'
+import PurchaseNotice from '@/lib/ProductNotice'
 
 type Variant = {
   id: string
@@ -19,6 +20,8 @@ type Props = {
   productId: string
   productName: string
   productSlug: string
+  description: string | null
+  attributes: Record<string, unknown>
   variantOptions: Record<string, string[]>
   variants: Variant[]
   fallbackImageUrl: string | null
@@ -37,11 +40,14 @@ export default function ProductGallery({
   productId,
   productName,
   productSlug,
+  description,
+  attributes,
   variantOptions,
   variants,
   fallbackImageUrl,
 }: Props) {
   const optionKeys = Object.keys(variantOptions)
+  const attributeEntries = Object.entries(attributes)
   const addItem = useCartStore((state) => state.addItem)
   const cartItems = useCartStore((state) => state.items)
 
@@ -124,40 +130,23 @@ export default function ProductGallery({
   const displayImageUrl = matchedVariant?.imageUrl || fallbackImageUrl
 
   return (
-    <div>
-      <div className="aspect-square overflow-hidden rounded-lg border border-border-light bg-surface-muted">
+    <div className="grid gap-10 md:grid-cols-2 md:gap-14 md:items-start">
+      {/* Image column */}
+      <div className="aspect-square overflow-hidden rounded-lg border border-border-light bg-surface-muted md:sticky md:top-8">
         {displayImageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={displayImageUrl} alt="" className="h-full w-full object-cover" />
+          <img src={displayImageUrl} alt={productName} className="h-full w-full object-cover" />
         ) : null}
       </div>
 
-      {optionKeys.map((key) => (
-        <div key={key} className="mt-6">
-          <div className="mb-2 text-sm font-medium text-text">{key}</div>
-          <div className="flex flex-wrap gap-2">
-            {variantOptions[key].map((value) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => handleSelect(key, value)}
-                className={cn(
-                  'rounded-md border px-3.5 py-2 text-sm font-medium transition-colors duration-150 ease-out',
-                  selected[key] === value
-                    ? 'border-accent bg-accent-light text-primary'
-                    : 'border-border text-text-muted hover:border-border-strong hover:text-text'
-                )}
-              >
-                {value}
-              </button>
-            ))}
-          </div>
-        </div>
-      ))}
+      {/* Info column: title, price, description, specs, notice, variants, quantity + CTA all live together */}
+      <div className="flex flex-col">
+        <h1 className="font-display text-3xl font-semibold text-primary md:text-4xl">
+          {productName}
+        </h1>
 
-      <div className="mt-8 border-t border-border-light pt-6">
-        {matchedVariant ? (
-          <>
+        {matchedVariant && (
+          <div className="mt-3">
             <div className="font-display text-3xl font-semibold text-primary">
               ${matchedVariant.price.toFixed(2)}
             </div>
@@ -179,33 +168,82 @@ export default function ProductGallery({
             {matchedVariant.sku && (
               <div className="mt-1 text-xs text-text-light">SKU: {matchedVariant.sku}</div>
             )}
-
-            <div className="mt-5 flex items-center gap-3">
-              <input
-                type="number"
-                min={1}
-                max={remaining}
-                value={quantity}
-                onChange={(e) => handleQuantityChange(parseInt(e.target.value, 10) || 0)}
-                className="min-h-[44px] w-16 rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
-              />
-              <Button type="button" onClick={handleAddToCart} disabled={remaining <= 0} className="gap-2">
-                <ShoppingBag className="h-4 w-4" aria-hidden="true" />
-                {remaining <= 0 ? 'Max in cart' : 'Add to Cart'}
-              </Button>
-            </div>
-
-            {quantityWarning && <p className="mt-3 text-sm text-warning">{quantityWarning}</p>}
-            {justAdded && (
-              <p className="mt-3 flex items-center gap-1.5 text-sm text-success">
-                <Check className="h-4 w-4" aria-hidden="true" />
-                Added to cart.
-              </p>
-            )}
-          </>
-        ) : (
-          <div className="text-sm text-text-muted">This combination is unavailable.</div>
+          </div>
         )}
+
+        {description && (
+          <p className="mt-5 leading-relaxed text-text-muted">{description}</p>
+        )}
+
+        {attributeEntries.length > 0 && (
+          <div className="mt-6">
+            <h2 className="text-sm font-medium text-text">Specifications</h2>
+            <dl className="mt-3 divide-y divide-border-light border-t border-border-light">
+              {attributeEntries.map(([key, value]) => (
+                <div key={key} className="flex items-start justify-between gap-4 py-2.5 text-sm">
+                  <dt className="text-text-muted">{key}</dt>
+                  <dd className="text-right text-text">{String(value)}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
+
+        <PurchaseNotice />
+
+        {optionKeys.map((key) => (
+          <div key={key} className="mt-6">
+            <div className="mb-2 text-sm font-medium text-text">{key}</div>
+            <div className="flex flex-wrap gap-2">
+              {variantOptions[key].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => handleSelect(key, value)}
+                  className={cn(
+                    'rounded-md border px-3.5 py-2 text-sm font-medium transition-colors duration-150 ease-out',
+                    selected[key] === value
+                      ? 'border-accent bg-accent-light text-primary'
+                      : 'border-border text-text-muted hover:border-border-strong hover:text-text'
+                  )}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        <div className="mt-6 border-t border-border-light pt-6">
+          {matchedVariant ? (
+            <>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={1}
+                  max={remaining}
+                  value={quantity}
+                  onChange={(e) => handleQuantityChange(parseInt(e.target.value, 10) || 0)}
+                  className="min-h-[44px] w-16 rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
+                />
+                <Button type="button" onClick={handleAddToCart} disabled={remaining <= 0} className="gap-2">
+                  <ShoppingBag className="h-4 w-4" aria-hidden="true" />
+                  {remaining <= 0 ? 'Max in cart' : 'Add to Cart'}
+                </Button>
+              </div>
+
+              {quantityWarning && <p className="mt-3 text-sm text-warning">{quantityWarning}</p>}
+              {justAdded && (
+                <p className="mt-3 flex items-center gap-1.5 text-sm text-success">
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                  Added to cart.
+                </p>
+              )}
+            </>
+          ) : (
+            <div className="text-sm text-text-muted">This combination is unavailable.</div>
+          )}
+        </div>
       </div>
     </div>
   )

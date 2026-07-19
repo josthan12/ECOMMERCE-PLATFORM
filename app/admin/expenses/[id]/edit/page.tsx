@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { AlertCircle, Receipt } from 'lucide-react'
+import Button from '../../../../components/ui/Button'
 
 const CATEGORY_SUGGESTIONS = ['Shipping', 'Packaging', 'Product Cost', 'Marketing', 'Other']
 
@@ -62,30 +64,39 @@ export default function EditExpensePage() {
     }
   }
 
-  if (loading) return <p className="text-gray-500">Loading...</p>
+  if (loading) return <p className="text-text-muted">Loading...</p>
 
   return (
     <div className="max-w-lg">
-      <h1 className="text-2xl font-bold text-gray-800 mb-4">Edit Expense</h1>
+      <h1 className="mb-6 flex items-center gap-2 font-display text-2xl font-semibold text-primary">
+        <Receipt className="h-6 w-6 text-accent" aria-hidden="true" />
+        Edit Expense
+      </h1>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+          <label htmlFor="title" className="mb-1.5 block text-sm font-medium text-text">
+            Title
+          </label>
           <input
+            id="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full border border-gray-300 px-3 py-2 rounded"
+            className="min-h-[44px] w-full rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
             required
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+          <label htmlFor="category" className="mb-1.5 block text-sm font-medium text-text">
+            Category
+          </label>
           <input
+            id="category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             list="category-suggestions"
-            className="w-full border border-gray-300 px-3 py-2 rounded"
+            className="min-h-[44px] w-full rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
             required
           />
           <datalist id="category-suggestions">
@@ -96,48 +107,58 @@ export default function EditExpensePage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
+          <label htmlFor="amount" className="mb-1.5 block text-sm font-medium text-text">
+            Amount ($)
+          </label>
           <input
+            id="amount"
             type="number"
             step="0.01"
             min="0"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full border border-gray-300 px-3 py-2 rounded"
+            className="min-h-[44px] w-full rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
             required
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Date incurred</label>
+          <label htmlFor="incurredAt" className="mb-1.5 block text-sm font-medium text-text">
+            Date incurred
+          </label>
           <input
+            id="incurredAt"
             type="date"
             value={incurredAt}
             onChange={(e) => setIncurredAt(e.target.value)}
-            className="w-full border border-gray-300 px-3 py-2 rounded"
+            className="min-h-[44px] w-full rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
             required
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+          <label htmlFor="notes" className="mb-1.5 block text-sm font-medium text-text">
+            Notes (optional)
+          </label>
           <textarea
+            id="notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full border border-gray-300 px-3 py-2 rounded"
             rows={3}
+            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
           />
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <p className="flex items-center gap-1.5 text-sm text-error">
+            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {error}
+          </p>
+        )}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="bg-black text-white py-2.5 rounded disabled:bg-gray-300"
-        >
+        <Button type="submit" disabled={submitting}>
           {submitting ? 'Saving...' : 'Save Changes'}
-        </button>
+        </Button>
       </form>
     </div>
   )

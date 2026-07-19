@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AlertCircle, Package, Plus, X } from 'lucide-react'
+import Button from '../../../components/ui/Button'
 
 type ProductField = {
   id: string
@@ -27,6 +29,14 @@ type VariantRow = {
   imageUrl: string
 }
 
+// No width baked in here on purpose — combining a fixed width utility
+// (w-1/3, flex-1) with a class that also sets width causes Tailwind to
+// pick whichever wins in its generated CSS order, not the order written
+// in JSX. Every full-width usage below adds `w-full` explicitly instead.
+const inputClass =
+  'rounded-md border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-light focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent'
+const cellInputClass =
+  'rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-text focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent'
 
 function generateCombinations(options: VariantOption[]): VariantRow[] {
   const parsed = options
@@ -40,18 +50,10 @@ function generateCombinations(options: VariantOption[]): VariantRow[] {
 
   const combos = parsed.reduce<Record<string, string>[]>((acc, option) => {
     if (acc.length === 0) return option.values.map((v) => ({ [option.name]: v }))
-    return acc.flatMap((combo) =>
-      option.values.map((v) => ({ ...combo, [option.name]: v }))
-    )
+    return acc.flatMap((combo) => option.values.map((v) => ({ ...combo, [option.name]: v })))
   }, [])
 
-  return combos.map((combination) => ({
-    combination,
-    price: '',
-    stock: '',
-    sku: '',
-    imageUrl: '',
-  }))
+  return combos.map((combination) => ({ combination, price: '', stock: '', sku: '', imageUrl: '' }))
 }
 
 export default function NewProductPage() {
@@ -107,7 +109,7 @@ export default function NewProductPage() {
             value={value}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
             required={field.required}
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`w-full ${inputClass}`}
           />
         )
 
@@ -117,7 +119,7 @@ export default function NewProductPage() {
             type="checkbox"
             checked={!!value}
             onChange={(e) => handleAttributeChange(field.key, e.target.checked)}
-            className="h-4 w-4"
+            className="h-4 w-4 rounded border-border text-primary focus:ring-2 focus:ring-accent"
           />
         )
 
@@ -128,7 +130,7 @@ export default function NewProductPage() {
             value={value}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
             required={field.required}
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`w-full ${inputClass}`}
           />
         )
 
@@ -138,7 +140,7 @@ export default function NewProductPage() {
             value={value}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
             required={field.required}
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`w-full ${inputClass}`}
           >
             <option value="">Select...</option>
             {field.options?.map((opt) => (
@@ -149,15 +151,16 @@ export default function NewProductPage() {
 
       case 'RADIO':
         return (
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {field.options?.map((opt) => (
-              <label key={opt} className="flex items-center gap-2 text-sm">
+              <label key={opt} className="flex items-center gap-2 text-sm text-text">
                 <input
                   type="radio"
                   name={field.key}
                   value={opt}
                   checked={value === opt}
                   onChange={() => handleAttributeChange(field.key, opt)}
+                  className="h-4 w-4 border-border text-primary focus:ring-2 focus:ring-accent"
                 />
                 {opt}
               </label>
@@ -171,7 +174,7 @@ export default function NewProductPage() {
             type="color"
             value={value || '#000000'}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
-            className="h-10 w-20 border rounded cursor-pointer"
+            className="h-10 w-20 cursor-pointer rounded-md border border-border"
           />
         )
 
@@ -182,7 +185,7 @@ export default function NewProductPage() {
             value={value}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
             placeholder="Comma separated tags"
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`w-full ${inputClass}`}
           />
         )
 
@@ -192,22 +195,18 @@ export default function NewProductPage() {
             type="text"
             value={value}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`w-full ${inputClass}`}
           />
         )
     }
   }
-
-  // --- Variant option handlers ---
 
   function addVariantOption() {
     setVariantOptions((prev) => [...prev, { name: '', values: '' }])
   }
 
   function updateVariantOption(index: number, field: 'name' | 'values', value: string) {
-    setVariantOptions((prev) =>
-      prev.map((opt, i) => (i === index ? { ...opt, [field]: value } : opt))
-    )
+    setVariantOptions((prev) => prev.map((opt, i) => (i === index ? { ...opt, [field]: value } : opt)))
   }
 
   function removeVariantOption(index: number) {
@@ -219,9 +218,11 @@ export default function NewProductPage() {
   }
 
   function updateVariantRow(index: number, field: 'price' | 'stock' | 'sku' | 'imageUrl', value: string) {
-    setVariants((prev) =>
-      prev.map((row, i) => (i === index ? { ...row, [field]: value } : row))
-    )
+    setVariants((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)))
+  }
+
+  function removeVariantRow(index: number) {
+    setVariants((prev) => prev.filter((_, i) => i !== index))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -277,22 +278,26 @@ export default function NewProductPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">New Product</h1>
+      <h1 className="mb-6 flex items-center gap-2 font-display text-2xl font-semibold text-primary">
+        <Package className="h-6 w-6 text-accent" aria-hidden="true" />
+        New Product
+      </h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="bg-red-50 text-red-600 px-4 py-3 rounded text-sm">
+          <div className="flex items-center gap-1.5 rounded-md bg-error/10 px-4 py-3 text-sm text-error">
+            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
             {error}
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow p-6 space-y-4">
-          <h2 className="font-semibold text-gray-700">Product Type</h2>
+        <div className="space-y-4 rounded-lg border border-border-light bg-surface p-6 shadow-card">
+          <h2 className="font-display text-lg font-semibold text-primary">Product Type</h2>
           <select
             value={selectedTypeId}
             onChange={(e) => setSelectedTypeId(e.target.value)}
             required
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`w-full ${inputClass}`}
           >
             <option value="">Select a product type...</option>
             {productTypes.map((type) => (
@@ -305,12 +310,12 @@ export default function NewProductPage() {
 
         {selectedType && (
           <>
-            <div className="bg-white rounded-lg shadow p-6 space-y-4">
-              <h2 className="font-semibold text-gray-700">Basic Info</h2>
+            <div className="space-y-4 rounded-lg border border-border-light bg-surface p-6 shadow-card">
+              <h2 className="font-display text-lg font-semibold text-primary">Basic Info</h2>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Product Name <span className="text-red-500">*</span>
+                <label className="mb-1.5 block text-sm font-medium text-text">
+                  Product Name <span className="text-error">*</span>
                 </label>
                 <input
                   type="text"
@@ -318,48 +323,41 @@ export default function NewProductPage() {
                   onChange={(e) => setName(e.target.value)}
                   required
                   placeholder="e.g. Nike Air Force 1"
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full ${inputClass}`}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
+                <label className="mb-1.5 block text-sm font-medium text-text">Description</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
                   placeholder="Optional product description"
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full ${inputClass}`}
                 />
               </div>
+
               <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Product Image URL
-              </label>
-              <input
-                type="text"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://..."
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+                <label className="mb-1.5 block text-sm font-medium text-text">Product Image URL</label>
+                <input
+                  type="text"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://..."
+                  className={`w-full ${inputClass}`}
+                />
+              </div>
             </div>
 
             {selectedType.fields.length > 0 && (
-              <div className="bg-white rounded-lg shadow p-6 space-y-4">
-                <h2 className="font-semibold text-gray-700">
-                  {selectedType.name} Details
-                </h2>
+              <div className="space-y-4 rounded-lg border border-border-light bg-surface p-6 shadow-card">
+                <h2 className="font-display text-lg font-semibold text-primary">{selectedType.name} Details</h2>
                 {selectedType.fields.map((field) => (
                   <div key={field.id}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="mb-1.5 block text-sm font-medium text-text">
                       {field.label}
-                      {field.required && (
-                        <span className="text-red-500 ml-1">*</span>
-                      )}
+                      {field.required && <span className="ml-1 text-error">*</span>}
                     </label>
                     {renderField(field)}
                   </div>
@@ -367,81 +365,85 @@ export default function NewProductPage() {
               </div>
             )}
 
-            <div className="bg-white rounded-lg shadow p-6 space-y-4">
+            <div className="space-y-4 rounded-lg border border-border-light bg-surface p-6 shadow-card">
               <div className="flex items-center justify-between">
-                <h2 className="font-semibold text-gray-700">Variants</h2>
+                <h2 className="font-display text-lg font-semibold text-primary">Variants</h2>
                 <button
                   type="button"
                   onClick={addVariantOption}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  className="flex items-center gap-1.5 text-sm font-medium text-primary transition-colors hover:text-accent"
                 >
-                  + Add Option
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                  Add Option
                 </button>
               </div>
 
+              <p className="text-xs text-text-muted">
+                Add one row per option (e.g. &ldquo;Size&rdquo; or &ldquo;Color&rdquo;). In the second box, list
+                every value for that option separated by commas — e.g.{' '}
+                <span className="font-medium text-text">7, 8, 9</span>. Then click &ldquo;Generate
+                Combinations&rdquo; to build the price/stock table below from every combination.
+              </p>
+
               {variantOptions.length === 0 && (
-                <p className="text-sm text-gray-500">
-                  No variant options yet. Add one (e.g. "Size") to get started.
+                <p className="text-sm text-text-muted">
+                  No variant options yet. Add one (e.g. &ldquo;Size&rdquo;) to get started.
                 </p>
               )}
 
               {variantOptions.map((opt, i) => (
-                <div key={i} className="flex gap-3 items-start">
+                <div key={i} className="flex items-start gap-3">
                   <input
                     type="text"
                     value={opt.name}
                     onChange={(e) => updateVariantOption(i, 'name', e.target.value)}
                     placeholder="Option name (e.g. Size)"
-                    className="w-1/3 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-1/3 ${inputClass}`}
                   />
                   <input
                     type="text"
                     value={opt.values}
                     onChange={(e) => updateVariantOption(i, 'values', e.target.value)}
                     placeholder="Comma separated values (e.g. 7, 8, 9)"
-                    className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`flex-1 ${inputClass}`}
                   />
                   <button
                     type="button"
                     onClick={() => removeVariantOption(i)}
-                    className="text-sm text-red-500 hover:text-red-700 px-2 py-2"
+                    className="flex items-center px-2 py-2 text-error transition-colors hover:text-error/80"
+                    aria-label="Remove option"
                   >
-                    Remove
+                    <X className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </div>
               ))}
 
               {variantOptions.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleGenerateCombinations}
-                  className="bg-gray-800 text-white px-4 py-2 rounded text-sm font-medium hover:bg-gray-900"
-                >
+                <Button type="button" variant="secondary" size="sm" onClick={handleGenerateCombinations}>
                   Generate Combinations
-                </button>
+                </Button>
               )}
 
               {variants.length > 0 && (
-                <div className="overflow-x-auto pt-2">
-                  <table className="w-full text-sm border-collapse">
-                    <thead>
-                      <tr className="text-left text-gray-600 border-b">
-                        <th className="py-2 pr-4">Combination</th>
-                        <th className="py-2 pr-4">Price (SGD)</th>
-                        <th className="py-2 pr-4">Stock</th>
-                        <th className="py-2 pr-4">SKU (optional)</th>
-                        <th className="py-2 pr-4">Image URL (optional)</th>
+                <div className="overflow-x-auto rounded-md border border-border-light">
+                  <table className="w-full border-collapse text-sm">
+                    <thead className="bg-surface-muted">
+                      <tr className="text-left text-text-muted">
+                        <th className="px-3 py-2 font-medium">Combination</th>
+                        <th className="px-3 py-2 font-medium">Price (SGD)</th>
+                        <th className="px-3 py-2 font-medium">Stock</th>
+                        <th className="px-3 py-2 font-medium">SKU (optional)</th>
+                        <th className="px-3 py-2 font-medium">Image URL (optional)</th>
+                        <th className="px-3 py-2"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {variants.map((row, i) => (
-                        <tr key={i} className="border-b last:border-b-0">
-                          <td className="py-2 pr-4 whitespace-nowrap">
-                            {Object.entries(row.combination)
-                              .map(([k, v]) => `${k}: ${v}`)
-                              .join(', ')}
+                        <tr key={i} className="border-t border-border-light">
+                          <td className="whitespace-nowrap px-3 py-2 text-text">
+                            {Object.entries(row.combination).map(([k, v]) => `${k}: ${v}`).join(', ')}
                           </td>
-                          <td className="py-2 pr-4">
+                          <td className="px-3 py-2">
                             <input
                               type="number"
                               min="0"
@@ -449,36 +451,46 @@ export default function NewProductPage() {
                               value={row.price}
                               onChange={(e) => updateVariantRow(i, 'price', e.target.value)}
                               required
-                              className="w-24 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className={`w-24 ${cellInputClass}`}
                             />
                           </td>
-                          <td className="py-2 pr-4">
+                          <td className="px-3 py-2">
                             <input
                               type="number"
                               min="0"
                               value={row.stock}
                               onChange={(e) => updateVariantRow(i, 'stock', e.target.value)}
                               required
-                              className="w-20 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className={`w-20 ${cellInputClass}`}
                             />
                           </td>
-                          <td className="py-2 pr-4">
+                          <td className="px-3 py-2">
                             <input
                               type="text"
                               value={row.sku}
                               onChange={(e) => updateVariantRow(i, 'sku', e.target.value)}
-                              className="w-32 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className={`w-32 ${cellInputClass}`}
                             />
                           </td>
-                          <td className="py-2 pr-4">
+                          <td className="px-3 py-2">
                             <input
-                            type="text"
-                            onChange={(e) => updateVariantRow(i, 'imageUrl', e.target.value)}
-                            value={row.imageUrl}
-                            className="w-40 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="https://..."
+                              type="text"
+                              onChange={(e) => updateVariantRow(i, 'imageUrl', e.target.value)}
+                              value={row.imageUrl}
+                              className={`w-40 ${cellInputClass}`}
+                              placeholder="https://..."
                             />
-                        </td>
+                          </td>
+                          <td className="px-3 py-2">
+                            <button
+                              type="button"
+                              onClick={() => removeVariantRow(i)}
+                              className="text-error transition-colors hover:text-error/80"
+                              aria-label="Remove variant"
+                            >
+                              <X className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -487,13 +499,9 @@ export default function NewProductPage() {
               )}
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
-            >
+            <Button type="submit" disabled={loading} className="w-full">
               {loading ? 'Creating...' : 'Create Product'}
-            </button>
+            </Button>
           </>
         )}
       </form>
