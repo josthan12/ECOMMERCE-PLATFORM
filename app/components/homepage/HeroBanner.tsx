@@ -7,7 +7,8 @@ const HERO_CONTENT = {
 
 export default function HeroBanner() {
   return (
-    <section className="relative overflow-hidden bg-linear-to-b from-surface-muted to-background">
+    //<section className="relative overflow-hidden bg-linear-to-b from-surface-muted to-background">
+    <section className="relative overflow-hidden min-h-screen">
       <HeroAnimatedBackground />
       <div className="relative z-10 mx-auto max-w-[1400px] px-4 py-24 md:px-8 md:py-32">
         <div className="max-w-xl">

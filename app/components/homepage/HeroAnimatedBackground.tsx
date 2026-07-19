@@ -9,6 +9,7 @@ export default function HeroAnimatedBackground() {
         <video
           /*className="hero-video-band hero-video-clip"*/
           className="h-full w-full object-cover"
+          
 
           autoPlay
           loop

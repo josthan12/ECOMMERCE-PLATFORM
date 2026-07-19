@@ -2,6 +2,8 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { Archive, ArchiveRestore } from 'lucide-react'
+import { cn } from '@/lib/cn'
 
 export default function ProductActions({
   productId,
@@ -43,12 +45,16 @@ export default function ProductActions({
     <button
       onClick={handleToggle}
       disabled={loading}
-      className={
-        archived
-          ? 'text-green-600 hover:text-green-700 disabled:opacity-50'
-          : 'text-red-500 hover:text-red-700 disabled:opacity-50'
-      }
+      className={cn(
+        'flex items-center gap-1.5 transition-colors disabled:opacity-50',
+        archived ? 'text-success hover:text-success/80' : 'text-error hover:text-error/80'
+      )}
     >
+      {archived ? (
+        <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />
+      ) : (
+        <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+      )}
       {loading ? 'Saving...' : archived ? 'Unarchive' : 'Archive'}
     </button>
   )

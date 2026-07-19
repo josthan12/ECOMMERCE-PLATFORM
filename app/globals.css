@@ -46,10 +46,14 @@
   --shadow-modal: 0 20px 40px rgba(0, 0, 0, 0.15);
 
   /* Hero video companion — tune these to adjust the video band */
-  --hero-video-w: 1200px;
+  /*--hero-video-w: 1200px;*/
   /*--hero-video-h: calc(var(--hero-video-w) * 0.844);*/
-  --hero-video-h: 500px;
+  /*--hero-video-h: 500px;*/
   --hero-video-opacity: 1.0;
+  .hero-video {
+  width: var(--hero-video-w);
+  height: auto;
+}
 }
 
 @theme inline {

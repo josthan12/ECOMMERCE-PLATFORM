@@ -63,7 +63,7 @@ export async function PUT(
   if (updated.fulfillmentMethod === 'DELIVERY' && updated.status === 'SHIPPED') {
     await sendShippingNotificationEmail(updated.id);
   }
-  if (updated.fulfillmentMethod === 'SELF_COLLECTION' && updated.status === 'COMPLETED') {
+  if (updated.fulfillmentMethod === 'SELF_COLLECTION' && updated.status === 'PACKED') {
     await sendReadyForCollectionEmail(updated.id);
   }
 
