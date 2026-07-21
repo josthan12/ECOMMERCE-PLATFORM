@@ -11,7 +11,7 @@ export default async function CategoryGrid() {
   if (categories.length === 0) return null
 
   return (
-    <section className="mx-auto max-w-[1400px] px-4 py-12 md:px-8 md:py-16">
+    <section id="categories" className="mx-auto max-w-[1400px] px-4 py-12 md:px-8 md:py-16">
       <ScrollReveal>
         <h2 className="font-display text-2xl font-semibold text-primary md:text-3xl">
           Shop by Category

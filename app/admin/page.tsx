@@ -9,6 +9,8 @@ import {
   Package,
   AlertTriangle,
   Repeat,
+  Ticket,
+  Percent,
 } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { OrderStatus } from '@/app/generated/prisma/client'
@@ -41,6 +43,7 @@ export default async function AdminDashboard() {
   const [
     statusCounts, revenueAgg, activeProducts, recentOrders, expenses,
     revenueOrders, allUsers, allCustomerOrders, orderItemsWithProduct,
+    discountExpenseAgg,
   ] = await Promise.all([
     prisma.order.groupBy({ by: ['status'], _count: { _all: true } }),
     prisma.order.aggregate({
@@ -65,6 +68,11 @@ export default async function AdminDashboard() {
       where: { order: { status: { in: REVENUE_STATUSES } } },
       select: { productName: true, price: true, quantity: true },
     }),
+    prisma.expense.aggregate({
+      where: { isSystemGenerated: true },
+      _sum: { amount: true },
+      _count: { _all: true },
+    }),
   ])
 
   const countsByStatus = new Map(statusCounts.map((s) => [s.status, s._count._all]))
@@ -74,6 +82,8 @@ export default async function AdminDashboard() {
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0)
   const profit = totalRevenue - totalExpenses
   const averageOrderValue = paidOrderCount > 0 ? totalRevenue / paidOrderCount : 0
+  const totalDiscountsGiven = discountExpenseAgg._sum.amount ?? 0
+  const discountCodesUsedCount = discountExpenseAgg._count._all
 
   const monthBuckets = new Map<string, { revenue: number; newCustomers: number }>()
   for (let i = 0; i < 12; i++) {
@@ -137,6 +147,11 @@ export default async function AdminDashboard() {
         <MetricCard label="Active Products" value={String(activeProducts.length)} icon={Package} />
         <MetricCard label="Out of Stock" value={String(outOfStockCount)} icon={AlertTriangle} />
         <MetricCard label="Repeat Customer Rate" value={`${repeatCustomerRate.toFixed(0)}%`} icon={Repeat} />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4">
+        <MetricCard label="Total Discounts Given" value={`$${totalDiscountsGiven.toFixed(2)}`} icon={Percent} />
+        <MetricCard label="Discount Codes Used" value={String(discountCodesUsedCount)} icon={Ticket} />
       </div>
 
       <div className="mt-8 grid gap-5 md:grid-cols-2">

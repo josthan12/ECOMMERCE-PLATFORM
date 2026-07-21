@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Loader2, Tag, X } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
-import { calculateTotalWithGST } from '@/lib/gst'
+import { calculateTotalWithGST, GST_ENABLED, GST_RATE_DISPLAY } from '@/lib/gst'
 import { validateShippingAddress } from '@/lib/validateAddress'
 import { SELF_COLLECTION_ADDRESS } from '@/lib/constants'
 import { cn } from '@/lib/cn'
@@ -23,6 +23,11 @@ export default function CheckoutForm() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [promoCodeInput, setPromoCodeInput] = useState('')
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discountAmount: number } | null>(null)
+  const [promoLoading, setPromoLoading] = useState(false)
+  const [promoError, setPromoError] = useState<string | null>(null)
+
   useEffect(() => {
     fetch('/api/checkout/fulfillment-fees')
       .then((res) => res.json())
@@ -40,7 +45,44 @@ export default function CheckoutForm() {
       ? fees.selfCollection
       : fees.delivery
     : 0
-  const { subtotal, gst, total, shippingFee } = calculateTotalWithGST(estimatedSubtotal, currentFee)
+
+  const discountAmount = appliedPromo?.discountAmount ?? 0
+  const discountedSubtotal = Math.max(estimatedSubtotal - discountAmount, 0)
+  const { gst, total, shippingFee } = calculateTotalWithGST(discountedSubtotal, currentFee)
+
+  async function handleApplyPromo() {
+    setPromoError(null)
+    const trimmed = promoCodeInput.trim()
+    if (!trimmed) return
+
+    setPromoLoading(true)
+    try {
+      const res = await fetch('/api/checkout/apply-promo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: trimmed, subtotal: estimatedSubtotal }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setPromoError(data.error || 'Invalid promo code.')
+        setAppliedPromo(null)
+        return
+      }
+
+      setAppliedPromo({ code: data.code, discountAmount: data.discountAmount })
+    } catch {
+      setPromoError('Network error. Please try again.')
+    } finally {
+      setPromoLoading(false)
+    }
+  }
+
+  function handleRemovePromo() {
+    setAppliedPromo(null)
+    setPromoCodeInput('')
+    setPromoError(null)
+  }
 
   async function handlePlaceOrder() {
     setError(null)
@@ -70,6 +112,7 @@ export default function CheckoutForm() {
           shippingUnitNumber: fulfillmentMethod === 'SELF_COLLECTION' ? null : (unitNumber || null),
           shippingStreet: fulfillmentMethod === 'SELF_COLLECTION' ? null : street,
           shippingPostalCode: fulfillmentMethod === 'SELF_COLLECTION' ? null : postalCode,
+          promoCode: appliedPromo?.code ?? null,
         }),
       })
 
@@ -134,6 +177,47 @@ export default function CheckoutForm() {
       </section>
 
       <section className="mt-8">
+        <h2 className="font-medium text-text">Promo Code</h2>
+        <div className="mt-3">
+          {appliedPromo ? (
+            <div className="flex items-center justify-between rounded-md border border-accent bg-accent-light/40 px-4 py-2.5">
+              <span className="flex items-center gap-2 text-sm font-medium text-primary">
+                <Tag className="h-4 w-4" aria-hidden="true" />
+                {appliedPromo.code} applied
+              </span>
+              <button
+                type="button"
+                onClick={handleRemovePromo}
+                className="text-text-muted transition-colors hover:text-error"
+                aria-label="Remove promo code"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={promoCodeInput}
+                onChange={(e) => setPromoCodeInput(e.target.value)}
+                placeholder="Enter code"
+                className="min-h-[44px] flex-1 rounded-md border border-border bg-surface px-3 text-sm uppercase text-text placeholder:text-text-light placeholder:normal-case focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+              <Button type="button" variant="secondary" onClick={handleApplyPromo} disabled={promoLoading}>
+                {promoLoading ? 'Checking…' : 'Apply'}
+              </Button>
+            </div>
+          )}
+          {promoError && (
+            <p className="mt-2 flex items-center gap-1.5 text-sm text-error">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              {promoError}
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section className="mt-8">
         <h2 className="font-medium text-text">Order Summary</h2>
         <div className="mt-3 rounded-lg border border-border-light bg-surface p-4">
           {items.map((item) => (
@@ -147,16 +231,24 @@ export default function CheckoutForm() {
           <div className="mt-3 space-y-1.5 border-t border-border-light pt-3 text-sm">
             <div className="flex justify-between text-text-muted">
               <span>Subtotal</span>
-              <span>${subtotal.toFixed(2)}</span>
+              <span>${estimatedSubtotal.toFixed(2)}</span>
             </div>
+            {appliedPromo && (
+              <div className="flex justify-between text-success">
+                <span>Discount ({appliedPromo.code})</span>
+                <span>-${discountAmount.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-text-muted">
               <span>{fulfillmentMethod === 'SELF_COLLECTION' ? 'Self Collection' : 'Shipping'}</span>
               <span>${shippingFee.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-text-muted">
-              <span>GST (9%)</span>
-              <span>${gst.toFixed(2)}</span>
-            </div>
+            {GST_ENABLED && (
+              <div className="flex justify-between text-text-muted">
+                <span>GST ({GST_RATE_DISPLAY}%)</span>
+                <span>${gst.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between border-t border-border-light pt-1.5 font-semibold text-primary">
               <span>Total</span>
               <span>${total.toFixed(2)}</span>

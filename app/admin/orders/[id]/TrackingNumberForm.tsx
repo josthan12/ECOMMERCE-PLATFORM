@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Check, AlertCircle } from 'lucide-react';
+import Button from '../../../components/ui/Button';
 
 export default function TrackingNumberForm({
   orderId,
@@ -49,17 +51,23 @@ export default function TrackingNumberForm({
           setValue(e.target.value);
           setSaved(false);
         }}
-        className="border border-gray-300 px-3 py-1.5 rounded text-sm flex-1"
+        className="min-h-[44px] flex-1 rounded-md border border-border bg-surface px-3 text-sm text-text placeholder:text-text-light focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
       />
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="px-3 py-1.5 text-sm font-medium rounded bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-50"
-      >
+      <Button size="sm" onClick={handleSave} disabled={saving}>
         {saving ? 'Saving…' : 'Save'}
-      </button>
-      {saved && <span className="text-sm text-green-600">Saved</span>}
-      {error && <span className="text-sm text-red-600">{error}</span>}
+      </Button>
+      {saved && (
+        <span className="flex items-center gap-1 text-sm text-success">
+          <Check className="h-3.5 w-3.5" aria-hidden="true" />
+          Saved
+        </span>
+      )}
+      {error && (
+        <span className="flex items-center gap-1 text-sm text-error">
+          <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
+          {error}
+        </span>
+      )}
     </div>
   );
 }

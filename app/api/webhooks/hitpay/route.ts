@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { markOrderFailedAndRestoreStock } from '@/lib/orders'
 import { sendOrderConfirmationEmail } from '@/lib/email/sendOrderEmail';
+import { recordDiscountExpenseIfApplicable } from '@/lib/recordDiscountExpense'
 
 export async function POST(req: Request) {
   const rawBody = await req.text()
@@ -23,13 +24,8 @@ export async function POST(req: Request) {
 
   if (!isValid) {
     console.error('HitPay webhook: invalid signature')
-    console.log("RAW BODY:", JSON.stringify(rawBody))
-    console.log("SIGNATURE:", signature)
-    console.log("EXPECTED:", expectedSignature)
-    return NextResponse.json({ error: 'Invalid signature' }
-      , { status: 401 })
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
-  
 
   const payload = JSON.parse(rawBody)
   const orderId = payload.reference_number
@@ -46,20 +42,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Order not found' }, { status: 404 })
   }
 
-  // Idempotency: only act if the order is still awaiting payment
   if (order.status !== 'PENDING_PAYMENT') {
     return NextResponse.json({ received: true, note: 'Already processed' }, { status: 200 })
   }
 
   if (status === 'completed') {
-  await prisma.order.update({
-    where: { id: orderId },
-    data: { status: 'PAID' },
-  })
-  await sendOrderConfirmationEmail(order.id)
-} else if (status === 'failed') {
-  await markOrderFailedAndRestoreStock(orderId)
-}
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { status: 'PAID' },
+    })
+    await recordDiscountExpenseIfApplicable(orderId)
+    await sendOrderConfirmationEmail(order.id)
+  } else if (status === 'failed') {
+    await markOrderFailedAndRestoreStock(orderId)
+  }
 
   return NextResponse.json({ received: true }, { status: 200 })
 }

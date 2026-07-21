@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { calculateTotalWithGST } from '@/lib/gst'
 import { validateShippingAddress } from '@/lib/validateAddress'
 import { markOrderFailedAndRestoreStock } from '@/lib/orders'
+import { computeDiscountAmount } from '@/lib/promoCode'
 import { Prisma } from '@/app/generated/prisma/client'
 
 export async function POST(req: Request) {
@@ -20,7 +21,15 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json()
-  const { items, fulfillmentMethod, shippingBlock, shippingUnitNumber, shippingStreet, shippingPostalCode } = body
+  const {
+    items,
+    fulfillmentMethod,
+    shippingBlock,
+    shippingUnitNumber,
+    shippingStreet,
+    shippingPostalCode,
+    promoCode,
+  } = body
 
   if (!Array.isArray(items) || items.length === 0) {
     return NextResponse.json({ error: 'Cart is empty' }, { status: 400 })
@@ -39,6 +48,8 @@ export async function POST(req: Request) {
   if (validationError) {
     return NextResponse.json({ error: validationError }, { status: 400 })
   }
+
+  const trimmedPromoCode = typeof promoCode === 'string' ? promoCode.trim().toUpperCase() : ''
 
   let orderId: string | null = null
 
@@ -87,10 +98,34 @@ export async function POST(req: Request) {
       }
 
       const subtotal = orderItemsData.reduce((sum, i) => sum + i.price * i.quantity, 0)
-      const shippingFee = fulfillmentMethod === 'SELF_COLLECTION' ? SELF_COLLECTION_FEE : SHIPPING_FEE
-      const { gst, total } = calculateTotalWithGST(subtotal, shippingFee)
 
-      return tx.order.create({
+      // Promo code — re-validated live here, never trusted from the client's
+      // earlier /api/checkout/apply-promo preview call. Burned (usedAt set)
+      // immediately once an Order is created, regardless of whether payment
+      // that follows later succeeds or fails — a deliberate choice for these
+      // low-volume, admin-discretion codes, not the default assumption.
+      let discountAmount = 0
+      let appliedPromoCode: string | null = null
+
+      if (trimmedPromoCode) {
+        const promo = await tx.promoCode.findUnique({ where: { code: trimmedPromoCode } })
+
+        if (!promo || !promo.active || promo.usedAt) {
+          throw new Error('INVALID_PROMO')
+        }
+        if (promo.minOrderValue != null && subtotal < promo.minOrderValue) {
+          throw new Error('PROMO_MIN_ORDER_NOT_MET')
+        }
+
+        discountAmount = computeDiscountAmount(promo, subtotal)
+        appliedPromoCode = promo.code
+      }
+
+      const shippingFee = fulfillmentMethod === 'SELF_COLLECTION' ? SELF_COLLECTION_FEE : SHIPPING_FEE
+      const discountedSubtotal = Math.max(subtotal - discountAmount, 0)
+      const { gst, total } = calculateTotalWithGST(discountedSubtotal, shippingFee)
+
+      const createdOrder = await tx.order.create({
         data: {
           userId: user.id,
           fulfillmentMethod,
@@ -99,15 +134,25 @@ export async function POST(req: Request) {
           shippingStreet: fulfillmentMethod === 'SELF_COLLECTION' ? null : shippingStreet,
           shippingPostalCode: fulfillmentMethod === 'SELF_COLLECTION' ? null : shippingPostalCode,
           subtotal,
+          discountAmount,
+          promoCode: appliedPromoCode,
           shippingFee,
           gstAmount: gst,
           total,
           items: { create: orderItemsData },
         },
       })
-      })
 
-  
+      if (appliedPromoCode) {
+        await tx.promoCode.update({
+          where: { code: appliedPromoCode },
+          data: { usedAt: new Date(), usedByOrderId: createdOrder.id },
+        })
+      }
+
+      return createdOrder
+    })
+
     orderId = order.id
 
     const hitpayParams = new URLSearchParams({
@@ -130,7 +175,6 @@ export async function POST(req: Request) {
         'Content-Type': 'application/x-www-form-urlencoded',
         'X-Requested-With': 'XMLHttpRequest',
         'X-BUSINESS-API-KEY': process.env.HITPAY_API_KEY!,
-        
       },
       body: hitpayParams,
     })
@@ -152,8 +196,6 @@ export async function POST(req: Request) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'UNKNOWN'
 
-    // Compensating action: if the Order was created but HitPay failed afterward,
-    // this Order can never be paid — restore stock and mark it failed.
     if (message === 'HITPAY_REQUEST_FAILED' && orderId) {
       await markOrderFailedAndRestoreStock(orderId)
       return NextResponse.json({ error: 'Could not initiate payment. Please try again.' }, { status: 502 })
@@ -167,6 +209,15 @@ export async function POST(req: Request) {
     }
     if (message === 'INVALID_ITEM') {
       return NextResponse.json({ error: 'One or more items are invalid.' }, { status: 400 })
+    }
+    if (message === 'INVALID_PROMO') {
+      return NextResponse.json({ error: 'This promo code is invalid or has already been used.' }, { status: 400 })
+    }
+    if (message === 'PROMO_MIN_ORDER_NOT_MET') {
+      return NextResponse.json(
+        { error: 'Your order does not meet the minimum value required for this promo code.' },
+        { status: 400 }
+      )
     }
 
     console.error('Checkout error:', err)

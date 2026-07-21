@@ -2,6 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Loader2, AlertCircle } from 'lucide-react';
+import { formatStatus } from '@/lib/orderStatus';
+import { cn } from '@/lib/cn';
+import Button from '../../../components/ui/Button';
 
 const DELIVERY_TRANSITIONS: Record<string, string> = {
   PAID: 'PROCESSING',
@@ -25,14 +29,6 @@ const REFUNDABLE_STATUSES = new Set([
   'DELIVERED',
   'COMPLETED',
 ]);
-
-function formatStatus(status: string) {
-  return status
-    .toLowerCase()
-    .split('_')
-    .map((word) => word[0].toUpperCase() + word.slice(1))
-    .join(' ');
-}
 
 export default function OrderStatusActions({
   orderId,
@@ -91,25 +87,30 @@ export default function OrderStatusActions({
     <div className="flex flex-col items-end gap-2">
       <div className="flex items-center gap-2">
         {nextStatus && (
-          <button
-            onClick={handleAdvance}
-            disabled={loadingAction !== null}
-            className="px-3 py-1.5 text-sm font-medium rounded bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-50"
-          >
+          <Button size="sm" onClick={handleAdvance} disabled={loadingAction !== null} className="gap-1.5">
+            {loadingAction === 'advance' && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
             {loadingAction === 'advance' ? 'Updating…' : `Mark as ${formatStatus(nextStatus)}`}
-          </button>
+          </Button>
         )}
         {canRefund && (
           <button
             onClick={handleRefund}
             disabled={loadingAction !== null}
-            className="px-3 py-1.5 text-sm font-medium rounded border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50"
+            className={cn(
+              'rounded-md border border-error px-3 py-1.5 text-sm font-medium text-error transition-colors',
+              'hover:bg-error/10 disabled:opacity-50'
+            )}
           >
             {loadingAction === 'refund' ? 'Updating…' : 'Mark as Refunded'}
           </button>
         )}
       </div>
-      {error && <span className="text-sm text-red-600">{error}</span>}
+      {error && (
+        <span className="flex items-center gap-1.5 text-sm text-error">
+          <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
+          {error}
+        </span>
+      )}
     </div>
   );
 }

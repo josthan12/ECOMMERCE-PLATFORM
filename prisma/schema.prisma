@@ -169,7 +169,8 @@ model Order {
   total              Float
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
-
+  promoCode      String?
+  discountAmount Float    @default(0)
   items              OrderItem[]
 }
 
@@ -194,4 +195,24 @@ model Expense {
   notes      String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  isSystemGenerated Boolean @default(false)
+}
+
+enum PromoDiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+model PromoCode {
+  id                String            @id @default(cuid())
+  code              String            @unique
+  discountType      PromoDiscountType
+  discountValue     Float
+  minOrderValue     Float?
+  maxDiscountAmount Float?
+  active            Boolean           @default(true)
+  usedAt            DateTime?
+  usedByOrderId     String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }

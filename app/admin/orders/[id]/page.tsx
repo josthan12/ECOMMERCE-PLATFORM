@@ -1,29 +1,11 @@
 import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
+import { User, MapPin, CreditCard, Truck, ShoppingBag } from 'lucide-react';
 import BackButton from '@/app/components/BackButton';
+import { STATUS_STYLES, formatStatus } from '@/lib/orderStatus';
+import { GST_ENABLED } from '@/lib/gst';
 import OrderStatusActions from './OrderStatusActions';
 import TrackingNumberForm from './TrackingNumberForm';
-
-const STATUS_STYLES: Record<string, string> = {
-  PENDING_PAYMENT: 'bg-yellow-100 text-yellow-800',
-  PAID: 'bg-green-100 text-green-800',
-  PAYMENT_FAILED: 'bg-red-100 text-red-800',
-  PROCESSING: 'bg-blue-100 text-blue-800',
-  PACKED: 'bg-blue-100 text-blue-800',
-  SHIPPED: 'bg-indigo-100 text-indigo-800',
-  DELIVERED: 'bg-indigo-100 text-indigo-800',
-  COMPLETED: 'bg-gray-200 text-gray-800',
-  CANCELLED: 'bg-gray-200 text-gray-600',
-  REFUNDED: 'bg-orange-100 text-orange-800',
-};
-
-function formatStatus(status: string) {
-  return status
-    .toLowerCase()
-    .split('_')
-    .map((word) => word[0].toUpperCase() + word.slice(1))
-    .join(' ');
-}
 
 function formatCombination(combination: unknown): string {
   if (!combination || typeof combination !== 'object' || Array.isArray(combination)) {
@@ -54,13 +36,15 @@ export default async function AdminOrderDetailPage({
   }
 
   return (
-    <div className="p-6 max-w-4xl">
+    <div className="max-w-4xl">
       <BackButton />
 
-      <div className="flex items-center justify-between mt-4 mb-6">
+      <div className="mt-4 mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Order {order.id}</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="font-display text-2xl font-semibold text-primary">
+            Order <span className="font-mono text-xl text-text-muted">{order.id}</span>
+          </h1>
+          <p className="mt-1 text-sm text-text-muted">
             Placed{' '}
             {order.createdAt.toLocaleString('en-SG', {
               year: 'numeric',
@@ -73,104 +57,137 @@ export default async function AdminOrderDetailPage({
         </div>
         <div className="flex flex-col items-end gap-2">
           <span
-            className={`inline-block px-3 py-1 rounded text-sm font-medium ${
-              STATUS_STYLES[order.status] ?? 'bg-gray-100 text-gray-800'
+            className={`inline-block rounded-pill px-3 py-1 text-sm font-medium ${
+              STATUS_STYLES[order.status] ?? 'bg-surface-muted text-text'
             }`}
           >
             {formatStatus(order.status)}
           </span>
-          <OrderStatusActions orderId={order.id} currentStatus={order.status} fulfillmentMethod={order.fulfillmentMethod} />
+          <OrderStatusActions
+            orderId={order.id}
+            currentStatus={order.status}
+            fulfillmentMethod={order.fulfillmentMethod}
+          />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6 mb-6">
-        <div className="border rounded-lg p-4">
-          <h2 className="font-medium text-gray-700 mb-2">Customer</h2>
-          <p className="text-sm">{order.user.name || '—'}</p>
-          <p className="text-sm text-gray-500">{order.user.email}</p>
+      <div className="mb-6 grid grid-cols-2 gap-6">
+        <div className="rounded-lg border border-border-light bg-surface p-4 shadow-card">
+          <h2 className="mb-2 flex items-center gap-1.5 font-display text-base font-semibold text-primary">
+            <User className="h-4 w-4 text-accent" aria-hidden="true" />
+            Customer
+          </h2>
+          <p className="text-sm text-text">{order.user.name || '—'}</p>
+          <p className="text-sm text-text-muted">{order.user.email}</p>
         </div>
 
-        <div className="border rounded-lg p-4">
-          <h2 className="font-medium text-gray-700 mb-2">
+        <div className="rounded-lg border border-border-light bg-surface p-4 shadow-card">
+          <h2 className="mb-2 flex items-center gap-1.5 font-display text-base font-semibold text-primary">
+            <MapPin className="h-4 w-4 text-accent" aria-hidden="true" />
             {order.fulfillmentMethod === 'SELF_COLLECTION' ? 'Self Collection' : 'Shipping Address'}
           </h2>
           {order.fulfillmentMethod === 'SELF_COLLECTION' ? (
-            <p className="text-sm text-gray-500">Customer will collect this order in person.</p>
+            <p className="text-sm text-text-muted">Customer will collect this order in person.</p>
           ) : (
             <>
-              <p className="text-sm">
+              <p className="text-sm text-text">
                 Block {order.shippingBlock}
                 {order.shippingUnitNumber ? `, ${order.shippingUnitNumber}` : ''}
               </p>
-              <p className="text-sm">{order.shippingStreet}</p>
-              <p className="text-sm">Singapore {order.shippingPostalCode}</p>
+              <p className="text-sm text-text">{order.shippingStreet}</p>
+              <p className="text-sm text-text">Singapore {order.shippingPostalCode}</p>
             </>
           )}
         </div>
       </div>
 
-      <div className="border rounded-lg p-4 mb-6">
-        <h2 className="font-medium text-gray-700 mb-2">Payment</h2>
-        <p className="text-sm text-gray-500">
+      <div className="mb-6 rounded-lg border border-border-light bg-surface p-4 shadow-card">
+        <h2 className="mb-2 flex items-center gap-1.5 font-display text-base font-semibold text-primary">
+          <CreditCard className="h-4 w-4 text-accent" aria-hidden="true" />
+          Payment
+        </h2>
+        <p className="text-sm text-text-muted">
           HitPay Payment Request ID:{' '}
-          <span className="font-mono">{order.hitpayPaymentRequestId || '—'}</span>
+          <span className="font-mono text-text">{order.hitpayPaymentRequestId || '—'}</span>
         </p>
       </div>
 
-      <div className="border rounded-lg p-4 mb-6">
-        <h2 className="font-medium text-gray-700 mb-2">Tracking Number</h2>
+      <div className="mb-6 rounded-lg border border-border-light bg-surface p-4 shadow-card">
+        <h2 className="mb-3 flex items-center gap-1.5 font-display text-base font-semibold text-primary">
+          <Truck className="h-4 w-4 text-accent" aria-hidden="true" />
+          Tracking Number
+        </h2>
         <TrackingNumberForm orderId={order.id} initialTrackingNumber={order.trackingNumber} />
       </div>
 
-      <div className="border rounded-lg overflow-hidden mb-6">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="text-left px-4 py-2 font-medium text-gray-600">Product</th>
-              <th className="text-left px-4 py-2 font-medium text-gray-600">Variant</th>
-              <th className="text-left px-4 py-2 font-medium text-gray-600">SKU</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-600">Qty</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-600">Price</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-600">Line Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {order.items.map((item) => (
-              <tr key={item.id} className="border-b last:border-0">
-                <td className="px-4 py-2">{item.productName}</td>
-                <td className="px-4 py-2 text-gray-500">
-                  {formatCombination(item.combination)}
-                </td>
-                <td className="px-4 py-2 text-gray-500">{item.sku || '—'}</td>
-                <td className="px-4 py-2 text-right">{item.quantity}</td>
-                <td className="px-4 py-2 text-right">${item.price.toFixed(2)}</td>
-                <td className="px-4 py-2 text-right">
-                  ${(item.price * item.quantity).toFixed(2)}
-                </td>
+      <div className="mb-6 overflow-hidden rounded-lg border border-border-light bg-surface shadow-card">
+        <div className="flex items-center gap-1.5 border-b border-border-light bg-surface-muted px-4 py-3">
+          <ShoppingBag className="h-4 w-4 text-accent" aria-hidden="true" />
+          <h2 className="font-display text-base font-semibold text-primary">Items</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="border-b border-border-light bg-surface-muted">
+              <tr>
+                <th className="px-4 py-2 text-left font-medium text-text-muted">Product</th>
+                <th className="px-4 py-2 text-left font-medium text-text-muted">Variant</th>
+                <th className="px-4 py-2 text-left font-medium text-text-muted">SKU</th>
+                <th className="px-4 py-2 text-right font-medium text-text-muted">Qty</th>
+                <th className="px-4 py-2 text-right font-medium text-text-muted">Price</th>
+                <th className="px-4 py-2 text-right font-medium text-text-muted">Line Total</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {order.items.map((item, i) => (
+                <tr
+                  key={item.id}
+                  className={`border-b border-border-light last:border-b-0 ${
+                    i % 2 === 1 ? 'bg-surface-muted/40' : ''
+                  }`}
+                >
+                  <td className="px-4 py-2.5 text-text">{item.productName}</td>
+                  <td className="px-4 py-2.5 text-text-muted">{formatCombination(item.combination)}</td>
+                  <td className="px-4 py-2.5 text-text-muted">{item.sku || '—'}</td>
+                  <td className="px-4 py-2.5 text-right text-text">{item.quantity}</td>
+                  <td className="px-4 py-2.5 text-right text-text">${item.price.toFixed(2)}</td>
+                  <td className="px-4 py-2.5 text-right font-medium text-text">
+                    ${(item.price * item.quantity).toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="border rounded-lg p-4 ml-auto max-w-xs">
-        <div className="flex justify-between text-sm mb-1">
-          <span className="text-gray-500">Subtotal</span>
-          <span>${order.subtotal.toFixed(2)}</span>
+      <div className="ml-auto max-w-xs rounded-lg border border-border-light bg-surface p-4 shadow-card">
+        <div className="mb-1 flex justify-between text-sm">
+          <span className="text-text-muted">Subtotal</span>
+          <span className="text-text">${order.subtotal.toFixed(2)}</span>
         </div>
-        <div className="flex justify-between text-sm mb-1">
-          <span className="text-gray-500">
+        {order.discountAmount > 0 && (
+          <div className="mb-1 flex justify-between text-sm">
+            <span className="text-text-muted">
+              Discount{order.promoCode ? ` (${order.promoCode})` : ''}
+            </span>
+            <span className="text-success">-${order.discountAmount.toFixed(2)}</span>
+          </div>
+        )}
+        <div className="mb-1 flex justify-between text-sm">
+          <span className="text-text-muted">
             {order.fulfillmentMethod === 'SELF_COLLECTION' ? 'Self Collection' : 'Shipping'}
           </span>
-          <span>${order.shippingFee.toFixed(2)}</span>
+          <span className="text-text">${order.shippingFee.toFixed(2)}</span>
         </div>
-        <div className="flex justify-between text-sm mb-1">
-          <span className="text-gray-500">GST</span>
-          <span>${order.gstAmount.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between font-medium border-t pt-1 mt-1">
-          <span>Total</span>
-          <span>${order.total.toFixed(2)}</span>
+        {GST_ENABLED && (
+          <div className="mb-1 flex justify-between text-sm">
+            <span className="text-text-muted">GST</span>
+            <span className="text-text">${order.gstAmount.toFixed(2)}</span>
+          </div>
+        )}
+        <div className="mt-1 flex justify-between border-t border-border-light pt-2 font-semibold">
+          <span className="text-primary">Total</span>
+          <span className="text-primary">${order.total.toFixed(2)}</span>
         </div>
       </div>
     </div>

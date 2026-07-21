@@ -43,6 +43,7 @@ export type ExpenseMinAggregateOutputType = {
   notes: string | null
   createdAt: Date | null
   updatedAt: Date | null
+  isSystemGenerated: boolean | null
 }
 
 export type ExpenseMaxAggregateOutputType = {
@@ -54,6 +55,7 @@ export type ExpenseMaxAggregateOutputType = {
   notes: string | null
   createdAt: Date | null
   updatedAt: Date | null
+  isSystemGenerated: boolean | null
 }
 
 export type ExpenseCountAggregateOutputType = {
@@ -65,6 +67,7 @@ export type ExpenseCountAggregateOutputType = {
   notes: number
   createdAt: number
   updatedAt: number
+  isSystemGenerated: number
   _all: number
 }
 
@@ -86,6 +89,7 @@ export type ExpenseMinAggregateInputType = {
   notes?: true
   createdAt?: true
   updatedAt?: true
+  isSystemGenerated?: true
 }
 
 export type ExpenseMaxAggregateInputType = {
@@ -97,6 +101,7 @@ export type ExpenseMaxAggregateInputType = {
   notes?: true
   createdAt?: true
   updatedAt?: true
+  isSystemGenerated?: true
 }
 
 export type ExpenseCountAggregateInputType = {
@@ -108,6 +113,7 @@ export type ExpenseCountAggregateInputType = {
   notes?: true
   createdAt?: true
   updatedAt?: true
+  isSystemGenerated?: true
   _all?: true
 }
 
@@ -206,6 +212,7 @@ export type ExpenseGroupByOutputType = {
   notes: string | null
   createdAt: Date
   updatedAt: Date
+  isSystemGenerated: boolean
   _count: ExpenseCountAggregateOutputType | null
   _avg: ExpenseAvgAggregateOutputType | null
   _sum: ExpenseSumAggregateOutputType | null
@@ -240,6 +247,7 @@ export type ExpenseWhereInput = {
   notes?: Prisma.StringNullableFilter<"Expense"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Expense"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Expense"> | Date | string
+  isSystemGenerated?: Prisma.BoolFilter<"Expense"> | boolean
 }
 
 export type ExpenseOrderByWithRelationInput = {
@@ -251,6 +259,7 @@ export type ExpenseOrderByWithRelationInput = {
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  isSystemGenerated?: Prisma.SortOrder
 }
 
 export type ExpenseWhereUniqueInput = Prisma.AtLeast<{
@@ -265,6 +274,7 @@ export type ExpenseWhereUniqueInput = Prisma.AtLeast<{
   notes?: Prisma.StringNullableFilter<"Expense"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Expense"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Expense"> | Date | string
+  isSystemGenerated?: Prisma.BoolFilter<"Expense"> | boolean
 }, "id">
 
 export type ExpenseOrderByWithAggregationInput = {
@@ -276,6 +286,7 @@ export type ExpenseOrderByWithAggregationInput = {
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  isSystemGenerated?: Prisma.SortOrder
   _count?: Prisma.ExpenseCountOrderByAggregateInput
   _avg?: Prisma.ExpenseAvgOrderByAggregateInput
   _max?: Prisma.ExpenseMaxOrderByAggregateInput
@@ -295,6 +306,7 @@ export type ExpenseScalarWhereWithAggregatesInput = {
   notes?: Prisma.StringNullableWithAggregatesFilter<"Expense"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Expense"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Expense"> | Date | string
+  isSystemGenerated?: Prisma.BoolWithAggregatesFilter<"Expense"> | boolean
 }
 
 export type ExpenseCreateInput = {
@@ -306,6 +318,7 @@ export type ExpenseCreateInput = {
   notes?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  isSystemGenerated?: boolean
 }
 
 export type ExpenseUncheckedCreateInput = {
@@ -317,6 +330,7 @@ export type ExpenseUncheckedCreateInput = {
   notes?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  isSystemGenerated?: boolean
 }
 
 export type ExpenseUpdateInput = {
@@ -328,6 +342,7 @@ export type ExpenseUpdateInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isSystemGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type ExpenseUncheckedUpdateInput = {
@@ -339,6 +354,7 @@ export type ExpenseUncheckedUpdateInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isSystemGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type ExpenseCreateManyInput = {
@@ -350,6 +366,7 @@ export type ExpenseCreateManyInput = {
   notes?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  isSystemGenerated?: boolean
 }
 
 export type ExpenseUpdateManyMutationInput = {
@@ -361,6 +378,7 @@ export type ExpenseUpdateManyMutationInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isSystemGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type ExpenseUncheckedUpdateManyInput = {
@@ -372,6 +390,7 @@ export type ExpenseUncheckedUpdateManyInput = {
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  isSystemGenerated?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type ExpenseCountOrderByAggregateInput = {
@@ -383,6 +402,7 @@ export type ExpenseCountOrderByAggregateInput = {
   notes?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  isSystemGenerated?: Prisma.SortOrder
 }
 
 export type ExpenseAvgOrderByAggregateInput = {
@@ -398,6 +418,7 @@ export type ExpenseMaxOrderByAggregateInput = {
   notes?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  isSystemGenerated?: Prisma.SortOrder
 }
 
 export type ExpenseMinOrderByAggregateInput = {
@@ -409,6 +430,7 @@ export type ExpenseMinOrderByAggregateInput = {
   notes?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  isSystemGenerated?: Prisma.SortOrder
 }
 
 export type ExpenseSumOrderByAggregateInput = {
@@ -426,6 +448,7 @@ export type ExpenseSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   notes?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  isSystemGenerated?: boolean
 }, ExtArgs["result"]["expense"]>
 
 export type ExpenseSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -437,6 +460,7 @@ export type ExpenseSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   notes?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  isSystemGenerated?: boolean
 }, ExtArgs["result"]["expense"]>
 
 export type ExpenseSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -448,6 +472,7 @@ export type ExpenseSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   notes?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  isSystemGenerated?: boolean
 }, ExtArgs["result"]["expense"]>
 
 export type ExpenseSelectScalar = {
@@ -459,9 +484,10 @@ export type ExpenseSelectScalar = {
   notes?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  isSystemGenerated?: boolean
 }
 
-export type ExpenseOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "category" | "amount" | "incurredAt" | "notes" | "createdAt" | "updatedAt", ExtArgs["result"]["expense"]>
+export type ExpenseOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "category" | "amount" | "incurredAt" | "notes" | "createdAt" | "updatedAt" | "isSystemGenerated", ExtArgs["result"]["expense"]>
 
 export type $ExpensePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Expense"
@@ -475,6 +501,7 @@ export type $ExpensePayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     notes: string | null
     createdAt: Date
     updatedAt: Date
+    isSystemGenerated: boolean
   }, ExtArgs["result"]["expense"]>
   composites: {}
 }
@@ -906,6 +933,7 @@ export interface ExpenseFieldRefs {
   readonly notes: Prisma.FieldRef<"Expense", 'String'>
   readonly createdAt: Prisma.FieldRef<"Expense", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Expense", 'DateTime'>
+  readonly isSystemGenerated: Prisma.FieldRef<"Expense", 'Boolean'>
 }
     
 

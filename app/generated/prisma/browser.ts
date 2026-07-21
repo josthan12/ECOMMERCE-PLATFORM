@@ -72,3 +72,8 @@ export type OrderItem = Prisma.OrderItemModel
  * 
  */
 export type Expense = Prisma.ExpenseModel
+/**
+ * Model PromoCode
+ * 
+ */
+export type PromoCode = Prisma.PromoCodeModel

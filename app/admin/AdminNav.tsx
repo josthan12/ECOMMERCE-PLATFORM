@@ -9,6 +9,7 @@ import {
   FolderTree,
   ClipboardList,
   Receipt,
+  Ticket,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { href: '/admin/categories', label: 'Categories', icon: FolderTree },
   { href: '/admin/orders', label: 'Orders', icon: ClipboardList },
   { href: '/admin/expenses', label: 'Expenses', icon: Receipt },
+  { href: '/admin/promo-codes', label: 'Promo Codes', icon: Ticket },
 ]
 
 export default function AdminNav() {
