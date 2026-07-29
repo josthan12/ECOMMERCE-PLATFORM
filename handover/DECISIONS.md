@@ -575,3 +575,394 @@ Reason:
 
 Date:
 2026-07-17
+
+## APPEND THESE TO THE END OF THE REAL DECISIONS.md — DO NOT REPLACE OR EDIT EXISTING ENTRIES
+
+---
+
+Decision:
+Adopt Tailwind v4's CSS-first token system (`@theme inline` in
+`globals.css`), sourced directly from three admin-supplied brand documents
+(VISION.md, DESIGN_SYSTEM.md, UI_PATTERNS.md) rather than a generic design
+pass.
+
+Reason:
+The admin provided a genuinely detailed, opinionated brand spec — palette,
+typography scale, spacing system, motion rules, an explicit anti-patterns
+list, and page-by-page UI patterns. Treating it as authoritative (citing
+specific sections when making decisions, e.g. rejecting a "casino/VIP"
+hero concept directly against the anti-patterns list) produced better,
+more defensible design decisions than inferring "premium" from general
+knowledge. Tailwind v4's CSS-first approach (no `tailwind.config.ts`) was
+already the version installed in the project; tokens were wired as CSS
+custom properties re-exposed via `@theme inline` rather than fighting the
+framework's own migration.
+
+Date:
+2026-07-22
+
+---
+
+Decision:
+Newsletter composition is database-backed, while broadcasting remains a
+separate explicit admin action with recipient confirmation. Each recipient
+gets a delivery row and a stable Resend idempotency key; retries skip
+successful deliveries and customers who have since unsubscribed.
+
+Reason:
+Creating or editing content must never accidentally send marketing email.
+Per-recipient state makes partial failure visible and retryable without
+deliberately duplicating successful sends. Re-checking consent immediately
+before delivery preserves the customer’s latest preference. Newsletter images
+are stored as existing public paths or secure hosted URLs because the project
+has not selected persistent upload storage; a local server filesystem upload
+would not be durable on Vercel.
+
+Date:
+2026-07-28
+
+---
+
+Decision:
+Store production catalog images as repository-owned static assets under
+`public/images` rather than adding managed image storage. Store root-relative
+asset paths in the existing image URL fields and standardize product/variant
+source files at 1000x1400 (5:7), rendered with `object-contain`.
+
+Reason:
+The admin requires no separate image-storage cost and is comfortable adding
+or replacing images through the repository and redeploying. The current
+database contains only disposable test data and will be rebuilt with the real
+catalog, so its arbitrary remote URLs do not need a storage migration. Static
+paths work directly with Next.js Image without a remote-host allowlist. A
+temporary native-image fallback preserves today's test records until that
+reset; it is not the production storage design.
+
+Date:
+2026-07-23
+
+---
+
+Decision:
+Treat `Category.bannerImageUrl` as the repository-local category icon path and
+remove the full-width image from the category detail page rather than adding a
+second banner field.
+
+Reason:
+The admin selected square 1024x1024 category art displayed in uniform 3:2
+homepage tiles, following the measured TCG reference. Reusing that square
+artwork as a shallow full-width banner caused severe cropping. The reference
+category detail page also uses title/content without a wide banner, so removing
+it is the smallest consistent solution and avoids an unnecessary schema
+migration for a separate banner asset.
+
+Date:
+2026-07-23
+
+---
+
+Decision:
+Supersede the initial 5:7 product-image standard with square catalog canvases:
+1000x1000 for product/variant sources and square `object-contain` containers on
+product cards and product detail. Use 1024x1024 category-icon sources displayed
+inside fixed 3:2 `object-cover` tiles.
+
+Reason:
+The 5:7 rule assumed the store would mostly show individual cards, but the
+actual catalog includes sealed products, booster boxes, tins, and accessories.
+It produced visibly awkward scaling. Direct measurement of the admin-selected
+TCG reference showed square product artwork/canvases and square category art
+inside 3:2 tiles. A square product canvas gives every product type the same
+footprint while `object-contain` preserves the complete item.
+
+Date:
+2026-07-23
+
+---
+
+Decision:
+Make newsletter subscription an authenticated account preference on `User`
+instead of accepting arbitrary public email addresses or integrating Resend
+Contacts.
+
+Reason:
+The admin explicitly accepted the conversion tradeoff of requiring an
+account. This keeps newsletter consent tied to a verified Clerk-backed email,
+prevents anonymous submission of third-party addresses, and works with the
+existing Resend API key, which is restricted to sending email and cannot
+manage Contacts or Topics. Three fields preserve the current state and basic
+consent history: `newsletterSubscribed`, `newsletterSubscribedAt`, and
+`newsletterUnsubscribedAt`. The homepage redirects signed-out visitors to
+sign-in and returns them to `/#newsletter`; the authenticated API always
+resolves the email owner server-side and never accepts an email from the
+client. Sending newsletters and generating per-message unsubscribe links are
+separate future work; the current feature captures and manages consent only.
+
+Date:
+2026-07-23
+
+---
+
+Decision:
+Switch the site's typography from an initial Cormorant Garamond (serif
+display) + Inter (sans body) pairing to Geist for both `font-display` and
+`font-sans`.
+
+Reason:
+The admin explicitly wanted an "Apple-style," fully sans-serif, more
+modern-tech-product look after seeing the initial serif-paired result,
+rather than the "collector boutique" pairing originally specified. Both
+directions were compared visually via the Visualizer before committing,
+rather than guessing from description alone. Geist was chosen over other
+candidate sans options (Plus Jakarta Sans, DM Sans, Manrope, Outfit)
+partly for continuity — it was the *original* font in the project's
+scaffold before the Foundation step first replaced it, so the switch is
+also a full-circle return to a known-good starting point, not an
+arbitrary new pick.
+
+Date:
+2026-07-22
+
+---
+
+Decision:
+Adopt `lucide-react` and `recharts` as the only two new npm dependencies
+this session; explicitly avoid Framer Motion for hero/scroll animation,
+using a hand-built `ScrollReveal.tsx` (IntersectionObserver + CSS
+transitions) instead.
+
+Reason:
+Both `lucide-react` and `recharts` were proposed and explicitly
+admin-confirmed before installation, consistent with the project's
+standing "confirm before adding a dependency" convention (see Session 10's
+NEXT_TASK.md). Framer Motion was considered for the Apple-style scroll
+reveals but rejected as unnecessary — the actual effects needed (fade,
+small translate, once-only trigger, `prefers-reduced-motion` support) are
+fully achievable with `IntersectionObserver` and CSS `transition`, so
+adding a full animation library would have been overhead without a
+corresponding capability gain.
+
+Date:
+2026-07-22
+
+---
+
+Decision:
+Decline all requests for sexualized/adult-themed content for the hero
+section, as a firm boundary — including a "luxury casino/VIP" concept
+explicitly describing sexualized women, and multiple uploaded anime
+character images containing sexualizing elements — regardless of how the
+request was reframed (as "erotica," as "tell me how to do it myself," or
+as a new unrelated image upload).
+
+Reason:
+Not a negotiable design tradeoff. This holds independent of the
+project's brand direction (though it also happens to directly conflict
+with VISION.md's own anti-patterns list — "loud," "gimmicky," explicitly
+not "gaming themed"). Repeated attempts to reframe the same underlying
+request did not change the answer; the same brief, firm decline was given
+each time rather than re-litigating the reasoning at length. Legitimate,
+non-sexualized creative work on the hero (an abstract card placeholder, an
+ambient background, and later a real fully-clothed asset the admin
+supplied himself) was fully supported in the same conversation — the
+boundary is specifically about content, not about hero animation as a
+category.
+
+Date:
+2026-07-22
+
+---
+
+Decision:
+Decline to reuse an admin-uploaded reference FAQ/T&C document as source
+content, despite the admin offering it explicitly "for reference."
+
+Reason:
+The document was identified as another real business's actual
+customer-service copy — it named a different store ("Newtro") and a
+specific Telegram handle not belonging to this project. Beyond the IP
+concern of copying another business's proprietary policy language
+verbatim, much of its content described operations that don't exist for
+this store (a physical walk-in shop, a card-grading service, international
+shipping, bulk/streamer pricing tiers) — confirmed via a direct follow-up
+question to the admin, who confirmed none of those apply except an
+informal pre-order labeling convention. Used the document's *topic
+structure* (shipping/timing, stock availability, refunds, discounts) as
+organizational reference only; all actual FAQ answers were written fresh,
+grounded exclusively in facts already true of this specific site (HitPay/
+PayNow, GST conditionality, the real Delivery/Self-Collection options, the
+policies already live in `PurchaseNotice.tsx`).
+
+Date:
+2026-07-22
+
+---
+
+Decision:
+Build `Expense` as a flat, deliberately unrelated (no foreign keys to
+`Order`, `Product`, or anything else) admin-managed cost log, with a free-text
+`category` field rather than a fixed enum.
+
+Reason:
+The admin's explicit request was for something he creates and edits by
+hand — "an object that takes in title... then have the cost for it be
+manually created by me and can be edited in the future" — not an
+automated, relationally-tied accounting system linking specific costs to
+specific orders or products. A free-text category with `<datalist>`
+suggestions (rather than a `CostCategory` enum) means a new category never
+requires a schema migration, matching the project's general preference
+for the simpler option when the more complex one isn't actually needed
+yet (same reasoning already applied to `Category.slug` locking,
+self-collection address as a hardcoded constant, etc.).
+
+Date:
+2026-07-22
+
+---
+
+Decision:
+Move the self-collection "ready for pickup" customer email trigger from
+the `PACKED → COMPLETED` transition to `PROCESSING → PACKED`.
+
+Reason:
+Real bug, found by the admin: `COMPLETED` for a self-collection order
+represents the admin recording that the customer has *already* picked up
+the item — the end of the process, not the beginning of the "ready for
+pickup" window. The email was therefore firing after the fact, informing
+customers their order was ready only once it had already been collected.
+`PACKED` is the actual moment an order becomes ready for the customer to
+come get it, matching how the equivalent delivery-side email
+(`sendShippingNotificationEmail`) already fires at the correct transition
+point (`PACKED → SHIPPED`). `COMPLETED` now triggers no customer email for
+self-collection orders, which was confirmed as the correct, matching
+behavior already used for delivery orders reaching `COMPLETED` (also
+silent) — not a regression.
+
+Date:
+2026-07-22
+
+---
+
+Decision:
+Scope Promotion Codes narrowly: whole-order-only (no product/category
+targeting), no total-redemption cap, no per-customer usage limit, single
+code per order, burned at order-*creation* time rather than at
+payment-success time, with an admin-triggered Reactivate action as the
+mechanism for reuse rather than either permanent deletion or unlimited
+reuse.
+
+Reason:
+The admin's stated use case — "this will not be used very often and only
+at my discretion" — is a low-volume, admin-controlled scenario, not a
+public marketing-coupon system. A narrower scope avoids building
+speculative machinery (product-scoped discounts, redemption caps,
+per-customer limits) with no current requirement, consistent with the
+project's general build philosophy. The used-code lifecycle went through
+several iterations before settling: initially designed as
+`usedAt`/`usedByOrderId` marking (no schema deletion), briefly reconsidered
+as permanent hard-deletion at the admin's request, then reverted back to
+the marking approach — plus a new explicit Reactivate action — once the
+admin confirmed he wanted the ability to reuse a code later. Burning at
+order-creation (rather than waiting for payment confirmation) was an
+explicit, deliberate admin choice, accepting the tradeoff that a
+failed/expired payment still permanently burns a single-use code unless
+manually reactivated; the project's own instinct going in was the
+opposite (burn only on confirmed payment, mirroring how stock is only
+restored on confirmed failure), but the admin's explicit instruction
+overrides that default.
+
+Date:
+2026-07-22
+
+---
+
+Decision:
+Add `Order.promoCode` and `Order.discountAmount` as snapshot fields,
+separate from `PromoCode.usedByOrderId`.
+
+Reason:
+Once `PromoCode` supports reactivation-and-reuse, `usedByOrderId` can only
+ever reflect the *most recent* order to use a given code — if code
+`SAVE10` is used by Order A, then reactivated and later used by Order B,
+`usedByOrderId` now points at B, and Order A's own record of "a discount
+was applied here, of this amount" would be lost entirely if not
+independently snapshotted. This follows the exact same reasoning already
+applied throughout this project to `OrderItem` (productName/price/
+combination all snapshotted, never a live FK) and the shipping address
+fields on `Order` — a historical record must never depend on a live,
+mutable, reusable row remaining unchanged.
+
+Date:
+2026-07-22
+
+---
+
+Decision:
+Apply promo code discounts to `subtotal` before GST calculation, and make
+GST fully conditional via a new `GST_ENABLED` export from `lib/gst.ts`
+(derived from `GST_RATE_PERCENT` being a positive number), rather than
+displaying a "$0.00 GST" line when the rate is zero.
+
+Reason:
+The admin is not currently GST-registered and explicitly asked for a
+minimal-change way to hide GST entirely until that changes, while keeping
+the ability to simply set a real rate later with no further code change.
+Discount-before-GST is the standard treatment for a genuine price
+reduction (GST should apply to the actual net sale price, not the
+pre-discount gross) and was flagged to the admin as a real tax-timing
+decision, not just an implementation detail, before being implemented —
+the admin did not raise an objection to this default. `GST_ENABLED` is
+checked at every surface displaying a GST line (checkout form, order
+confirmation, admin order detail, the FAQ), following the same
+"not-automatic, must-be-added-explicitly-per-surface" convention already
+established for `archived: false` on product queries.
+
+Date:
+2026-07-22
+
+---
+
+Decision:
+Log a promo discount as an auto-generated `Expense` (new `isSystemGenerated`
+boolean field) only once the associated order actually reaches `PAID` —
+not at the moment the code is applied/burned.
+
+Reason:
+Burning a promo code happens at order-creation regardless of payment
+outcome (see above), but expensing money for a discount is a different
+fact: it should only be recorded once a real sale actually happened.
+Logging it at code-application time would have overstated costs (and
+understated Profit) for any order that later failed or expired — the
+mirror-image risk of the one the admin already explicitly accepted on the
+promo-code side. This mirrors exactly how Total Revenue already excludes
+unpaid orders. Implemented via a new shared helper
+(`lib/recordDiscountExpense.ts`), called from both the HitPay webhook's
+`completed` handler and `lib/reconcileOrder.ts`'s stale-order sweep — the
+same dual-call-site pattern the project already uses for
+`sendOrderConfirmationEmail`/`markOrderFailedAndRestoreStock`, chosen
+specifically so the trigger can't be missed on either payment-confirmation
+path. `isSystemGenerated` (rather than matching on the `category` string
+`"Promotion"` alone) was added so dashboard aggregates can never be
+accidentally polluted by a manually-entered expense that happens to share
+the same category text.
+
+Date:
+2026-07-22
+
+---
+
+Decision:
+Remove Terms & Conditions, Shipping, Returns, and Help Center pages/footer
+links entirely, rather than leaving them as "coming soon" placeholders.
+
+Reason:
+Explicit admin decision after building his own simplified footer — these
+were judged unnecessary for the current stage rather than deferred. Only
+About, Contact, and FAQ remain, all with real content. `ComingSoonPage.tsx`
+(built to serve exactly this kind of stub) may now have zero remaining
+usages as a result — worth confirming and removing next time that area of
+the codebase is touched, rather than carrying dead code forward
+indefinitely.
+
+Date:
+2026-07-22

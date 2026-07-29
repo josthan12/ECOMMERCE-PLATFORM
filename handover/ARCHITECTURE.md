@@ -32,28 +32,84 @@ Next.js App Router
 
 ---
 
+## Design System (added 2026-07-22)
+
+The entire storefront and admin panel were re-skinned this session against
+three custom documents supplied by the admin — **VISION.md**,
+**DESIGN_SYSTEM.md**, and **UI_PATTERNS.md** — defining a brand called
+"PokeSunshineTCG": premium, restrained, collector-focused, explicitly
+**not** gaming-themed, gimmicky, or over-decorated. These three docs are
+**not currently part of the `/mnt/project` doc set** — confirm whether
+they've been saved into the real project (recommended location:
+`docs/design/`) before assuming they're available in a future session.
+
+### Tokens
+Tailwind v4 (CSS-first config — there is **no** `tailwind.config.ts`).
+All design tokens are CSS custom properties in `app/globals.css`'s
+`:root`, re-exposed to Tailwind via an `@theme inline` block:
+- Colors: `--color-primary` (navy), `--color-secondary` (burgundy),
+  `--color-accent`/`--color-accent-light` (gold), `--color-background`
+  (warm cream), `--color-surface`/`--color-surface-muted`/
+  `--color-surface-hover`, `--color-text`/`--color-text-muted`/
+  `--color-text-light`/`--color-text-inverse`, `--color-border`/
+  `--color-border-light`/`--color-border-strong`, semantic
+  `--color-success`/`--color-warning`/`--color-error`/`--color-info`, and
+  stable premium panel tokens `--color-ink`/`--color-ink-muted`/
+  `--color-on-ink`/`--color-on-ink-muted`
+- Radius: `sm`/`md`/`lg`/`xl`/`pill`
+- Shadows: `input`/`card`/`dropdown`/`modal` (four-tier elevation scale)
+- Fonts: `--font-display` and `--font-sans` both resolve to **Geist**
+  (self-hosted from `app/fonts/geist-latin.woff2` via `next/font/local` in
+  `app/layout.tsx`) — a deliberate,
+  admin-confirmed switch from an initial Cormorant Garamond (serif
+  display) + Inter (body) pairing, chosen after comparing both directions
+  visually via the Visualizer tool. Collector Midnight is the implemented
+  dark palette, selected through `data-theme="dark"` and persisted by the
+  global theme toggle. The ink token family remains dark in both themes so
+  hero/footer/editorial panels never rely on `primary` retaining the same
+  semantic background role.
+
+Gradient utilities use Tailwind v4's renamed `bg-linear-to-*` (not the v3
+`bg-gradient-to-*`).
+
+### Shared UI primitives (`app/components/ui/`)
+- `Button.tsx` — variants: `primary`/`secondary`/`ghost`/`danger`/`accent`; sizes `sm`/`md`/`lg`
+- `Badge.tsx` — variants: `success`/`warning`/`error`/`info`/`neutral`/`accent`
+- `Card.tsx` — unopinionated shell (surface + border + shadow), no default padding
+- `MetricCard.tsx` — label/value/icon, used across the admin dashboard
+
+### Other new shared components
+- `app/components/ScrollReveal.tsx` — IntersectionObserver-based fade-up-on-scroll wrapper, fires once, respects `prefers-reduced-motion`. No new dependency (deliberately not Framer Motion — see DECISIONS.md).
+- `app/components/Footer.tsx` — global multi-column customer footer with
+  brand positioning plus Shop, Help, and Company navigation.
+- `app/components/ComingSoonPage.tsx` — shared stub-page shell. **Possibly now unused** — every page that used it (Terms, Shipping, Returns, Help Center) was removed by the admin this session. Worth confirming and deleting if genuinely orphaned.
+- `lib/cn.ts` — small className-joining helper, written in place of installing `clsx`.
+
+### New npm dependencies this session (each explicitly admin-confirmed before adding)
+- `lucide-react` — icon library, used throughout storefront and admin
+- `recharts` — admin dashboard charts
+
+---
+
 ## Key Architectural Decisions
 
 ### Server vs Client Components
-- **Admin list pages** (product list, product type list) → Server Components — fetch data directly with Prisma, no API call needed
-- **Admin form pages** (new/edit product, new/edit product type, new/edit category) → Client Components (`'use client'`) — need React state for dynamic form behavior
-- **Admin row-level actions** (archive/unarchive, delete, with a confirm dialog) → small standalone Client Components (e.g. `ProductActions.tsx`, `CategoryActions.tsx`) rather than making the whole list page a Client Component — same pattern established by `OrderStatusActions.tsx` in Phase 5
-- **API routes** → handle all mutations (POST, PUT, PATCH, DELETE) and are called by client components via `fetch()`
+- **Admin list pages** → Server Components — fetch data directly with Prisma
+- **Admin form pages** → Client Components (`'use client'`)
+- **Admin row-level actions** (archive/unarchive, delete, activate/deactivate/reactivate, with a confirm dialog) → small standalone Client Components (`ProductActions.tsx`, `CategoryActions.tsx`, `ExpenseActions.tsx`, `PromoCodeActions.tsx`) rather than making the whole list page a Client Component
+- **Admin nav** (`app/admin/AdminNav.tsx`, added 2026-07-22) → Client Component, since active-link highlighting needs `usePathname()`; kept separate from `app/admin/layout.tsx` specifically so the layout's server-side auth/role check never has to move client-side
+- **Admin dashboard charts** (`app/admin/DashboardCharts.tsx`, added 2026-07-22) → Client Component, since `recharts` requires the browser; the page itself (`app/admin/page.tsx`) stays a Server Component doing all data-fetching/aggregation, passing pre-computed arrays down as props
+- **API routes** → handle all mutations and are called by client components via `fetch()`
 
 ### Database Connection (Prisma 7)
-Prisma 7 uses an adapter pattern instead of a URL in the schema:
-
 ```
 prisma.config.ts          → tells Prisma CLI where schema + migrations live, provides DB URL for migrations
 lib/prisma.ts             → runtime singleton using PrismaPg adapter, reads DATABASE_URL at runtime
 app/generated/prisma/     → generated client, committed to repo (needed for Vercel builds)
 ```
-
-The `datasource db` block in `schema.prisma` has NO `url` field — this is intentional for Prisma 7.
+The `datasource db` block in `schema.prisma` has NO `url` field — intentional for Prisma 7.
 
 ### Dynamic Product System
-Products are schema-flexible using JSON columns:
-
 ```
 ProductType    → defines the template (what fields a product type has)
 ProductField   → individual field definitions per type (label, key, type, options)
@@ -61,31 +117,139 @@ Product        → a specific product, stores type-specific data in `attributes`
 ProductVariant → each sellable combination (Size+Color etc.) with its own price/stock
 ```
 
-This means new product types (Coffee Beans, Artwork, 3D Printers) can be created by admins with zero code changes.
+### Admin Edit / Delete / Archive Pattern
+- **Category** — fully editable; supports real hard delete.
+- **Product** — fully editable except `productTypeId` and `slug`, both locked after creation. Uses **archive, not hard delete**.
+- **ProductType** — editable, but `ProductField` `key`/`type` locked once created; no delete or type-reassignment feature exists, by deliberate decision.
+- **Expense** — fully editable, real hard delete. No archive concept (nothing depends on an Expense row).
+- **PromoCode** — fully editable. No hard delete restriction, but the meaningful lifecycle state is `active`/`usedAt`, not deletion. Deleting a `PromoCode` row does **not** retroactively affect any `Order` that already used it, since the order's discount is snapshotted onto `Order.promoCode`/`discountAmount`.
 
-### Admin Edit / Delete / Archive Pattern (added 2026-07-17)
-Full edit capability was added this session for all three core admin entities, with different levels of restriction depending on how much other data structurally depends on each one:
+- **NewsletterPost** — editable and deletable only while `DRAFT`.
+  Broadcasting is a separate confirmed admin action. `SENT` content and
+  delivery history are immutable; `FAILED` broadcasts retry only unsent
+  recipients.
 
-- **Category** — fully editable; supports real hard delete. Nothing else has a required dependency on a Category, so deletion is unrestricted (`CategoryProduct` cascades cleanly, only unassigning products).
-- **Product** — fully editable except `productTypeId` and `slug`, both locked after creation (see below). Uses **archive, not hard delete** (`Product.archived`) — modeled on Shopify's own product-deletion behavior, confirmed via research rather than assumed. Every customer-facing product query must explicitly filter `archived: false`; this is not a global default.
-- **ProductType** — editable, but its `ProductField` children have `key` and `type` locked once created, and a field cannot be removed while any product still holds real data in it. No delete or type-reassignment feature exists for `ProductType` itself, by deliberate decision — see DATABASE_SCHEMA.md and DECISIONS.md.
+**General principle applied throughout:** where an incorrect edit could
+silently corrupt or orphan real data, the field is locked outright. Where
+the risk is about losing a whole record with real history behind it, the
+safer action (archive) is offered instead of the destructive one. Where
+there's no real risk, the simpler action (hard delete) is used without
+extra ceremony.
 
-**General principle applied across all three:** where an incorrect edit could silently corrupt or orphan real data (a slug used in a bookmarked URL, an `attributes` key a field no longer matches, a product's entire type shape), the field is locked outright rather than validated after the fact. Where the risk is about losing a whole record (deleting a Product with real order history behind it), the safer action (archive) is offered instead of the destructive one. Where there's no real risk (Category), the simpler action (hard delete) is used without extra ceremony.
+### Financial / Promotions Data Flow (added 2026-07-22)
+- **GST is conditional**, not assumed-on. `lib/gst.ts` exports `GST_ENABLED`
+  (derived from `GST_RATE_PERCENT` env var being a positive number) and
+  `GST_RATE_DISPLAY`. Every surface showing order totals (checkout form,
+  order confirmation, admin order detail, the FAQ) must check `GST_ENABLED`
+  before rendering a GST line — this is not automatic, same convention as
+  `archived: false` needing to be added by hand to new product queries.
+- **Promo code validation is duplicated by design, computation is not.**
+  `/api/checkout/apply-promo` is a preview-only endpoint the checkout UI
+  calls live as the customer types a code — it validates and computes but
+  never mutates anything. The real, authoritative application happens
+  inside `/api/checkout`'s own transaction, which re-validates the code
+  from scratch (never trusts the earlier preview call) and is the only
+  place `PromoCode.usedAt` actually gets set. Both call the same
+  `lib/promoCode.ts` → `computeDiscountAmount()` function, so the number
+  shown to the customer before checkout can never drift from what they're
+  actually charged.
+- **Discount timing relative to GST:** subtracted from `subtotal` before
+  `calculateTotalWithGST()` runs — GST is calculated on the net
+  (post-discount) amount, not the gross.
+- **Promo burn timing:** a code is marked used at order-**creation** time,
+  not at payment-success time — a deliberate admin decision accepting the
+  tradeoff that a failed/expired payment still permanently burns a
+  single-use code (mitigated by the admin's own "Reactivate" action being
+  available at any time).
+- **Discount-as-Expense timing is the inverse:** the auto-generated
+  `Expense` row (`isSystemGenerated: true`) is only created once an order
+  actually reaches `PAID` — via `lib/recordDiscountExpense.ts`, called
+  from **both** `app/api/webhooks/hitpay/route.ts`'s `completed` handler
+  and `lib/reconcileOrder.ts`'s stale-order sweep (the same dual-call-site
+  pattern already established for `sendOrderConfirmationEmail` and
+  `markOrderFailedAndRestoreStock`). This asymmetry (burn-on-create vs.
+  expense-on-paid) is intentional: "the code is spent" and "money was
+  actually given away on a real sale" are treated as genuinely separate
+  facts.
 
 ### Public Storefront Pages
-`/`, `/category/[slug]`, `/product/[slug]`, and `/search` are unauthenticated Server Components — no Clerk auth guard, consistent with the "Server Components fetch via Prisma directly" convention. No API routes back these pages for rendering; nothing is mutated, only read. `/api/search/suggestions` is the one exception on this surface — a small API route exists there because a live-typing dropdown needs to be triggered from a Client Component (`SearchBar.tsx`), which can't call Prisma directly.
+`/`, `/categories`, `/products`, `/category/[slug]`, `/product/[slug]`,
+`/search`, `/faq`, `/about`,
+`/contact` are unauthenticated Server Components. `/checkout/success` has a
+verified-but-unauthenticated view (see below). `/api/search/suggestions`
+`/api/checkout/apply-promo`, and authenticated `/api/newsletter` are the
+storefront's API-route exceptions, needed because Client Components call
+them and can't reach Prisma directly.
 
-- **Dynamic route params** (`params`) and **query strings** (`searchParams`) are both async (`Promise`) in Next.js 15 App Router — both must be `await`ed before use, in both the page component and `generateMetadata`.
-- **404 handling**: unknown slugs call `notFound()` from `next/navigation` rather than manually rendering an error state. An archived product's slug is treated identically to an unknown one — `notFound()` either way (added 2026-07-17).
-- **Category page sort/filter**: read from `searchParams`, applied in-memory after the Prisma fetch (dataset per category is small), submitted via a plain `<form method="GET">` — no client-side state, page reload on Apply. `/search`'s results page follows the same plain-GET-form convention (submitted from the header's `SearchBar`).
-- **Homepage sections** are hardcoded (no `HomepageSection` DB model) — see DECISIONS.md.
-- **Image fallback chain**: `ProductVariant.imageUrl` (if the selected variant has one) → `Product.imageUrl` → blank. Handled client-side in `ProductGallery.tsx`, since it depends on which variant is selected.
-- **Shared `ProductCard`** (`app/components/ProductCard.tsx`, added 2026-07-17): extracted from the category page and `FeaturedProducts` once `/search` needed the same card a third time. Accepts a `headingLevel` prop (`h2`/`h3`) so each page keeps correct heading hierarchy relative to its own page title, and a `showOutOfStockBadge` prop (on for category/search, off for the homepage) to preserve each page's existing behavior exactly.
-- **Search** (`app/search/page.tsx`, added 2026-07-17): Prisma `contains`/`mode: insensitive` match against `Product.name`/`description`. No typo tolerance — Meilisearch was evaluated and deliberately not adopted; see DECISIONS.md. `SearchBar.tsx` (Client Component, in the Header) adds a debounced (300ms) live-suggestion dropdown on top of the plain-GET-form full search, calling `/api/search/suggestions` for a capped top-6 list with image/name/category/price.
+- **Dynamic route params** and **query strings** are both async (`Promise`) in Next.js 15 App Router.
+- **404 handling**: unknown slugs, and archived products, both call `notFound()`.
+- **Category page sort/filter** and **`/search`**: plain-GET forms, `searchParams`-driven, no client-side state.
+- **Homepage sections** are hardcoded (no `HomepageSection` DB model). The
+  current order is animated PokeSunshine landing, CategoryGrid,
+  FeaturedProducts, simplified promises, Newsletter, then the global Footer.
+  Admin reordering remains Phase 7 scope.
+- **Image fallback chain**: `ProductVariant.imageUrl` → `Product.imageUrl` → blank.
+- **Catalog image storage (Phase 8)**: production catalog images are
+  repository-owned static files under `public/images/products`,
+  `public/images/variants`, and `public/images/categories`; database image
+  fields store root-relative paths such as `/images/products/card-name.webp`.
+  This deliberately avoids a separately billed managed-storage service.
+- **Shared `CatalogImage`** (`app/components/CatalogImage.tsx`) renders local
+  paths with Next.js `Image`. Its native `<img>` branch is temporary
+  compatibility for arbitrary remote URLs in the disposable test database
+  and must be removed after the database is reset with real local paths. It
+  supports deliberate `contain` (products) and `cover` (category icons) modes,
+  plus explicit eager loading for the above-the-fold category/product hero
+  while cards and thumbnails remain lazy.
+- **Product image verification**: the new/edit admin forms accept filenames
+  rather than URLs. The browser issues a `HEAD` request to the corresponding
+  static product/variant path, confirms a successful image response, and
+  resets verification whenever the filename changes. A verified main image is
+  required; variant images remain optional, but every entered filename must be
+  verified. Edit converts valid stored paths back to filenames and requires
+  legacy remote variant images to be replaced or explicitly removed. POST and
+  PUT independently reject paths outside the expected local folders.
+- **Shared `ProductCard`** (`app/components/ProductCard.tsx`) — used by
+  category, homepage, and search surfaces. Product imagery uses a consistent
+  square `object-contain` canvas; the card now exposes live availability,
+  format count, price, and a clearer detail affordance.
+- **Homepage categories** use responsive asymmetric editorial cards with
+  `object-cover`, live product counts, optional descriptions, and a stable
+  dark image overlay. The first two cards establish visual hierarchy while
+  remaining cards rebalance across the 12-column grid.
+- **Category image verification** mirrors products: Create/Edit accept a
+  required filename under `public/images/categories`, verify it with a real
+  image `HEAD` response, and POST/PUT reject paths outside that folder. The
+  legacy field remains named `bannerImageUrl`, but it now supplies the
+  homepage category icon only. The category-detail page's wide banner was
+  removed because one square source cannot safely serve both compositions.
+- **Live homepage hero** is a static Server Component using the
+  admin-supplied PokeSunshine logo. CSS provides a one-time logo, ray,
+  wordmark, and CTA reveal with a no-animation reduced-motion fallback.
+  Its buttons scroll to new arrivals and Shop by TCG.
+- **Newsletter broadcasting** uses database-backed drafts and recipient
+  delivery snapshots. The broadcast endpoint captures the current opted-in
+  audience, re-checks opt-in before each delivery, sends through the existing
+  Resend client with a per-delivery idempotency key, and records success or
+  failure. Saving a post never sends it. Lead images are references only;
+  persistent upload storage remains a separate decision.
+- **`Footer.tsx`** — global multi-column brand and navigation footer.
+- **`/faq`** (added 2026-07-22) — real content grounded only in facts already true of the site (payment method, GST conditionality, fulfillment options, sales policy pulled from `PurchaseNotice.tsx`). Deliberately did **not** reuse a reference FAQ document the admin uploaded, since it was identified as another real business's actual customer-service copy, not written for this project.
+- **`/about`, `/contact`** (added 2026-07-22) — real, admin-written content.
+- **Terms & Conditions, Shipping, Returns, Help Center** — deliberately **not built**, by explicit admin decision (not deferred, actively decided against for now).
+- **SEO metadata (Milestone 4)**: the root layout defines the production
+  metadata base, branded title template, default OpenGraph/Twitter cards, and
+  logo. Public routes define canonicals; category/product routes add dynamic
+  metadata and social images; transactional, search, and account routes are
+  `noindex`.
+- **`app/sitemap.ts`** builds an hourly sitemap from public static routes,
+  categories containing at least one non-archived product, and all
+  non-archived products. URLs and images use `NEXT_PUBLIC_APP_URL` through
+  `lib/structuredData.ts`.
+- **`proxy.ts`** is the Next 16 Clerk request-boundary convention that replaced
+  deprecated `middleware.ts`; its matcher behaviour is unchanged.
 
-Clerk handles identity (email, password, sessions). Your database stores a `User` row linked by `clerkId` for app-specific data (role, addresses). The Clerk webhook creates this row on signup.
-
-Role check pattern used in every admin API route:
+Clerk handles identity; `User` row (via `clerkId`) stores app-specific data. Role check pattern in every admin API route:
 ```ts
 const { userId } = await auth()
 const user = await prisma.user.findUnique({ where: { clerkId: userId } })
@@ -99,90 +263,105 @@ if (!user || user.role !== 'ADMIN') return 403
 ```
 ecommerce-platform/
 ├── app/
-│   ├── layout.tsx                        ← Root layout, ClerkProvider wrapper
-│   ├── page.tsx                          ← Homepage — composes 4 sections (Phase 3)
-│   ├── sign-in/[[...sign-in]]/page.tsx   ← Clerk sign-in page
-│   ├── sign-up/[[...sign-up]]/page.tsx   ← Clerk sign-up page
+│   ├── layout.tsx                        ← Root layout; Geist font, ClerkProvider, Header, <main>, Footer
+│   ├── page.tsx                          ← Homepage
+│   ├── sitemap.ts                        ← Hourly public category/product sitemap
+│   ├── globals.css                       ← All design tokens (Tailwind v4 @theme inline), keyframes
+│   ├── fonts/                            ← Self-hosted variable Geist font + OFL license
+│   ├── sign-in/, sign-up/                ← Clerk pages
 │   │
-│   ├── search/
-│   │   └── page.tsx                      ← Public search results page (Server Component, plain GET ?q=)
+│   ├── faq/page.tsx                      ← (added 2026-07-22) Real FAQ content, native <details> accordion
+│   ├── about/page.tsx                    ← (added 2026-07-22)
+│   ├── contact/page.tsx                  ← (added 2026-07-22)
 │   │
-│   ├── category/
-│   │   └── [slug]/page.tsx               ← Public category page — grid, sort, filter, back button (archived products excluded)
+│   ├── search/page.tsx
+│   ├── categories/page.tsx
+│   ├── products/page.tsx
+│   ├── category/[slug]/page.tsx
+│   ├── product/[slug]/
+│   │   ├── page.tsx
+│   │   └── ProductGallery.tsx            ← Re-themed 2026-07-22; owns image + variant selector + spec table + purchase notice
 │   │
-│   ├── product/
-│   │   └── [slug]/
-│   │       ├── page.tsx                  ← Public product page — spec table, back button (404s if archived)
-│   │       └── ProductGallery.tsx        ← Client Component — image swap + variant selector + price/stock
-│   │
+│   ├── cart/page.tsx
 │   ├── checkout/
-│   │   └── success/page.tsx              ← Order confirmation page; authenticated full detail view, plus a verified read-only cosmetic view for unauthenticated visitors (added 2026-07-17, see DECISIONS.md)
+│   │   ├── page.tsx
+│   │   ├── CheckoutForm.tsx              ← Extended 2026-07-22: promo code entry/apply/remove, conditional GST line
+│   │   └── success/page.tsx
 │   │
-│   ├── components/                       ← Shared UI, nested under app/ (no top-level components/ folder)
-│   │   ├── BackButton.tsx                ← Shared Client Component (router.back())
-│   │   ├── Header.tsx                    ← Site header — cart, auth UI, and (added 2026-07-17) SearchBar
-│   │   ├── SearchBar.tsx                 ← Client Component (added 2026-07-17) — debounced live-suggestion search dropdown
-│   │   ├── ProductCard.tsx               ← Shared product-card component (added 2026-07-17), used by category page, FeaturedProducts, and /search
+│   ├── components/
+│   │   ├── ui/
+│   │   │   ├── Button.tsx                ← (added 2026-07-22)
+│   │   │   ├── Badge.tsx                 ← (added 2026-07-22)
+│   │   │   ├── Card.tsx                  ← (added 2026-07-22)
+│   │   │   └── MetricCard.tsx            ← (added 2026-07-22)
+│   │   ├── ScrollReveal.tsx              ← (added 2026-07-22)
+│   │   ├── Footer.tsx                    ← Multi-column customer footer
+│   │   ├── ComingSoonPage.tsx            ← (added 2026-07-22, possibly now unused)
+│   │   ├── BackButton.tsx
+│   │   ├── Header.tsx                    ← Store assurance bar, shopping nav, responsive search/actions/mobile menu
+│   │   ├── SearchBar.tsx                 ← Live suggestions; responsive header placement
+│   │   ├── ProductCard.tsx               ← Availability, format count, price, detail affordance
 │   │   └── homepage/
-│   │       ├── HeroBanner.tsx            ← Static content (hardcoded, no DB yet)
-│   │       ├── FeaturedProducts.tsx      ← Server Component, latest 4 products (archived excluded)
-│   │       ├── CategoryGrid.tsx          ← Server Component, all categories
-│   │       └── Newsletter.tsx            ← Client Component (non-functional form)
+│   │       ├── HeroBanner.tsx            ← Animated PokeSunshineTCG landing
+│   │       ├── HeroAnimatedBackground.tsx← Unused legacy video experiment
+│   │       ├── HeroCardAccent.tsx        ← (added 2026-07-22) reusable "foil card" placeholder, currently unused on the live Hero
+│   │       ├── FeaturedProducts.tsx      ← At most eight standardized arrival cards
+│   │       ├── CategoryGrid.tsx          ← Three/two/one-card category carousel
+│   │       ├── TrustStrip.tsx            ← Unused legacy store-assurance component
+│   │       └── Newsletter.tsx            ← Account-only subscribe/unsubscribe UI backed by /api/newsletter
 │   │
-│   ├── admin/                            ← Admin panel (role-protected)
-│   │   ├── layout.tsx                    ← Admin layout + auth guard
-│   │   ├── page.tsx                      ← Admin dashboard home
-│   │   ├── product-types/
-│   │   │   ├── page.tsx                  ← List all product types
-│   │   │   ├── new/page.tsx              ← Create product type form
-│   │   │   └── [id]/edit/page.tsx        ← Edit product type form (added 2026-07-17) — key/type locked on existing fields
-│   │   ├── products/
-│   │   │   ├── page.tsx                  ← List all products (archive badge + action, added 2026-07-17)
-│   │   │   ├── new/page.tsx              ← Create product form (dynamic, incl. per-product and per-variant image URL)
-│   │   │   ├── ProductActions.tsx        ← Client Component (added 2026-07-17) — archive/unarchive button with confirm
-│   │   │   └── [id]/edit/page.tsx        ← Edit product form (added 2026-07-17) — productTypeId/slug locked, non-destructive variant merge
-│   │   ├── categories/
-│   │   │   ├── page.tsx                  ← List all categories (delete action, added 2026-07-17)
-│   │   │   ├── new/page.tsx              ← Create category form
-│   │   │   ├── CategoryActions.tsx       ← Client Component (added 2026-07-17) — delete button with confirm
-│   │   │   └── [id]/edit/page.tsx        ← Edit category form (added 2026-07-17) — slug locked
-│   │   └── orders/                       ← Order list/detail, fulfillment status, refund, tracking (Phase 5)
+│   ├── admin/
+│   │   ├── layout.tsx                    ← Auth guard; sidebar now bg-primary, renders AdminNav
+│   │   ├── AdminNav.tsx                  ← (added 2026-07-22) Client Component, active-link highlighting
+│   │   ├── page.tsx                      ← (rebuilt 2026-07-22) Real dashboard: revenue/expense/profit/discount metrics + recharts
+│   │   ├── DashboardCharts.tsx           ← (added 2026-07-22) recharts Client Component
+│   │   ├── product-types/                ← List/new/edit, all re-themed 2026-07-22
+│   │   ├── products/                     ← List/new/edit + ProductActions, all re-themed 2026-07-22
+│   │   ├── categories/                   ← List/new/edit + CategoryActions, all re-themed 2026-07-22
+│   │   ├── orders/                       ← List/detail + OrderStatusActions + TrackingNumberForm, all re-themed 2026-07-22
+│   │   ├── expenses/                     ← (added 2026-07-22) Full CRUD: list, new, [id]/edit, ExpenseActions
+│   │   └── promo-codes/                  ← (added 2026-07-22) Full CRUD: list, new, [id]/edit, PromoCodeActions (incl. Reactivate)
 │   │
 │   ├── api/
 │   │   ├── webhooks/
-│   │   │   ├── clerk/route.ts            ← Clerk user.created webhook
-│   │   │   └── hitpay/route.ts           ← HitPay payment webhook (Phase 4)
-│   │   ├── search/
-│   │   │   └── suggestions/route.ts      ← Live search-dropdown API (added 2026-07-17) — top 6, archived excluded
+│   │   │   ├── clerk/route.ts
+│   │   │   └── hitpay/route.ts           ← Extended 2026-07-22: calls recordDiscountExpenseIfApplicable on `completed`; leftover debug console.logs removed
+│   │   ├── search/suggestions/route.ts
+│   │   ├── checkout/
+│   │   │   └── apply-promo/route.ts      ← (added 2026-07-22) Preview/validation only, never mutates
 │   │   └── admin/
 │   │       ├── product-types/
-│   │       │   ├── route.ts              ← GET + POST product types
-│   │       │   └── [id]/route.ts         ← GET + PUT (added 2026-07-17) — key/type immutable, in-use field-removal guard
 │   │       ├── products/
-│   │       │   ├── route.ts              ← GET + POST products (incl. imageUrl on product + variants)
-│   │       │   └── [id]/
-│   │       │       ├── route.ts          ← GET + PUT (added 2026-07-17) — productTypeId/slug locked, variant create/update/delete diffing
-│   │       │       └── archive/route.ts  ← PATCH (added 2026-07-17) — toggles Product.archived only
-│   │       └── categories/
-│   │           ├── route.ts              ← GET + POST categories
-│   │           └── [id]/route.ts         ← GET + PUT + DELETE (added 2026-07-17)
+│   │       ├── categories/
+│   │       ├── orders/
+│   │       ├── expenses/                 ← (added 2026-07-22) GET/POST, [id] GET/PUT/DELETE
+│   │       └── promo-codes/              ← (added 2026-07-22) GET/POST, [id] GET/PUT/DELETE, [id]/toggle-active, [id]/reactivate
 │   │
-│   └── generated/
-│       └── prisma/                       ← Prisma 7 generated client (committed to repo)
+│   └── generated/prisma/
 │
 ├── lib/
-│   └── prisma.ts                         ← Prisma singleton (PrismaPg adapter)
+│   ├── prisma.ts
+│   ├── gst.ts                            ← Extended 2026-07-22: GST_ENABLED, GST_RATE_DISPLAY exports
+│   ├── promoCode.ts                      ← (added 2026-07-22) computeDiscountAmount() — shared by preview and real checkout
+│   ├── recordDiscountExpense.ts          ← (added 2026-07-22) recordDiscountExpenseIfApplicable(orderId)
+│   ├── cn.ts                             ← (added 2026-07-22) className helper
+│   ├── validateAddress.ts
+│   ├── orderStatus.ts                    ← STATUS_STYLES/formatStatus — now consistently imported everywhere (deduplicated 2026-07-22; admin order detail page and OrderStatusActions previously had their own copies)
+│   ├── orders.ts
+│   ├── reconcileOrder.ts                 ← Extended 2026-07-22: calls recordDiscountExpenseIfApplicable on the `completed` path
+│   ├── constants.ts                      ← SELF_COLLECTION_ADDRESS, TELEGRAM_URL (added 2026-07-22)
+│   └── email/
 │
 ├── prisma/
-│   ├── schema.prisma                     ← Database schema
-│   ├── migrations/                       ← Migration history
-│   └── seed.ts                           ← (To be built) Seed script
+│   ├── schema.prisma
+│   ├── migrations/
+│   └── seed.ts
 │
-├── prisma.config.ts                      ← Prisma 7 config (schema path, DB URL for CLI)
-├── next.config.ts                        ← Next.js config (allowedDevOrigins for ngrok)
-├── .env                                  ← Local secrets (never committed)
-├── .env.example                          ← Template for required env vars
-└── .gitattributes                        ← LF line endings enforced
+├── prisma.config.ts
+├── next.config.ts
+├── proxy.ts                              ← Clerk boundary using Next 16 convention
+├── .env / .env.example
+└── .gitattributes
 ```
 
 ---
@@ -200,30 +379,32 @@ CLERK_WEBHOOK_SECRET=
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
 NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 
-# HitPay (Phase 4)
+# HitPay
 HITPAY_API_KEY=
 HITPAY_WEBHOOK_SALT=
 HITPAY_API_BASE_URL=
 
-# GST (Phase 4)
+# GST — now conditionally consumed; set to 0 to fully disable GST display/calculation
 GST_RATE_PERCENT=9
 GST_REGISTRATION_NUMBER=
 
-# App URL (Phase 4+) — build-time-baked, requires a redeploy after any change
+# App URL — build-time-baked, requires a redeploy after any change
 NEXT_PUBLIC_APP_URL=https://biggyballs69.gay
 
-# Fulfillment fees (Phase 5)
+# Fulfillment fees
 SHIPPING_FEE_SGD=
 SELF_COLLECTION_FEE_SGD=
 
-# Email (Phase 4/5, Resend + React Email)
+# Email (Resend + React Email)
 RESEND_API_KEY=
+RESEND_ORDER_FROM_EMAIL="PokeSunshineTCG Orders <orders@biggyballs69.gay>"
+RESEND_NEWSLETTER_FROM_EMAIL="PokeSunshineTCG <newsletters@biggyballs69.gay>"
+# Legacy fallback retained for deployments that have not migrated yet
 RESEND_FROM_EMAIL=
 
-# Background reconciliation cron (Phase 4/5)
+# Background reconciliation cron
 CRON_SECRET=
 ```
-*(List expanded 2026-07-17 to include several vars that were added in earlier sessions — Sessions 6–9 — but had never been synced into this document. `NEXT_PUBLIC_APP_URL` is called out specifically since it's now load-bearing for the custom domain and is easy to update in the wrong place — see DECISIONS.md and CURRENT_STATE.md.)*
 
 ---
 
@@ -233,11 +414,13 @@ CRON_SECRET=
 |---|---|---|
 | Neon | PostgreSQL database | Dev branch + Prod branch |
 | Clerk | Authentication | Dev instance + Prod instance |
-| Vercel | Hosting + CI/CD | Auto-deploy from GitHub main branch; custom domain `biggyballs69.gay` live as of 2026-07-17 |
-| Cloudflare | DNS host for `biggyballs69.gay` | Nameservers unchanged; one DNS-only `A` record added for Vercel, existing Resend email DNS records untouched |
-| ngrok | Local webhook tunnel for Clerk/HitPay testing | Local dev only |
-| HitPay | Payment processing (Phase 4) | Sandbox + Live |
-| Resend | Transactional email (Phase 4/5) | Sending domain `biggyballs69.gay`, verified |
+| Vercel | Hosting + CI/CD | Auto-deploy from GitHub main branch; custom domain live |
+| Cloudflare | DNS host | Unchanged |
+| ngrok | Local webhook tunnel | Local dev only |
+| HitPay | Payment processing | Sandbox + Live |
+| Resend | Transactional email | Verified sending domain |
 | cron-job.org | Triggers `/api/cron/reconcile-orders` every 5 minutes | Production only |
 
-**Note (2026-07-17):** Meilisearch was evaluated for Phase 6 search (both Cloud/hosted and self-hosted options) but deliberately not adopted — typo tolerance was confirmed not required, so plain Prisma/Postgres search was judged sufficient with no added infrastructure. Not listed as an external service since none is in use. See DECISIONS.md and ROADMAP.md.
+**Note (2026-07-22):** No new external services added this session — only
+two new npm dependencies (`lucide-react`, `recharts`), both bundled into
+the existing Vercel deployment, no new infrastructure.

@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
+
   /* Brand */
   --color-primary: #14213D;
   --color-primary-hover: #1D2E55;
@@ -8,6 +10,11 @@
   --color-secondary: #6E2439;
   --color-accent: #C6A15B;
   --color-accent-light: #E2C98F;
+  --color-accent-foreground: #14213D;
+  --color-ink: #101B31;
+  --color-ink-muted: #192843;
+  --color-on-ink: #FAF7F0;
+  --color-on-ink-muted: #C2C8D2;
 
   /* Background */
   --color-background: #FAF6EE;
@@ -46,14 +53,47 @@
   --shadow-modal: 0 20px 40px rgba(0, 0, 0, 0.15);
 
   /* Hero video companion — tune these to adjust the video band */
-  /*--hero-video-w: 1200px;*/
-  /*--hero-video-h: calc(var(--hero-video-w) * 0.844);*/
-  /*--hero-video-h: 500px;*/
-  --hero-video-opacity: 1.0;
-  .hero-video {
-  width: var(--hero-video-w);
-  height: auto;
 }
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Collector Midnight */
+  --color-primary: #D2AF67;
+  --color-primary-hover: #E2C98F;
+
+  --color-secondary: #9B4560;
+  --color-accent: #D2AF67;
+  --color-accent-light: #E2C98F;
+  --color-accent-foreground: #111827;
+  --color-ink: #070D18;
+  --color-ink-muted: #111C2F;
+  --color-on-ink: #FAF7F0;
+  --color-on-ink-muted: #B8C0CD;
+
+  --color-background: #0C1424;
+  --color-surface: #141F33;
+  --color-surface-muted: #1A2942;
+  --color-surface-hover: #22314B;
+
+  --color-text: #F3EFE7;
+  --color-text-muted: #B8BDC7;
+  --color-text-light: #8F98A8;
+  --color-text-inverse: #111827;
+
+  --color-border: #2B3B55;
+  --color-border-light: #22314B;
+  --color-border-strong: #40516D;
+
+  --color-success: #34D399;
+  --color-warning: #FBBF24;
+  --color-error: #F87171;
+  --color-info: #93C5FD;
+
+  --shadow-input: 0 2px 6px rgba(0, 0, 0, 0.22);
+  --shadow-card: 0 8px 20px rgba(0, 0, 0, 0.28);
+  --shadow-dropdown: 0 12px 28px rgba(0, 0, 0, 0.36);
+  --shadow-modal: 0 20px 40px rgba(0, 0, 0, 0.45);
 }
 
 @theme inline {
@@ -62,6 +102,11 @@
   --color-secondary: var(--color-secondary);
   --color-accent: var(--color-accent);
   --color-accent-light: var(--color-accent-light);
+  --color-accent-foreground: var(--color-accent-foreground);
+  --color-ink: var(--color-ink);
+  --color-ink-muted: var(--color-ink-muted);
+  --color-on-ink: var(--color-on-ink);
+  --color-on-ink-muted: var(--color-on-ink-muted);
 
   --color-background: var(--color-background);
   --color-surface: var(--color-surface);
@@ -99,6 +144,308 @@
 
 body {
   font-family: var(--font-sans);
+  min-width: 320px;
+  transition: background-color 250ms ease-out, color 250ms ease-out;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.collector-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, black, transparent 92%);
+}
+
+.sunshine-landing {
+  background:
+    radial-gradient(circle at 78% 34%, rgba(255, 204, 71, 0.26), transparent 30rem),
+    radial-gradient(circle at 18% 82%, rgba(112, 210, 224, 0.18), transparent 25rem),
+    linear-gradient(145deg, var(--color-background), var(--color-surface-muted));
+}
+
+.sunshine-glow {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(3rem);
+  pointer-events: none;
+}
+
+.sunshine-glow-left {
+  bottom: -8rem;
+  left: -7rem;
+  width: 24rem;
+  height: 24rem;
+  background: rgba(255, 151, 174, 0.13);
+}
+
+.sunshine-glow-right {
+  top: -10rem;
+  right: -8rem;
+  width: 32rem;
+  height: 32rem;
+  background: rgba(255, 201, 58, 0.16);
+}
+
+.sunshine-rays {
+  position: absolute;
+  top: 50%;
+  right: -8rem;
+  width: min(60vw, 54rem);
+  aspect-ratio: 1;
+  opacity: 0.18;
+  transform: translateY(-50%);
+  background: repeating-conic-gradient(
+    from -8deg,
+    transparent 0deg 10deg,
+    rgba(198, 161, 91, 0.5) 10deg 13deg,
+    transparent 13deg 26deg
+  );
+  mask-image: radial-gradient(circle, transparent 0 27%, black 28% 58%, transparent 72%);
+  animation: sunshine-rays-in 1400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.sunshine-orbit {
+  border: 1px solid color-mix(in srgb, var(--color-accent) 42%, transparent);
+  box-shadow:
+    0 0 0 1.15rem color-mix(in srgb, var(--color-accent) 5%, transparent),
+    0 0 0 2.3rem color-mix(in srgb, var(--color-accent) 4%, transparent);
+  animation: sunshine-orbit-breathe 6s ease-in-out 1.1s infinite;
+}
+
+.sunshine-rays-local {
+  opacity: 0.28;
+  background: repeating-conic-gradient(
+    from 0deg,
+    color-mix(in srgb, var(--color-accent) 58%, transparent) 0deg 1.5deg,
+    transparent 1.5deg 13deg
+  );
+  mask-image: radial-gradient(circle, transparent 0 59%, black 60% 73%, transparent 74%);
+  animation: sunshine-rays-turn 34s linear infinite;
+}
+
+.sunshine-logo-float {
+  animation: sunshine-logo-float 7s ease-in-out 1.1s infinite;
+}
+
+.sunshine-logo-frame {
+  transform: scale(0.88) rotate(-4deg);
+  animation: sunshine-logo-in 950ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+}
+
+.sunshine-logo-sheen {
+  transform: translateX(-170%) skewX(-15deg);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.42),
+    transparent
+  );
+  animation: sunshine-sheen-cycle 7s ease-in-out 1.2s infinite;
+}
+
+.sunshine-spark {
+  position: absolute;
+  z-index: 2;
+  width: 0.8rem;
+  aspect-ratio: 1;
+  background: var(--color-accent);
+  clip-path: polygon(50% 0, 61% 38%, 100% 50%, 61% 62%, 50% 100%, 39% 62%, 0 50%, 39% 38%);
+  filter: drop-shadow(0 0 0.55rem color-mix(in srgb, var(--color-accent) 68%, transparent));
+  animation: sunshine-sparkle 4.8s ease-in-out infinite;
+}
+
+.sunshine-spark-one {
+  top: 13%;
+  right: 9%;
+}
+
+.sunshine-spark-two {
+  right: 2%;
+  bottom: 26%;
+  width: 0.55rem;
+  animation-delay: -1.7s;
+}
+
+.sunshine-spark-three {
+  bottom: 9%;
+  left: 16%;
+  width: 0.65rem;
+  animation-delay: -3.1s;
+}
+
+.sunshine-motion-paused .sunshine-rays-local,
+.sunshine-motion-paused .sunshine-orbit,
+.sunshine-motion-paused .sunshine-logo-float,
+.sunshine-motion-paused .sunshine-logo-sheen,
+.sunshine-motion-paused .sunshine-spark {
+  animation-play-state: paused;
+}
+
+.header-brand-mark {
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 250ms ease,
+    box-shadow 250ms ease;
+}
+
+.header-brand-mark::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  transform: translateX(-155%) skewX(-18deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.52), transparent);
+  transition: transform 650ms ease;
+}
+
+.group:hover .header-brand-mark {
+  transform: scale(1.06) rotate(3deg);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 0.22rem color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
+
+.group:hover .header-brand-mark::after {
+  transform: translateX(155%) skewX(-18deg);
+}
+
+.sunshine-wordmark {
+  opacity: 0;
+  transform: translateY(1.25rem);
+  animation: sunshine-copy-in 700ms cubic-bezier(0.22, 1, 0.36, 1) 360ms both;
+}
+
+.sunshine-tagline {
+  opacity: 0;
+  transform: translateY(0.75rem);
+  animation: sunshine-copy-in 650ms ease-out 560ms both;
+}
+
+.sunshine-actions {
+  opacity: 0;
+  transform: translateY(0.75rem);
+  animation: sunshine-copy-in 650ms ease-out 720ms both;
+}
+
+.sunshine-scroll {
+  opacity: 0;
+  animation: sunshine-copy-in 600ms ease-out 1050ms both;
+}
+
+@keyframes sunshine-logo-in {
+  from {
+    opacity: 0;
+    transform: scale(0.72) rotate(-10deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes sunshine-rays-in {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) rotate(-12deg) scale(0.82);
+  }
+  to {
+    opacity: 0.18;
+    transform: translateY(-50%) rotate(0) scale(1);
+  }
+}
+
+@keyframes sunshine-copy-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sunshine-sheen-cycle {
+  0%,
+  66% {
+    opacity: 0;
+    transform: translateX(-170%) skewX(-15deg);
+  }
+  70% {
+    opacity: 1;
+  }
+  86%,
+  100% {
+    opacity: 0;
+    transform: translateX(170%) skewX(-15deg);
+  }
+}
+
+@keyframes sunshine-rays-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes sunshine-orbit-breathe {
+  0%,
+  100% {
+    transform: scale(0.985);
+    opacity: 0.72;
+  }
+  50% {
+    transform: scale(1.015);
+    opacity: 1;
+  }
+}
+
+@keyframes sunshine-logo-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-0.45rem) rotate(0.65deg);
+  }
+}
+
+@keyframes sunshine-sparkle {
+  0%,
+  100% {
+    transform: scale(0.72) rotate(0);
+    opacity: 0.38;
+  }
+  50% {
+    transform: scale(1.18) rotate(45deg);
+    opacity: 1;
+  }
+}
+
+.collector-hero::after {
+  position: absolute;
+  width: 24rem;
+  height: 24rem;
+  border: 1px solid rgba(198, 161, 91, 0.2);
+  border-radius: 999px;
+  content: "";
+  pointer-events: none;
+}
+
+.collector-hero::after {
+  top: -12rem;
+  left: 38%;
+}
+
+[data-theme="dark"] .theme-icon-light {
+  display: none;
+}
+
+[data-theme="dark"] .theme-icon-dark {
+  display: block;
 }
 
 @keyframes fade-up {
@@ -143,11 +490,29 @@ html {
   animation: shine-sweep 1200ms ease-out 900ms both;
 }
 
+.hero-video-clip {
+  display: block;
+}
+
+.hero-video-poster {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-up,
   .animate-fade-up-delay,
   .animate-fade-up-delay-2,
   .animate-fade-up-delay-3,
+  .sunshine-logo-frame,
+  .sunshine-logo-float,
+  .sunshine-rays-local,
+  .sunshine-orbit,
+  .sunshine-spark,
+  .sunshine-rays,
+  .sunshine-wordmark,
+  .sunshine-tagline,
+  .sunshine-actions,
+  .sunshine-scroll,
   .animate-drift-a,
   .animate-drift-b,
   .animate-drift-c {
@@ -157,6 +522,27 @@ html {
   }
   .animate-shine {
     animation: none;
+    opacity: 0;
+  }
+  .sunshine-rays,
+  .sunshine-rays-local {
+    opacity: 0.22;
+  }
+  .sunshine-spark {
+    opacity: 0.68;
+  }
+  .sunshine-logo-sheen {
+    animation: none;
+    opacity: 0;
+  }
+  .header-brand-mark,
+  .header-brand-mark::after {
+    transition: none;
+  }
+  .group:hover .header-brand-mark {
+    transform: none;
+  }
+  .header-brand-mark::after {
     opacity: 0;
   }
   .hero-video-clip {
@@ -186,18 +572,3 @@ html {
 .animate-drift-a { animation: drift-a 20s ease-in-out infinite; }
 .animate-drift-b { animation: drift-b 26s ease-in-out infinite; }
 .animate-drift-c { animation: drift-c 32s ease-in-out infinite; }
-
-/* Hero video companion — replaces the sprite-sheet loop with a short
-   looping clip (no frame-count/steps() to configure; motion is baked
-   into the video). Source has no alpha channel — its "transparent"
-   areas are solid black — so a soft radial mask stands in for real
-   per-pixel transparency instead of a hard rectangle. */
-.hero-video-band {
-  width: var(--hero-video-w);
-  height: var(--hero-video-h);
-  object-fit: cover;
-  opacity: var(--hero-video-opacity);
-}
-
-.hero-video-clip { display: block; }
-.hero-video-poster { display: none; }

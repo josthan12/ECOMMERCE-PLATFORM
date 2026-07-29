@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { isCatalogImagePath } from '@/lib/catalogImages'
 
 async function requireAdmin() {
   const { userId } = await auth()
@@ -44,12 +45,24 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (!name) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
+  if (!isCatalogImagePath(imageUrl, 'products')) {
+    return NextResponse.json(
+      { error: 'A valid local product image path is required' },
+      { status: 400 }
+    )
+  }
   if (!Array.isArray(variants) || variants.length === 0) {
     return NextResponse.json({ error: 'At least one variant is required' }, { status: 400 })
   }
   for (const v of variants) {
     if (v.price === undefined || v.price === '' || v.stock === undefined || v.stock === '') {
       return NextResponse.json({ error: 'Every variant needs a price and stock value' }, { status: 400 })
+    }
+    if (v.imageUrl && !isCatalogImagePath(v.imageUrl, 'variants')) {
+      return NextResponse.json(
+        { error: 'Every variant image must use a valid local variant image path' },
+        { status: 400 }
+      )
     }
   }
 

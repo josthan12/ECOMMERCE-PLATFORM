@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, X, Loader2, ImageOff } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import CatalogImage from './CatalogImage'
 
 interface Suggestion {
   id: string
@@ -26,30 +27,30 @@ export default function SearchBar() {
 
   useEffect(() => {
     const trimmed = query.trim()
-    if (!trimmed) {
-      setSuggestions([])
-      setIsOpen(false)
-      setIsLoading(false)
-      return
-    }
+    if (!trimmed) return
 
-    setIsLoading(true)
+    let cancelled = false
     const timeoutId = setTimeout(async () => {
       try {
         const res = await fetch(`/api/search/suggestions?q=${encodeURIComponent(trimmed)}`)
         if (!res.ok) return
         const data = await res.json()
-        setSuggestions(data.results)
-        setIsOpen(true)
+        if (!cancelled) {
+          setSuggestions(data.results)
+          setIsOpen(true)
+        }
       } catch {
         // Silently ignore — suggestions are a non-critical enhancement,
         // the plain Enter-to-search flow still works regardless.
       } finally {
-        setIsLoading(false)
+        if (!cancelled) setIsLoading(false)
       }
     }, 300)
 
-    return () => clearTimeout(timeoutId)
+    return () => {
+      cancelled = true
+      clearTimeout(timeoutId)
+    }
   }, [query])
 
   useEffect(() => {
@@ -84,9 +85,21 @@ export default function SearchBar() {
     inputRef.current?.focus()
   }
 
+  function handleQueryChange(value: string) {
+    setQuery(value)
+    if (value.trim()) {
+      setIsLoading(true)
+      return
+    }
+
+    setSuggestions([])
+    setIsOpen(false)
+    setIsLoading(false)
+  }
+
   return (
     <div ref={containerRef} className="relative w-full">
-      <form onSubmit={handleSubmit}>
+      <form role="search" aria-label="Product search" onSubmit={handleSubmit}>
         <div className="relative">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-light"
@@ -97,11 +110,12 @@ export default function SearchBar() {
             type="text"
             name="q"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => handleQueryChange(e.target.value)}
             onFocus={() => suggestions.length > 0 && setIsOpen(true)}
             onKeyDown={handleKeyDown}
             placeholder="Search cards, sets, or Pokémon..."
             autoComplete="off"
+            aria-label="Search products"
             className={cn(
               'w-full rounded-md border border-border bg-surface py-2 pl-9 pr-9 text-sm text-text',
               'placeholder:text-text-light',
@@ -135,13 +149,13 @@ export default function SearchBar() {
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 border-b border-border-light px-3 py-2.5 text-sm last:border-b-0 hover:bg-surface-hover"
             >
-              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-muted">
+              <div className="relative flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-muted">
                 {product.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <CatalogImage
                     src={product.imageUrl}
                     alt=""
-                    className="h-full w-full object-cover"
+                    sizes="44px"
+                    className="p-1"
                   />
                 ) : (
                   <ImageOff className="h-4 w-4 text-text-light" aria-hidden="true" />
@@ -158,6 +172,14 @@ export default function SearchBar() {
           ))}
         </div>
       )}
+
+      <p className="sr-only" role="status" aria-live="polite">
+        {isLoading
+          ? 'Loading product suggestions'
+          : isOpen && suggestions.length > 0
+            ? `${suggestions.length} product ${suggestions.length === 1 ? 'suggestion' : 'suggestions'} available`
+            : ''}
+      </p>
     </div>
   )
 }

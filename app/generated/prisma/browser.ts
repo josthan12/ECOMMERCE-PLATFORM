@@ -77,3 +77,13 @@ export type Expense = Prisma.ExpenseModel
  * 
  */
 export type PromoCode = Prisma.PromoCodeModel
+/**
+ * Model NewsletterPost
+ * 
+ */
+export type NewsletterPost = Prisma.NewsletterPostModel
+/**
+ * Model NewsletterDelivery
+ * 
+ */
+export type NewsletterDelivery = Prisma.NewsletterDeliveryModel

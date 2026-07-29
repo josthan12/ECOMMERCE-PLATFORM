@@ -15,7 +15,13 @@ export interface OrderConfirmationProps {
   orderId: string;
   items: OrderConfirmationItem[];
   subtotal: number;
+  promoCode?: string | null;
+  discountAmount: number;
+  shippingFee: number;
+  fulfillmentMethod: 'DELIVERY' | 'SELF_COLLECTION';
   gstAmount: number;
+  gstEnabled: boolean;
+  gstRateDisplay: number;
   total: number;
   shippingBlock: string;
   shippingUnitNumber?: string | null;
@@ -30,7 +36,8 @@ function formatCombination(combo: Record<string, string>) {
 }
 
 export default function OrderConfirmationEmail({
-  orderId, items, subtotal, gstAmount, total,
+  orderId, items, subtotal, promoCode, discountAmount, shippingFee,
+  fulfillmentMethod, gstAmount, gstEnabled, gstRateDisplay, total,
   shippingBlock, shippingUnitNumber, shippingStreet, shippingPostalCode,
 }: OrderConfirmationProps) {
   return (
@@ -50,7 +57,7 @@ export default function OrderConfirmationEmail({
               Order confirmed
             </Heading>
             <Text style={{ color: BRAND.text, fontSize: 14, margin: '0 0 24px' }}>
-              Thanks for your order! We've received your payment and we're getting it ready.
+              Thanks for your order! We&apos;ve received your payment and we&apos;re getting it ready.
             </Text>
 
             <Text style={{ color: BRAND.text, fontSize: 12, opacity: 0.7, margin: '0 0 24px' }}>
@@ -88,10 +95,22 @@ export default function OrderConfirmationEmail({
                 <Column><Text style={{ fontSize: 13, color: BRAND.text, margin: '4px 0' }}>Subtotal</Text></Column>
                 <Column align="right"><Text style={{ fontSize: 13, color: BRAND.text, margin: '4px 0' }}>${subtotal.toFixed(2)}</Text></Column>
               </Row>
+              {discountAmount > 0 && (
+                <Row>
+                  <Column><Text style={{ fontSize: 13, color: BRAND.text, margin: '4px 0' }}>Discount{promoCode ? ` (${promoCode})` : ''}</Text></Column>
+                  <Column align="right"><Text style={{ fontSize: 13, color: BRAND.text, margin: '4px 0' }}>-${discountAmount.toFixed(2)}</Text></Column>
+                </Row>
+              )}
               <Row>
-                <Column><Text style={{ fontSize: 13, color: BRAND.text, margin: '4px 0' }}>GST (9%)</Text></Column>
-                <Column align="right"><Text style={{ fontSize: 13, color: BRAND.text, margin: '4px 0' }}>${gstAmount.toFixed(2)}</Text></Column>
+                <Column><Text style={{ fontSize: 13, color: BRAND.text, margin: '4px 0' }}>{fulfillmentMethod === 'SELF_COLLECTION' ? 'Self Collection' : 'Shipping'}</Text></Column>
+                <Column align="right"><Text style={{ fontSize: 13, color: BRAND.text, margin: '4px 0' }}>${shippingFee.toFixed(2)}</Text></Column>
               </Row>
+              {gstEnabled && (
+                <Row>
+                  <Column><Text style={{ fontSize: 13, color: BRAND.text, margin: '4px 0' }}>GST ({gstRateDisplay}%)</Text></Column>
+                  <Column align="right"><Text style={{ fontSize: 13, color: BRAND.text, margin: '4px 0' }}>${gstAmount.toFixed(2)}</Text></Column>
+                </Row>
+              )}
               <Row>
                 <Column><Text style={{ fontSize: 15, fontWeight: 'bold', color: BRAND.navy, margin: '8px 0' }}>Total</Text></Column>
                 <Column align="right"><Text style={{ fontSize: 15, fontWeight: 'bold', color: BRAND.navy, margin: '8px 0' }}>${total.toFixed(2)}</Text></Column>

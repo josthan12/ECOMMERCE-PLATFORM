@@ -1,16 +1,85 @@
+import type { Metadata } from 'next'
+import Link from 'next/link'
 import { auth } from '@clerk/nextjs/server'
 import { notFound } from 'next/navigation'
+import {
+  CheckCircle2,
+  Clock3,
+  PackageCheck,
+  XCircle,
+} from 'lucide-react'
 import { prisma } from '@/lib/prisma'
-//import { markOrderFailedAndRestoreStock } from '@/lib/orders'
 import { reconcileOrderIfStale } from '@/lib/reconcileOrder'
+import { GST_ENABLED } from '@/lib/gst'
+import { SELF_COLLECTION_ADDRESS } from '@/lib/constants'
 
-
-type Props = {
-  searchParams: Promise<{ orderId?: string; status?: string; reference?: string }>
+export const metadata: Metadata = {
+  title: 'Checkout status',
+  robots: { index: false, follow: false },
 }
 
+type Props = {
+  searchParams: Promise<{
+    orderId?: string
+    status?: string
+    reference?: string
+  }>
+}
 
+type StatusPanelProps = {
+  title: string
+  orderId: string
+  message: string
+  tone: 'success' | 'pending' | 'error'
+  action?: {
+    href: string
+    label: string
+  }
+}
 
+function StatusPanel({
+  title,
+  orderId,
+  message,
+  tone,
+  action,
+}: StatusPanelProps) {
+  const Icon =
+    tone === 'success' ? CheckCircle2 : tone === 'error' ? XCircle : Clock3
+  const iconClassName =
+    tone === 'success'
+      ? 'text-success'
+      : tone === 'error'
+        ? 'text-error'
+        : 'text-warning'
+
+  return (
+    <div className="mx-auto flex min-h-[60vh] max-w-2xl items-center px-4 py-16">
+      <section className="w-full rounded-2xl border border-border-light bg-surface p-7 text-center shadow-card sm:p-10">
+        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-border-light bg-surface-muted">
+          <Icon className={`h-8 w-8 ${iconClassName}`} aria-hidden="true" />
+        </span>
+        <h1 className="mt-6 font-display text-3xl font-semibold tracking-[-0.03em] text-primary">
+          {title}
+        </h1>
+        <p className="mt-2 text-xs font-semibold tracking-[0.1em] text-text-light uppercase">
+          Order {orderId}
+        </p>
+        <p className="mx-auto mt-5 max-w-lg text-sm leading-7 text-text-muted">
+          {message}
+        </p>
+        {action && (
+          <Link
+            href={action.href}
+            className="mt-7 inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold text-text-inverse transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            {action.label}
+          </Link>
+        )}
+      </section>
+    </div>
+  )
+}
 
 export default async function CheckoutSuccessPage({ searchParams }: Props) {
   const { orderId, status, reference } = await searchParams
@@ -22,15 +91,8 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
   const { userId: clerkId } = await auth()
 
   if (!clerkId) {
-    // Not signed in on this device — common with QR-based payments where the
-    // customer scans with their phone while checking out on another device.
-    // We can't show real order details without an authenticated session, but
-    // we CAN safely confirm payment succeeded if the visitor holds HitPay's
-    // own reference for this specific payment (proof they came from the real
-    // redirect, not just guessing an orderId) — checked against the order's
-    // stored hitpayPaymentRequestId. Deliberately not calling
-    // reconcileOrderIfStale here: this branch is read-only by design, and
-    // reconciliation already runs via the webhook and the authenticated flow.
+    // QR-based payments may return on another device. Only reveal a positive
+    // payment result when HitPay's own reference matches this stored request.
     let verifiedPaid = false
 
     if (reference) {
@@ -38,36 +100,35 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
         where: { id: orderId },
         select: { hitpayPaymentRequestId: true, status: true },
       })
-      verifiedPaid = !!order && order.hitpayPaymentRequestId === reference && order.status === 'PAID'
+      verifiedPaid =
+        !!order &&
+        order.hitpayPaymentRequestId === reference &&
+        order.status === 'PAID'
     }
 
     const signInParams = new URLSearchParams({ orderId })
     if (status) signInParams.set('status', status)
     if (reference) signInParams.set('reference', reference)
-    const redirectUrl = encodeURIComponent(`/checkout/success?${signInParams.toString()}`)
+    const redirectUrl = encodeURIComponent(
+      `/checkout/success?${signInParams.toString()}`
+    )
 
-   return (
-  <div className="max-w-2xl mx-auto px-6 py-16 text-center">
-    <h1 className="text-2xl font-semibold mb-2">
-      {verifiedPaid ? 'Payment received!' : 'Payment Status'}
-    </h1>
-
-    <p className="text-gray-500">Order ID: {orderId}</p>
-
-    <p className="mt-4 text-sm text-gray-600">
-      {verifiedPaid
-        ? "We've received your payment. A confirmation email is on its way — if you don't see it in a few minutes, check your spam folder."
-        : "We're finalizing your order status. You'll receive an email confirmation once it's done."}
-    </p>
-
-    <a
-      href={`/sign-in?redirect_url=${redirectUrl}`}
-      className="inline-block mt-6 text-sm underline"
-    >
-      Sign in to view your order details
-    </a>
-  </div>
-)
+    return (
+      <StatusPanel
+        title={verifiedPaid ? 'Payment received' : 'Confirming payment'}
+        orderId={orderId}
+        message={
+          verifiedPaid
+            ? "We've received your payment. A confirmation email is on its way; check your spam folder if it does not arrive shortly."
+            : "We're finalizing your order status. You will receive an email confirmation once it is complete."
+        }
+        tone={verifiedPaid ? 'success' : 'pending'}
+        action={{
+          href: `/sign-in?redirect_url=${redirectUrl}`,
+          label: 'Sign in to view order',
+        }}
+      />
+    )
   }
 
   const user = await prisma.user.findUnique({ where: { clerkId } })
@@ -81,24 +142,20 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
     notFound()
   }
 
-  // Cosmetic-only: customer explicitly backed out and it's still within the buffer
-  // window, so we haven't verified the real outcome yet. Show cancellation messaging
-  // without touching the DB — the order may still complete via webhook if the
-  // customer had already scanned the QR code before navigating away.
-  const showCosmeticCancel = status === 'canceled' && reconciled.status === 'PENDING_PAYMENT'
+  // This remains cosmetic and read-only. A webhook may still confirm payment
+  // if the customer completed the PayNow scan before navigating back.
+  const showCosmeticCancel =
+    status === 'canceled' && reconciled.status === 'PENDING_PAYMENT'
 
   if (showCosmeticCancel) {
     return (
-      <div className="max-w-2xl mx-auto px-6 py-16 text-center">
-        <h1 className="text-2xl font-semibold mb-2">Payment Cancelled</h1>
-        <p className="text-gray-500">Order ID: {orderId}</p>
-        <p className="mt-4 text-sm text-gray-600">
-          If you already completed the payment (e.g. via the PayNow QR code) before
-          clicking back, this page may not reflect that yet. Please refresh this
-          page after completing payment to see the updated order status. Do not
-          scan or pay using the same QR code again.
-        </p>
-      </div>
+      <StatusPanel
+        title="Payment cancelled"
+        orderId={orderId}
+        message="If you completed payment before returning, this status may still update. Refresh after completing payment, and do not pay again using the same QR code."
+        tone="error"
+        action={{ href: '/account/orders', label: 'View my orders' }}
+      />
     )
   }
 
@@ -109,13 +166,20 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
 
   if (reconciled.status !== 'PAID') {
     return (
-      <div className="max-w-2xl mx-auto px-6 py-16 text-center">
-        <h1 className="text-2xl font-semibold mb-2">Payment Status</h1>
-        <p className="text-gray-500">Order ID: {orderId}</p>
-        <p className="mt-4 text-sm text-gray-600">
-          {messages[reconciled.status] ?? 'We are confirming your payment status.'}
-        </p>
-      </div>
+      <StatusPanel
+        title={
+          reconciled.status === 'PAYMENT_FAILED'
+            ? 'Payment not completed'
+            : 'Confirming payment'
+        }
+        orderId={orderId}
+        message={
+          messages[reconciled.status] ??
+          'We are confirming your payment status.'
+        }
+        tone={reconciled.status === 'PAYMENT_FAILED' ? 'error' : 'pending'}
+        action={{ href: '/account/orders', label: 'View my orders' }}
+      />
     )
   }
 
@@ -129,55 +193,121 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-16">
-      <h1 className="text-2xl font-semibold mb-1">Order placed!</h1>
-      <p className="text-gray-500 mb-8">Order ID: {order.id}</p>
-
-      <div className="mb-8">
-        <h2 className="font-medium mb-3">Items</h2>
-        <div className="flex flex-col gap-3">
-          {order.items.map((item) => (
-            <div key={item.id} className="flex justify-between text-sm border-b pb-2">
-              <div>
-                <p>{item.productName}</p>
-                <p className="text-gray-500">
-                  {Object.entries((item.combination as Record<string, string>) ?? {})
-                    .map(([key, value]) => `${key}: ${value}`)
-                    .join(', ')}
-                </p>
-                <p className="text-gray-400">Qty: {item.quantity}</p>
-              </div>
-              <p>${(item.price * item.quantity).toFixed(2)}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="mb-8">
-        <h2 className="font-medium mb-2">Shipping Address</h2>
-        <p className="text-sm text-gray-600">
-          Block {order.shippingBlock}
-          {order.shippingUnitNumber ? `, ${order.shippingUnitNumber}` : ''}
-          <br />
-          {order.shippingStreet}
-          <br />
-          Singapore {order.shippingPostalCode}
+    <div className="mx-auto max-w-4xl px-4 py-12 md:px-8 md:py-16">
+      <div className="text-center">
+        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-success/30 bg-success/10 text-success">
+          <PackageCheck className="h-8 w-8" aria-hidden="true" />
+        </span>
+        <p className="mt-6 text-xs font-semibold tracking-[0.15em] text-accent uppercase">
+          Payment received
         </p>
+        <h1 className="mt-2 font-display text-4xl font-semibold tracking-[-0.035em] text-primary">
+          Your order is confirmed.
+        </h1>
+        <p className="mt-3 text-sm text-text-muted">Order {order.id}</p>
       </div>
 
-      <div className="text-sm space-y-1">
-        <div className="flex justify-between">
-          <span>Subtotal</span>
-          <span>${order.subtotal.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>GST</span>
-          <span>${order.gstAmount.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between font-semibold pt-1 border-t">
-          <span>Total</span>
-          <span>${order.total.toFixed(2)}</span>
-        </div>
+      <div className="mt-10 grid gap-6 md:grid-cols-[minmax(0,1fr)_19rem]">
+        <section className="rounded-2xl border border-border-light bg-surface p-5 shadow-card sm:p-6">
+          <h2 className="font-display text-xl font-semibold text-primary">
+            Items
+          </h2>
+          <div className="mt-4 divide-y divide-border-light">
+            {order.items.map((item) => (
+              <div key={item.id} className="flex justify-between gap-5 py-4 text-sm">
+                <div>
+                  <p className="font-medium text-text">{item.productName}</p>
+                  <p className="mt-1 text-text-muted">
+                    {Object.entries(
+                      (item.combination as Record<string, string>) ?? {}
+                    )
+                      .map(([key, value]) => `${key}: ${value}`)
+                      .join(' · ')}
+                  </p>
+                  <p className="mt-1 text-xs text-text-light">
+                    Quantity {item.quantity}
+                  </p>
+                </div>
+                <p className="shrink-0 font-medium text-text">
+                  ${(item.price * item.quantity).toFixed(2)}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 border-t border-border-light pt-5">
+            <h2 className="font-display text-lg font-semibold text-primary">
+              {order.fulfillmentMethod === 'SELF_COLLECTION'
+                ? 'Self collection'
+                : 'Shipping address'}
+            </h2>
+            {order.fulfillmentMethod === 'SELF_COLLECTION' ? (
+              <p className="mt-2 text-sm leading-6 text-text-muted">
+                {SELF_COLLECTION_ADDRESS}
+              </p>
+            ) : (
+              <address className="mt-2 text-sm leading-6 text-text-muted not-italic">
+                Block {order.shippingBlock}
+                {order.shippingUnitNumber
+                  ? `, ${order.shippingUnitNumber}`
+                  : ''}
+                <br />
+                {order.shippingStreet}
+                <br />
+                Singapore {order.shippingPostalCode}
+              </address>
+            )}
+          </div>
+        </section>
+
+        <aside className="rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-6">
+          <h2 className="font-display text-xl font-semibold text-primary">
+            Total
+          </h2>
+          <dl className="mt-5 space-y-2 text-sm">
+            <div className="flex justify-between text-text-muted">
+              <dt>Subtotal</dt>
+              <dd>${order.subtotal.toFixed(2)}</dd>
+            </div>
+            {order.discountAmount > 0 && (
+              <div className="flex justify-between text-success">
+                <dt>
+                  Discount
+                  {order.promoCode ? ` (${order.promoCode})` : ''}
+                </dt>
+                <dd>-${order.discountAmount.toFixed(2)}</dd>
+              </div>
+            )}
+            <div className="flex justify-between text-text-muted">
+              <dt>
+                {order.fulfillmentMethod === 'SELF_COLLECTION'
+                  ? 'Self collection'
+                  : 'Shipping'}
+              </dt>
+              <dd>
+                {order.shippingFee === 0
+                  ? 'Free'
+                  : `$${order.shippingFee.toFixed(2)}`}
+              </dd>
+            </div>
+            {GST_ENABLED && (
+              <div className="flex justify-between text-text-muted">
+                <dt>GST</dt>
+                <dd>${order.gstAmount.toFixed(2)}</dd>
+              </div>
+            )}
+            <div className="flex justify-between border-t border-border-light pt-3 font-display text-xl font-semibold text-primary">
+              <dt>Total</dt>
+              <dd>${order.total.toFixed(2)}</dd>
+            </div>
+          </dl>
+          <Link
+            href="/account/orders"
+            className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-primary px-4 text-sm font-semibold text-primary transition-colors hover:bg-surface-hover"
+          >
+            View my orders
+          </Link>
+        </aside>
       </div>
     </div>
   )

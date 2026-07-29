@@ -6,4 +6,14 @@ if (!process.env.RESEND_API_KEY) {
 
 export const resend = new Resend(process.env.RESEND_API_KEY);
 
-export const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? 'orders@biggyballs69.gay';
+const legacyFromEmail = process.env.RESEND_FROM_EMAIL?.trim();
+
+export const ORDER_FROM_EMAIL =
+  process.env.RESEND_ORDER_FROM_EMAIL?.trim() ||
+  legacyFromEmail ||
+  'PokeSunshineTCG Orders <orders@biggyballs69.gay>';
+
+export const NEWSLETTER_FROM_EMAIL =
+  process.env.RESEND_NEWSLETTER_FROM_EMAIL?.trim() ||
+  legacyFromEmail ||
+  'PokeSunshineTCG <newsletters@biggyballs69.gay>';

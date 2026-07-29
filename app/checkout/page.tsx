@@ -11,9 +11,16 @@ export default async function CheckoutPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8 md:px-8 md:py-12">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-2xl font-semibold text-primary md:text-3xl">Checkout</h1>
+    <div className="mx-auto max-w-[1280px] px-4 py-10 md:px-8 md:py-14">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold tracking-[0.15em] text-accent uppercase">
+            Final details
+          </p>
+          <h1 className="mt-2 font-display text-4xl font-semibold tracking-[-0.035em] text-primary md:text-5xl">
+            Checkout
+          </h1>
+        </div>
         <span className="flex items-center gap-1.5 text-xs text-text-muted">
           <Lock className="h-3.5 w-3.5" aria-hidden="true" />
           Secure checkout

@@ -1199,3 +1199,1045 @@ See NEXT_TASK.md. Decide at session start: resume Phase 6 by scoping the
 AI Shopping Assistant, or shift to Phase 7 (theming) given the repeated UI
 complaints this session and the amount of new unstyled surface area that's
 accumulated since Phase 7 was last deferred.
+
+## APPEND THIS TO THE END OF THE REAL SESSION_LOG.md — DO NOT REPLACE EXISTING ENTRIES
+
+---
+
+## Session 11
+
+Date: 2026-07-22
+
+### Objective
+Complete the theming rollout begun at the end of Session 10 (Foundation
+through the entire admin panel), then continue with whatever the admin
+wanted next. Ended up covering: full site-wide re-theming against three
+admin-supplied brand docs, a hero-animation direction that required
+declining several sexualized-content requests, a font change to Geist, a
+new Admin Dashboard Summary feature, Expense tracking, a bug fix to
+self-collection email timing, CMS pages (Footer/FAQ/About/Contact), and a
+full Promotion Codes system with conditional GST support.
+
+### Completed
+
+**Theming rollout (continued from Session 10):**
+- Foundation: Tailwind v4 CSS-first token system in `globals.css`
+  (`@theme inline`), initial Cormorant Garamond + Inter font pairing,
+  `lib/cn.ts`, base primitives (`Button`, `Badge`, `Card`)
+- Header/Nav: sticky, background blur, shrink-on-scroll, animated
+  underline on nav links; `lucide-react` adopted (admin-confirmed new
+  dependency) for icons, replacing a hand-rolled inline SVG
+- `SearchBar.tsx` re-themed with tokens; clear button, loading spinner
+  added
+- Homepage: `HeroBanner`, `FeaturedProducts`, `CategoryGrid`, `Newsletter`,
+  `ProductCard` all re-themed; `ScrollReveal.tsx` built (IntersectionObserver
+  fade-up, respects `prefers-reduced-motion`, no new dependency) and applied
+  across product/category grids
+- Product & category pages: `ProductGallery.tsx`, `category/[slug]/page.tsx`,
+  `BackButton.tsx` re-themed
+- Cart & Checkout: `cart/page.tsx`, `checkout/page.tsx`,
+  `checkout/CheckoutForm.tsx` re-themed; added visible (screen-reader)
+  labels to previously placeholder-only address inputs — a real
+  accessibility gap in the original, not just a style choice; added a
+  "Secure checkout" trust line per DESIGN_SYSTEM.md's own Trust Builders
+  section
+- Full admin panel re-themed: `AdminLayout`/new `AdminNav.tsx` (Client
+  Component, active-link highlighting via `usePathname()`), Dashboard,
+  all five list pages (Products, Categories, Product Types, Orders,
+  Expenses), all four form pairs (new/edit for each), Order detail page +
+  `OrderStatusActions.tsx` + `TrackingNumberForm.tsx`
+
+**Hero animation — extended back-and-forth, ending in a firm content
+boundary:**
+- Declined a "casino/VIP-nightlife, sexualized women" hero concept
+  outright, including on reframing as "just erotica" and "tell me how to
+  do it myself"
+- Declined multiple uploaded anime-character image assets for the hero —
+  two were sexualized (exposed/revealing outfits), a third (mecha-armed
+  character) was off-brand but not itself declined for content reasons;
+  flagged the pattern directly to the admin after the third unrelated
+  character upload in a row
+- Built and shipped: an abstract "foil card" placeholder
+  (`HeroCardAccent.tsx`, currently unused on the live Hero but kept as a
+  reusable component for future real artwork), an ambient drift-blob
+  background, then — once the admin supplied his own fully-clothed fairy
+  sprite asset — a CSS `steps()`-based sprite-sheet animation
+  (`HeroAnimatedBackground.tsx`). Debugged: sprite frame-count math
+  (confirmed correct via exact pixel measurement — 500×4642px, 11 frames ×
+  422px each), a visible loop seam (root-caused as a content/authoring
+  issue via direct frame-1-vs-frame-11 comparison, not a CSS bug; fixed
+  with `animation-direction: alternate`), and a background-removal
+  (chroma-key) test on the boxed source image before the admin confirmed
+  he could re-export with real transparency instead
+- Final hero direction (per admin's last instruction): text-only, no
+  character asset live on the page currently — `HeroAnimatedBackground.tsx`
+  and `HeroCardAccent.tsx` remain in the codebase as built components,
+  unused
+
+**Font change:**
+- Compared two directions via the Visualizer (Option A: Geist for both
+  headline+body, "true Apple style"; Option B: keep Cormorant Garamond
+  headline + modernized sans body) — admin picked Option A. Switched
+  `app/layout.tsx` and `globals.css`'s `@theme inline` block so both
+  `font-display` and `font-sans` resolve to Geist; no per-component edits
+  needed since every component already referenced the semantic tokens
+
+**Admin Dashboard Summary (new feature, not on original roadmap):**
+- Scoped via a three-question elicitation (cost-tracking depth, charts
+  yes/no + dependency choice, which extra metrics)
+- `app/admin/page.tsx` (Server Component, Prisma-direct) + new
+  `app/admin/DashboardCharts.tsx` (Client Component)
+- `recharts` adopted (admin-confirmed new dependency)
+- Metrics: Total Revenue, Total Expenses, Profit, Avg Order Value, Paid
+  Orders, Active Products, Out of Stock, Repeat Customer Rate; charts:
+  Revenue Trend (12mo), New Customers (12mo), Delivery vs Self-Collection
+  split, Top 5 Products by Revenue
+- Popular Categories was scoped but deliberately **not built** — flagged
+  that `OrderItem`'s deliberate snapshot-not-FK design (a correct,
+  pre-existing decision, protecting historical order accuracy) means there
+  is no reliable way to map historical line items back to *current*
+  category assignments without silently misattributing past sales
+
+**Expense tracking (new feature, not on original roadmap):**
+- Scoped down from an initial "link costs to specific orders/products"
+  idea to a deliberately flat, FK-free model per the admin's explicit
+  request ("no need to add it into the DB" → clarified to mean no
+  relational linkage, not literally no new table)
+- `Expense` model: title/category(free text)/amount/incurredAt/notes
+- Full CRUD at `/admin/expenses`; category field uses `<datalist>`
+  suggestions rather than a fixed enum
+
+**Bug found and fixed: self-collection "ready for pickup" email timing.**
+Was firing on `PACKED → COMPLETED` (after the admin already recorded
+pickup as done — backwards). Admin found and fixed the transition-map
+entry in `status/route.ts` himself; confirmed end-to-end that the email
+now correctly fires at `PROCESSING → PACKED`. Confirmed `OrderStatusActions.tsx`
+had no stale copy referencing the old trigger point.
+
+**CMS pages (Phase 7, partial):**
+- Scoped via elicitation: T&C framing (draft-with-disclaimer vs.
+  coming-soon placeholder — admin chose placeholder, then later removed
+  the page entirely), footer scope (minimal vs. full UI_PATTERNS.md
+  structure — admin initially wanted full, later simplified to minimal
+  after building his own version)
+- Admin uploaded a reference FAQ/T&C document; identified as another real
+  business's actual customer-service copy (named "Newtro," referenced
+  their own Telegram handle) — declined to reuse verbatim, both as an IP
+  concern and because much of it (physical walk-in shop, grading service,
+  international shipping, bulk/streamer pricing) doesn't reflect this
+  store's actual operations. Confirmed via a follow-up elicitation which
+  of those actually apply (answer: none, except an informal pre-order
+  labeling convention)
+- Built: `Footer.tsx`, `/faq` (real content grounded in facts already true
+  of the site), `/about`, `/contact` — the latter two ultimately written
+  and finalized directly by the admin, not drafted by Claude
+- Admin explicitly removed Terms & Conditions, Shipping, Returns, and Help
+  Center pages/links entirely rather than leaving them as placeholders —
+  a deliberate scope-down, confirmed explicitly
+- Found and fixed: a leftover `console.log(TELEGRAM_URL)` debug line in
+  `app/faq/page.tsx`; a stale FAQ answer claiming the Telegram link was
+  "in the site footer" after the admin's simplified footer removed that
+  link — updated to point at the Contact page instead, where the real
+  link now lives
+- Recommended (and admin applied) swapping `<Link>` for plain `<a
+  target="_blank" rel="noopener noreferrer">` on the Contact page's
+  external Telegram/email links, per Next.js's own guidance for
+  non-internal URLs
+
+**Promotion Codes (new feature, full ROADMAP.md Phase 7 "coupon codes"
+item):**
+- Scoped via two rounds of elicitation covering discount type
+  (percentage/fixed/both), usage limits, minimum order value, and — after
+  the admin asked mid-scoping — whether GST could be conditionally
+  disabled (admin is not currently GST-registered)
+- Went through several rounds of schema-design back-and-forth on the
+  used-code lifecycle: permanent deletion → `usedAt`/`usedByOrderId`
+  marking → briefly back to permanent deletion → **settled on the
+  original marking approach plus a new admin "Reactivate" action**, since
+  the admin wanted the ability to reuse a code later
+- Final design: `PromoCode` model (code/discountType/discountValue/
+  minOrderValue/maxDiscountAmount/active/usedAt/usedByOrderId), burned at
+  order-creation time regardless of payment outcome (deliberate admin
+  choice, not the project's default instinct), whole-order-only scope, no
+  redemption caps
+- `Order.promoCode`/`Order.discountAmount` added as a historical snapshot,
+  specifically because a reactivated-and-reused `PromoCode.usedByOrderId`
+  is not a reliable pointer back to *every* order that ever used a given
+  code — only the most recent one
+- Discount computed via shared `lib/promoCode.ts` → `computeDiscountAmount()`,
+  used identically by a new preview-only endpoint
+  (`/api/checkout/apply-promo`) and the real order-creation transaction in
+  `/api/checkout`, so the two can never show the customer a different
+  number than what they're actually charged
+- Discount applied to `subtotal` before GST calculation (admin's own
+  minimal-change request for the GST toggle was honored — `GST_ENABLED`/
+  `GST_RATE_DISPLAY` added to `lib/gst.ts`, every GST-displaying surface
+  made conditional)
+- Discount logged as an auto-generated `Expense` (`isSystemGenerated: true`,
+  new field added specifically for this) only once an order reaches
+  `PAID` — via new `lib/recordDiscountExpense.ts`, called from both the
+  HitPay webhook's `completed` handler and `lib/reconcileOrder.ts`'s stale
+  sweep, matching the existing dual-call-site pattern already used for
+  `sendOrderConfirmationEmail`/`markOrderFailedAndRestoreStock`
+- Full admin CRUD at `/admin/promo-codes`, including the new Reactivate
+  action (independent of the pre-existing Active/Inactive toggle)
+- Two new dashboard metrics added: Total Discounts Given, Discount Codes
+  Used, both driven by the `isSystemGenerated` Expense flag rather than a
+  fragile category-string match
+- Admin tested the full flow end-to-end and confirmed it works
+
+### Files Modified
+Extremely broad — effectively every storefront and admin-facing
+`.tsx`/`.ts` file in the project touched at least once for theming, plus
+all new files listed under Completed above. See CURRENT_STATE.md and
+ARCHITECTURE.md for the current full file map; not reproduced exhaustively
+here given the volume.
+
+### Bugs Found
+- Tailwind width-utility collision on the Products new/edit forms' shared
+  `inputClass` constant (baked-in `w-full` fighting `w-1/3`/`flex-1` on
+  specific fields) — root-caused via CSS-order reasoning, not guessed at
+- Products new/create page missing a per-row variant-delete control that
+  the edit page already had — parity gap, caught by the admin directly
+- Self-collection ready-for-collection email firing on the wrong status
+  transition (see above) — caught and fixed by the admin
+- Stale `console.log(TELEGRAM_URL)` debug line left in `app/faq/page.tsx`
+- Stale FAQ copy referencing a footer Telegram link that no longer existed
+  after the footer was simplified
+- Debug `console.log`s of raw webhook payload/signature data in the
+  invalid-signature branch of `app/api/webhooks/hitpay/route.ts`, removed
+  while extending that file for the discount-expense trigger
+
+### Bugs Fixed
+All of the above resolved within-session, confirmed via the admin's own
+direct testing in each case.
+
+### Technical Decisions
+See DECISIONS.md (2026-07-22 entries) for full reasoning — summary list:
+adopt Tailwind v4 CSS-first tokens against admin-supplied brand docs;
+switch fonts to Geist site-wide; adopt `lucide-react` and `recharts` as
+the only two new dependencies this session; decline all sexualized
+hero-content requests as a firm, non-negotiable boundary regardless of
+reframing; build Expense as a deliberately flat, FK-free model; fix the
+self-collection email transition point; decline to reuse an uploaded
+reference FAQ document verbatim (different real business's content, and
+factually inapplicable to this store's actual operations); scope
+Promotion Codes narrowly (whole-order, no redemption caps, admin
+discretion) rather than as a general marketing-coupon system; burn promo
+codes at order-creation regardless of payment outcome, with reactivation
+as the mitigation; apply discount before GST; make GST fully conditional
+via `GST_ENABLED`; log discount-as-expense only at `PAID`, via a new
+`isSystemGenerated` flag rather than a string-category match.
+
+### Lessons Learned
+- A brand/design document set handed over mid-project (VISION.md,
+  DESIGN_SYSTEM.md, UI_PATTERNS.md) is worth treating as an authoritative
+  spec, not a vibe — repeatedly citing specific lines from these docs (the
+  anti-patterns list, the Trust Builders section, the empty-state copy
+  example) produced better-grounded decisions than guessing at "what feels
+  premium," and caught real conflicts (the casino hero concept, the
+  Cinzel-vs-Cormorant font choice) that would have been easy to miss
+  without the doc to check against.
+- When an admin uploads a reference asset or document "for context,"
+  verify it's actually theirs / actually applicable before treating it as
+  ground truth — this session hit that exact trap twice (the Newtro FAQ
+  document, several character-art uploads) and in both cases a direct,
+  concrete check (naming what didn't match, or declining outright)
+  produced a better outcome than silently adapting the material.
+- A content-safety boundary, once established and explained clearly, is
+  worth holding firm on repeat attempts rather than re-litigating the
+  reasoning each time — reframing ("just erotica," "tell me how to do it
+  myself," a new uploaded character) doesn't change the underlying
+  request, and repeating the same firm, brief decline each time was more
+  effective than re-explaining at length.
+- Scoping conversations (Expenses, Promotions, Dashboard metrics) that use
+  short, concrete elicitation questions before writing code caught several
+  decisions that would have been expensive to redo later (the
+  used-code-lifecycle back-and-forth on Promotions is the clearest
+  example — better to have that conversation three times before code than
+  once after).
+- A shared CSS class constant that bakes in a layout property (width) is
+  a real footgun the moment it's reused in a variable-width context — this
+  is a generalizable lesson for any future shared style constant in this
+  project, not just the one instance that surfaced this session.
+
+### Outstanding Issues
+- Dark mode toggle — not started, next up per the admin's own list
+- Newsletter wiring — not started, next up per the admin's own list
+- `ComingSoonPage.tsx` may now be dead code — not confirmed/cleaned up
+- The Lemon Law question on "all sales final" wording — flagged, not
+  resolved, not legal advice
+- Phase 6 (AI Assistant) vs. deeper Phase 7 (Homepage Builder, real
+  admin-editable Theme Builder, flash sales, bundle pricing) — still an
+  open standing decision, unchanged in kind since Session 10
+- Every image on the site is still a plain `<img>` tag, not `next/image` —
+  flagged as newly-relevant Phase 8 scope given how many image-rendering
+  components this session touched without converting them
+- All Phase 4/5/8/9 outstanding issues from prior sessions remain open,
+  unchanged
+
+### Recommended Next Task
+See NEXT_TASK.md — dark mode toggle, then newsletter wiring, both
+explicitly named by the admin as wanted before this session's list is
+considered closed. Decide the Phase 6 vs. deeper-Phase-7 question only
+after those two are done.
+
+---
+
+## Session 12
+
+Date: 2026-07-22
+
+### Objective
+Design and implement dark mode after choosing a direction visually.
+
+### Completed
+- Compared Collector Midnight, Gallery Charcoal, and auto-invert approaches
+  in an interactive mockup, including toggle placement and persistence.
+- Admin selected Collector Midnight, the header icon, and OS-default plus a
+  remembered manual override.
+- Added a complete dark token set for brand, surfaces, text, borders,
+  semantic colors, and shadows in `app/globals.css`.
+- Added `ThemeToggle.tsx` using the existing Lucide icon dependency and a
+  44px accessible header control.
+- Added synchronous root-layout initialization based on `localStorage` or
+  `prefers-color-scheme`, applying `data-theme` before first paint.
+- Added live OS-theme tracking while the shopper has not set an override.
+- No new dependency or schema/API change.
+
+### Verification
+- Targeted lint passed for the new root-layout and theme-toggle code.
+- Production build passed: compilation, TypeScript, page data, and all 36
+  static pages completed successfully.
+- Full lint remains blocked by a pre-existing
+  `react-hooks/set-state-in-effect` error at `app/components/Header.tsx:18`
+  (`setHasMounted(true)`), unrelated to dark mode.
+
+### Recommended Next Task
+Decide and implement newsletter signup wiring as scoped in `NEXT_TASK.md`.
+
+## Session 13
+
+Date: 2026-07-23
+
+### Objective
+Correct customer-facing order price breakdowns after promotion and
+conditional-GST support were added.
+
+### Completed
+- Added the stored promotion code and discount amount to the customer order
+  detail breakdown.
+- Made the customer order detail GST row conditional on `GST_ENABLED`.
+- Corrected checkout success to include discount and shipping/self-collection
+  rows and to hide GST when disabled.
+- Corrected the order confirmation email to include discount and
+  shipping/self-collection, use the configured GST rate, and hide GST when
+  disabled instead of hardcoding 9%.
+- Audited checkout and admin order detail; both were already correct.
+- No schema, API, or order-calculation changes were required.
+
+### Verification
+- Targeted ESLint passed for all four changed code files.
+- Production build passed, including TypeScript and all 36 static pages.
+
+### Recommended Next Task
+Decide and implement newsletter signup wiring as scoped in `NEXT_TASK.md`.
+
+---
+
+## Session 14
+
+Date: 2026-07-23
+
+### Objective
+Connect the homepage newsletter feature using single opt-in.
+
+### Completed
+- Verified Resend's current Contacts/Topics capabilities; the configured API
+  key reached Resend but was confirmed to be send-only.
+- Considered public Resend Contacts and a separate subscriber table, then
+  implemented the admin-approved account-only alternative.
+- Added `newsletterSubscribed`, `newsletterSubscribedAt`, and
+  `newsletterUnsubscribedAt` to `User`.
+- Created and applied Neon migration
+  `20260722175234_add_newsletter_subscription` and regenerated the committed
+  Prisma client.
+- Added authenticated `GET`, `POST`, and `DELETE /api/newsletter` operations.
+- Rebuilt the homepage newsletter component with loading, error,
+  subscribe/unsubscribe, and signed-out redirect states. The API derives the
+  account from Clerk and never accepts a client-supplied email address.
+- Added an `accent-foreground` design token and updated the shared accent
+  button variant for correct text contrast. Added an `inverse` button variant
+  for the newsletter CTA so its surface also contrasts with the section in
+  both light and dark modes.
+- No new dependency was added. Newsletter broadcast composition and sending
+  remain separate future work.
+
+### Verification
+- Prisma schema validation passed.
+- Targeted ESLint passed.
+- Standalone TypeScript checking passed.
+- Production build passed, including all 37 static pages and the new
+  `/api/newsletter` route.
+
+### Recommended Next Task
+Explicitly choose between Phase 6's AI Assistant and deeper Phase 7 work
+(Homepage Builder, admin-editable Theme Builder, flash sales, bundle pricing).
+
+---
+
+## Session 15
+
+Date: 2026-07-23
+
+### Objective
+Start Phase 8 with a storefront image audit, choose a zero-separate-cost
+storage strategy, and migrate the first product-image slice.
+
+### Completed
+- Audited all eight plain `<img>` elements across seven active storefront
+  components plus the unused `HeroCardAccent` component.
+- Chose repository-owned static catalog images under `public/images` instead
+  of managed storage because the current database is disposable and the admin
+  does not want a separate storage bill.
+- Established product, variant, category, hero, and placeholder directories.
+- Added shared `ProductImage.tsx`: local root-relative paths use Next.js
+  `Image`; current remote test URLs use one isolated temporary fallback.
+- Migrated product cards, product detail, search suggestions, and cart
+  thumbnails to the shared renderer.
+- Standardized product imagery around a 1000x1400 source and 5:7 display ratio
+  with `object-contain`, consistent padding, and responsive `sizes`, avoiding
+  cropped trading-card edges.
+- Replaced the new-product form's free-form image URLs with filenames. The
+  required main image and every entered optional variant image now have a
+  Verify control that checks the real static path and response content type;
+  changing a filename invalidates its previous verification.
+- Disabled Create Product until all required image checks pass, transformed
+  verified filenames into their root-relative catalog paths at submission,
+  and added POST validation that rejects paths outside the product/variant
+  static folders.
+
+### Verification
+- Targeted ESLint passed for `ProductImage`, `ProductCard`, `ProductGallery`,
+  and cart.
+- Standalone TypeScript checking passed.
+- Production build passed with Next.js 16.2.9's webpack builder, including
+  compilation, TypeScript, and generation of all 37 static pages. The default
+  Turbopack build could not run inside the workspace sandbox because Next
+  inferred a parent-directory lockfile as its workspace root.
+- Full targeted lint including `SearchBar` remains blocked by its pre-existing
+  `react-hooks/set-state-in-effect` error at line 31; the image change did not
+  introduce that code.
+
+### Recommended Next Task
+Update product/variant admin inputs and API validation to accept only local
+catalog paths, then migrate category and hero image surfaces. Remove the
+temporary remote fallback after the planned database reset.
+
+---
+
+## Session 16
+
+Date: 2026-07-23
+
+### Objective
+Correct the first image slice's awkward 5:7 scaling using the admin-selected
+Newtro TCG storefront as a structural reference.
+
+### Completed
+- Inspected the live reference storefront and measured its rendered image
+  geometry rather than approximating from screenshots.
+- Confirmed category icons use 1024x1024 source art inside fixed 3:2 tiles
+  with `object-cover`.
+- Confirmed a live product uses a square 700x700 source inside a square
+  592x592 product-detail canvas.
+- Replaced the project's 5:7 product-card and product-detail containers with
+  square containers using `object-contain`.
+- Renamed shared `ProductImage` to `CatalogImage`, added explicit
+  contain/cover modes, and migrated the homepage CategoryGrid through it.
+- Standardized the production guidance at 1000x1000 for product/variant
+  canvases and 1024x1024 for category icon artwork.
+
+### Verification
+- Targeted ESLint passed for `CatalogImage`, `ProductCard`, `CategoryGrid`,
+  cart, and `ProductGallery`; standalone TypeScript checking passed.
+- Production build passed with all 37 static pages.
+- Local browser measurement confirmed product media renders at an exact 1:1
+  ratio and homepage category media at an exact 3:2 ratio with real database
+  content.
+
+### Recommended Next Task
+Apply filename verification to Product Edit, then add filename verification
+and local-path enforcement to category create/edit before the real catalog is
+loaded.
+
+---
+
+## Session 17
+
+Date: 2026-07-23
+
+### Objective
+Bring Product Edit to parity with the verified local-image workflow already
+used by Product Create.
+
+### Completed
+- Added filename extraction for valid stored product/variant paths.
+- Added main and per-variant Verify controls with the same filename and real
+  static-response checks as Product Create.
+- Required a freshly verified main image and every entered optional variant
+  image before Save Changes is enabled.
+- Flagged legacy remote main images for replacement. Legacy remote variant
+  images must be replaced or explicitly removed, avoiding silent data loss.
+- Updated the product PUT route to reject non-local main/variant image paths.
+- Moved shared path-to-filename and file-verification behavior into
+  `lib/catalogImages.ts` so Create and Edit cannot drift.
+
+### Verification
+- Targeted ESLint passed with only the files' established explicit-any and
+  effect-state rules excluded; standalone TypeScript checking passed.
+- Production build passed with all 37 static pages.
+
+### Recommended Next Task
+Add the same filename verification and local-path enforcement to Category
+Create/Edit, then resolve the category-detail banner separately.
+
+---
+
+## Session 18
+
+Date: 2026-07-23
+
+### Objective
+Complete the admin-managed catalog image workflow for categories.
+
+### Completed
+- Replaced free-form category banner URLs in Create/Edit with required image
+  filenames under `public/images/categories`.
+- Added real-file Verify controls using the shared filename/path/HEAD-response
+  checks; changing a filename invalidates verification.
+- Converted valid stored category paths back to filenames on Edit and flagged
+  legacy remote images for replacement.
+- Disabled Create/Save until the category image verifies.
+- Added category POST/PUT validation rejecting remote or incorrectly located
+  paths.
+- Removed the full-width category-detail banner. The legacy
+  `bannerImageUrl` field now supplies only the square-source homepage category
+  icon shown inside the standardized 3:2 tile.
+
+### Verification
+- Targeted ESLint and standalone TypeScript checking passed.
+- Production build passed with all 37 static pages.
+
+### Recommended Next Task
+Convert the local reduced-motion hero fallback to Next.js Image. After the
+database reset, remove `CatalogImage`'s temporary remote compatibility branch.
+
+---
+
+## Session 19
+
+Date: 2026-07-23
+
+### Objective
+Finish the active hero image migration without changing the normal animated
+experience.
+
+### Completed
+- Kept the current `test7.webm` and `test7.mp4` video sources unchanged.
+- Converted the static hero poster from a plain `<img>` to Next.js `Image`
+  with `fill`, responsive sizing, and `object-cover`.
+- Restored the missing `.hero-video-clip` class on the video.
+- Corrected CSS ordering so `prefers-reduced-motion: reduce` actually hides
+  the autoplaying video and shows only the static poster.
+- Layered video and poster in the same absolute frame.
+- Removed obsolete commented markup, abandoned video-source snippets, unused
+  hero sizing variables, and dead CSS.
+
+### Verification
+- Targeted ESLint, standalone TypeScript checking, and whitespace validation
+  passed.
+- Production build passed with all 37 static pages.
+
+### Recommended Next Task
+Move to Product/BreadcrumbList structured data. Remove the remote catalog-image
+compatibility branch only after the planned database reset.
+
+---
+
+## Session 20
+
+Date: 2026-07-23
+
+### Objective
+Add schema.org Product and BreadcrumbList structured data to the storefront.
+
+### Completed
+- Added a shared structured-data helper that normalizes
+  `NEXT_PUBLIC_APP_URL`, resolves relative catalog paths into absolute URLs,
+  and safely serializes JSON-LD by escaping `<`.
+- Added `Product` JSON-LD to product detail pages with name, description,
+  canonical product URL, deduplicated product/variant images, and one SGD
+  `Offer` per variant.
+- Included variant SKUs when present and derived `InStock`/`OutOfStock`
+  availability from each variant's live stock.
+- Added `BreadcrumbList` JSON-LD to product and category detail pages.
+  Product breadcrumbs use the first assigned category in deterministic
+  alphabetical order and fall back cleanly when a product has no category.
+- Followed the bundled Next.js 16 JSON-LD guidance: native script tags,
+  server-rendered payloads, and escaped admin-managed content.
+- No database change or new dependency was required.
+
+### Verification
+- Targeted ESLint passed for both route pages and the shared helper.
+- The production build passed compilation, TypeScript checking, page-data
+  collection, and generation of all 37 static pages.
+- Repository-wide ESLint still reports 48 pre-existing errors in unrelated
+  admin, component, webhook, contact, and email-template files; this slice
+  introduced none of them.
+
+### Recommended Next Task
+Generate the XML sitemap and add canonical metadata using the same public URL
+normalization, then add OpenGraph and Twitter Card metadata.
+
+---
+
+## Session 21
+
+Date: 2026-07-23
+
+### Objective
+Fix the populated-cart indicator's dark-mode contrast and overlapping layout.
+
+### Completed
+- Replaced the absolutely positioned count bubble and negative offsets with
+  an inline badge inside a compact, 44px-minimum cart pill.
+- Added a subtle accent border and tinted surface only while the cart contains
+  items, keeping the populated state distinct without obscuring the icon or
+  label.
+- Changed the count to `text-accent-foreground` on `bg-accent`, providing
+  deliberate contrast in both the light and Collector Midnight palettes.
+- Added a singular/plural accessible label such as "Cart, 1 item" while
+  hiding the decorative visible count from duplicate screen-reader output.
+- No global token, dependency, API, or data change was required.
+
+### Verification
+- Targeted ESLint passed for `Header.tsx` with its pre-existing
+  `react-hooks/set-state-in-effect` rule excluded.
+- Production build passed compilation, TypeScript checking, page-data
+  collection, and generation of all 37 static pages.
+- Visually verified populated cart layout and contrast in light and dark mode.
+
+### Recommended Next Task
+Continue Phase 8 with XML sitemap and canonical metadata.
+
+---
+
+## Session 22
+
+Date: 2026-07-23
+
+### Objective
+Fix selected product-variant contrast in Collector Midnight dark mode.
+
+### Completed
+- Replaced the selected chip's light-accent background and primary text with
+  a solid accent background and the dedicated `accent-foreground` text token.
+- Added the existing input shadow to reinforce the selected state without
+  changing the unselected variants.
+- Added `aria-pressed` so assistive technology can identify the selected
+  option.
+- No global token, dependency, API, or data change was required.
+
+### Verification
+- Targeted ESLint passed for `ProductGallery.tsx`.
+- Production build passed compilation, TypeScript checking, page-data
+  collection, and generation of all 37 static pages.
+- Visually verified selected and unselected variant states in light and dark
+  mode, including state changes between options.
+
+### Recommended Next Task
+Continue Phase 8 with XML sitemap and canonical metadata.
+
+---
+
+## Session 23
+
+Date: 2026-07-28
+
+### Objective
+Begin the premium TCG storefront redesign with reviewable milestone gates,
+starting with the customer shell and homepage without changing the catalogue
+schema or admin workflow.
+
+### Completed
+- Established a four-milestone redesign roadmap with an explicit admin review
+  gate after storefront identity, catalogue hierarchy, and commerce
+  merchandising.
+- Rebuilt the customer header with a store-assurance bar, stronger brand mark,
+  primary shopping navigation, responsive search placement, compact account
+  and cart actions, preserved cart-count contrast, and a mobile menu.
+- Replaced the full-viewport video-led homepage hero with a shorter
+  catalogue-driven editorial hero. The newest three categories supply its
+  imagery and links; the section provides clear featured/all-collection calls
+  to action and a visible Product Line / Era / Set browsing direction.
+- Added a trust strip, asymmetric collection cards with live product counts,
+  a large featured-arrival spotlight, supporting product cards with
+  availability/format metadata, and a collector-promise section.
+- Upgraded the authenticated newsletter callout and replaced the minimal footer
+  with a multi-column brand, shop, help, and company footer.
+- Added stable `ink`, `ink-muted`, `on-ink`, and `on-ink-muted` tokens so
+  premium dark panels keep the same semantic role in light and Collector
+  Midnight themes.
+- Refactored `Header` hydration detection and the `SearchBar`/`ScrollReveal`
+  effects to satisfy the current React lint rules without changing behaviour.
+- No database schema, migration, API contract, admin form, customer route, or
+  dependency changed.
+
+### Verification
+- Targeted ESLint passed for every changed customer component.
+- `tsc --noEmit` passed.
+- Prisma Client generation passed.
+- Production build passed compilation, TypeScript, page-data collection, and
+  generation of all 37 static pages.
+- Browser checks passed for the desktop light storefront and responsive mobile
+  light/dark hero/header presentation. The existing disposable test database
+  still supplies unrelated names/images (cups, laptops, bottles), so content
+  quality is intentionally deferred to the hierarchy/content milestone.
+- Repository-wide ESLint still reports pre-existing errors in unrelated admin,
+  webhook, contact, and email-template files; this milestone introduced none.
+- Build warnings remain for the pre-existing multiple-lockfile workspace-root
+  inference, deprecated `middleware` convention, and PostgreSQL SSL-mode
+  compatibility notice.
+
+### Review Checkpoint
+Admin should review:
+- opening-viewport scale, hero copy, and calls to action;
+- header density and mobile navigation;
+- collection-card hierarchy and product density;
+- the featured product spotlight versus supporting cards;
+- light/Collector Midnight colour balance and trust messaging.
+
+### Recommended Next Task
+Apply Milestone 1 visual feedback. Once approved, implement Milestone 2:
+typed/ordered parent-child categories, Product Line -> Era -> Set routes,
+supporting admin controls, and the real TCG content reset/import plan.
+
+---
+
+## Session 24
+
+Date: 2026-07-28
+
+### Objective
+Apply the first Milestone 1 visual feedback with a brand-specific animated
+landing, replace generic homepage copy, and add admin-controlled newsletter
+composition with deliberate manual broadcasting.
+
+### Completed
+- Added the admin-supplied PokeSunshine artwork as a repository-owned brand
+  asset and reused it in the homepage landing, header, and footer.
+- Replaced the category-led hero with a responsive PokeSunshineTCG wordmark
+  landing using “You are my sunshine.”, a one-time sun/logo reveal, and
+  reduced-motion fallback.
+- Wired “Shop featured products” to New arrivals and “Explore TCGs” to Shop
+  by TCG.
+- Removed the homepage trust strip, uppercase eyebrow labels, numbered promise
+  cards, and generic supporting paragraphs. The homepage now uses the
+  admin-approved headings, newsletter wording, and three factual promises.
+- Left the admin-written About page completely unchanged.
+- Added `NewsletterPost` and `NewsletterDelivery` with explicit draft/send
+  lifecycle and per-recipient delivery history.
+- Added `/admin/newsletters` list, create/edit forms, live email preview,
+  optional image path/URL, current subscriber count, deletion for drafts, and
+  an explicit confirmed Broadcast/Retry action.
+- Reused Resend and React Email. Broadcasts re-check current opt-in, assign a
+  stable idempotency key per recipient, skip unsubscribed customers, and do
+  not intentionally resend successful recipients during retry.
+- Moved the theme initialization into a static before-interactive script to
+  comply with the current Next.js script handling.
+- Applied migration `20260728133000_add_newsletter_posts` to Neon and
+  regenerated the committed Prisma client.
+- No real newsletter was broadcast during implementation or testing.
+
+### Verification
+- Prisma schema validation passed.
+- Targeted ESLint passed for all changed customer, admin, API, and email files.
+- `tsc --noEmit` passed.
+- Production build passed compilation, TypeScript, page-data collection, and
+  generation of all 40 static pages.
+- Browser checks passed for the animated landing on desktop/mobile and
+  light/Collector Midnight themes.
+- Browser checks passed for the empty newsletter admin state and the live
+  editor preview. Draft persistence was not exercised against production data,
+  and the external Broadcast action was intentionally not triggered.
+- Existing warnings remain for multiple-lockfile workspace-root inference,
+  deprecated `middleware`, and PostgreSQL SSL-mode compatibility.
+
+### Review Checkpoint
+Admin should review the new landing scale/motion and the newsletter editor.
+If approved, proceed to Milestone 2 catalogue hierarchy. A drag-and-drop
+newsletter image upload remains gated on a persistent storage decision.
+
+---
+
+## Session 25
+
+Date: 2026-07-29
+
+### Objective
+Implement the five admin-approved storefront refinement milestones with a
+verification gate after each milestone.
+
+### Milestone 1 — Catalogue Index Routes and Navigation
+- Added `/categories` as the complete category index with standardized cards,
+  live non-archived product counts, route metadata, and BreadcrumbList JSON-LD.
+- Added `/products` as the complete product catalogue with category,
+  availability, and sort controls; URL-persisted filters; result counts; and
+  24-product pagination.
+- Extracted shared catalogue sort parsing and shared filter UI, then reused it
+  on the existing category detail page.
+- Updated Shop TCG and Explore TCGs to `/categories`; updated Browse all
+  collections to Browse all products at `/products`.
+
+### Milestone 1 Verification
+- Targeted ESLint passed.
+- `tsc --noEmit` passed.
+- Production build passed and generated both new routes.
+- Live HTTP checks returned 200 for `/categories` and filtered `/products`,
+  including expected headings, filter controls, and BreadcrumbList JSON-LD.
+- In-app visual QA could not run because the browser refused localhost
+  navigation after an earlier connection-error page. This remains a manual
+  review item; no attempt was made to bypass the browser restriction.
+
+### Milestone 2 — Standardized Categories Carousel
+- Renamed the homepage section to Categories.
+- Replaced the asymmetric category mosaic with equal 4:3 cards in a
+  dependency-free scroll-snap carousel.
+- The viewport shows at most three cards on desktop, two on tablet, and one on
+  mobile, with previous/next controls, touch scrolling, keyboard arrow
+  navigation, responsive control state, and reduced-motion-safe scrolling.
+- Added View all categories links to the new `/categories` route.
+
+### Milestone 2 Verification
+- Targeted ESLint and `tsc --noEmit` passed.
+- Production build passed and generated all 42 static pages.
+- Browser visual review remains part of the same localhost-policy limitation
+  recorded under Milestone 1.
+
+### Milestone 3 — Standardized New Arrivals
+- Removed the oversized spotlight composition and now query at most eight
+  newest non-archived products.
+- Every arrival uses the same shared ProductCard in a responsive two-, three-,
+  or four-column grid; desktop presents up to four columns by two rows.
+- Reserved a consistent two-line title area so short and long product names do
+  not create uneven card bottoms.
+
+### Milestone 3 Verification
+- Targeted ESLint and `tsc --noEmit` passed.
+- Production build passed and generated all 42 static pages.
+
+### Milestone 4 — Separate Email Senders
+- Added `RESEND_ORDER_FROM_EMAIL` and `RESEND_NEWSLETTER_FROM_EMAIL`.
+- Order lifecycle messages now use the order sender and manual newsletter
+  broadcasts use the newsletter sender.
+- Retained `RESEND_FROM_EMAIL` as a backward-compatible deployment fallback.
+- Updated local configuration and architecture documentation. Production must
+  receive both new variables and be redeployed before the sender split is live
+  there.
+- No real email was sent during verification.
+
+### Milestone 4 Verification
+- Targeted ESLint and `tsc --noEmit` passed.
+- Production build passed and generated all 42 static pages.
+
+### Milestone 5 — Brand Motion
+- Added a slow local ray rotation, breathing orbit, three restrained sparkles,
+  periodic sheen, and slight floating motion around the existing raster logo
+  without modifying or distorting the artwork.
+- The animation pauses when the hero artwork leaves the viewport.
+- Added a small user-triggered scale/tilt/gleam response to the header logo.
+- Every new animation has a static `prefers-reduced-motion` presentation.
+
+### Milestone 5 and Final Verification
+- Targeted ESLint passed for every file changed by these five milestones.
+- `tsc --noEmit` passed.
+- Final production build passed compilation, TypeScript, page-data collection,
+  and generation of all 42 static pages.
+- Whole-repository ESLint was also run. It still reports 44 errors and one
+  warning in pre-existing admin forms/actions, product-type/product API
+  handlers, the Clerk webhook, Contact copy, the payment-failed email template,
+  and the theme initializer. None are in files introduced or materially
+  changed by these milestones; they remain separate cleanup work.
+- Existing build warnings remain for multiple-lockfile root inference,
+  deprecated `middleware`, and PostgreSQL SSL-mode compatibility.
+- No real email was sent and no production environment was changed.
+
+### Review Checkpoint
+Admin should now review `/`, `/categories`, `/products`, carousel interaction,
+the equal New arrivals grid, and logo motion across desktop/mobile and
+light/Collector Midnight. After approval, begin the documented Product Line ->
+Era -> Set hierarchy milestone.
+
+### Follow-up Review Adjustments
+- Added the shared Back control to `/categories` and `/products`.
+- Removed Why us from the header and Collector promise from the footer.
+- Removed the three-promise section from the homepage, deleted its now-unused
+  component, and removed its orphaned styling.
+- Targeted ESLint and `tsc --noEmit` passed.
+- Production build passed compilation, TypeScript, and generation of all 42
+  static pages. Existing build warnings are unchanged.
+
+---
+
+## Session 26
+
+Date: 2026-07-29
+
+### Objective
+Implement and self-review premium category and product merchandising while
+preserving the admin-approved Category -> Product/Set -> Variant/Format model.
+
+### Catalogue Model Decision
+- Cancelled the proposed Product Line -> Era -> Set hierarchy and associated
+  migration, nested routes, and admin fields.
+- Categories remain top-level TCG lines; each product remains one set; its
+  purchasable formats remain variants.
+- Confirmed that the existing variant combination editor preserves existing
+  priced rows and only adds missing combinations when a format is added.
+
+### Milestone 3 Implementation
+- Added an image-led category hero with set, format, and availability totals.
+- Added name search to category detail and all-products filters while retaining
+  URL-based sorting and stock filtering.
+- Added category result counts and explicit set/format catalogue guidance.
+- Rebuilt the product gallery around the main image plus unique variant images;
+  selecting a variant thumbnail also selects its matching format.
+- Default product selection now prefers an in-stock variant.
+- Consolidated price, SKU, format choices, sold-out state, availability,
+  quantity controls, and add-to-cart feedback into one purchase panel.
+- Added structured product details and up to four related products from the
+  product's deterministic primary category.
+- No schema, migration, API, admin, dependency, or About-page change was made.
+
+### Verification
+- Targeted ESLint passed for all five changed application files.
+- `tsc --noEmit` passed.
+- The Next.js production build passed compilation, TypeScript checking, page
+  data collection, and generation of all 42 pages.
+- Browser review passed on desktop and mobile in light and Collector Midnight.
+- Verified category filtering/no-results state, available and sold-out variant
+  selection, variant thumbnails, quantity increments, add-to-cart feedback,
+  cart count, related sets, responsive layout, and zero browser console errors.
+- Removed the temporary cart item after the interaction test.
+- Existing build warnings remain for multiple-lockfile workspace-root
+  inference, deprecated `middleware`, and PostgreSQL SSL-mode compatibility.
+
+---
+
+## Session 27
+
+Date: 2026-07-29
+
+### Objective
+Complete Milestone 4 launch-readiness work while leaving the admin-deferred
+legal-policy review out of scope.
+
+### Commerce and Customer Experience
+- Reworked cart, checkout, and checkout-status layouts with the premium
+  light/Collector Midnight tokens without changing payment, promotion, GST,
+  stock, or reconciliation rules.
+- Checkout now blocks payment until real fulfilment fees load successfully and
+  offers an explicit retry instead of falling back to hardcoded prices.
+- Corrected the paid self-collection receipt to display the configured pickup
+  address rather than an empty shipping block.
+- Reworked search results, My orders, and the customer order receipt for both
+  themes. The receipt table now has a caption, scoped headers, and responsive
+  horizontal overflow.
+
+### SEO and Structured Data
+- Added a root metadata base, title template, application metadata, and default
+  OpenGraph/Twitter card values using the PokeSunshineTCG logo and tagline.
+- Added canonical URLs to public content and catalogue routes, with dynamic
+  category/product metadata and social images.
+- Added noindex metadata to cart, checkout, checkout status, search, and account
+  routes.
+- Added an hourly database-backed `/sitemap.xml` containing public static
+  routes, categories with live products, and all non-archived products.
+- Revalidated Product JSON-LD against current Google requirements: name plus
+  per-variant SGD offers with price and availability remain present.
+- Updated breadcrumbs to reflect the approved customer path:
+  Home -> Categories -> Category -> Product, with an All products fallback.
+
+### Accessibility and Performance
+- Added a skip-to-content link and global focus-visible outline.
+- Labelled header search forms, added live suggestion feedback, and made Escape
+  close the mobile navigation.
+- Preserved accessible quantity controls, selected-option state, fulfilment
+  radios, checkout labels, and live error/status feedback.
+- Updated the homepage LCP image to the Next 16 `preload` API and eagerly loads
+  the above-the-fold product/category hero image while retaining lazy loading
+  elsewhere.
+- Self-hosted Geist through `next/font/local`, removing the build-time Google
+  Fonts network dependency.
+- Migrated deprecated `middleware.ts` to the Next 16 `proxy.ts` convention.
+- Updated the footer TCG link to the real `/categories` route.
+
+### Verification
+- Targeted ESLint passed for all Milestone 4 application/configuration files.
+- Next route type generation passed.
+- `tsc --noEmit` passed.
+- The production build passed compilation, TypeScript, page-data collection,
+  and generation of all 43 routes, including the hourly sitemap.
+- The sitemap artifact was inspected and contains static, category, product,
+  change-frequency, last-modified, and image entries as expected.
+- Whole-project ESLint was run separately and still reports 42 pre-existing
+  errors and one warning in unrelated admin/API/email files. This remains a
+  dedicated cleanup task, not a Milestone 4 regression.
+- PostgreSQL SSL-mode forward compatibility remains a build warning.
+- The admin requested that no preview server be started; browser review is
+  therefore Review Gate 4 on the admin-run server.
+
+### Final Pre-Live Gate
+- At final deployment readiness, remind the admin to regenerate/rotate every
+  API key and secret and update the deployment environment.
+- Wiping disposable Prisma data is a separate destructive action and requires
+  explicit confirmation at that time. After the wipe, reseed only approved
+  production content and run one final smoke test.
+
+### Follow-Up — Turbopack Root Override Reverted
+- Explicit `turbopack.root` attempts using `process.cwd()` and `__dirname`
+  resolved outside the repository during development, which caused dependency
+  resolution failures and repeated access-denied HMR errors.
+- Removed the entire root override and restored Next.js automatic root
+  detection. Config ESLint passed.
+- The admin will restart and verify the development server. The
+  multiple-lockfile inference warning may return; it is non-fatal and should
+  only be revisited with a separately tested configuration.
+
+---
+
+## Session 28
+
+Date: 2026-07-29
+
+### Objective
+Repair the invalid `/sitemap.xml` discovered during Review Gate 4 without
+starting or stopping the admin-run development server.
+
+### Sitemap XML Repair
+- Confirmed that three database-backed image URLs contained query parameters
+  with raw ampersands.
+- Next.js emitted those values directly inside `<image:loc>`, causing XML
+  parsing to stop at the first `&`.
+- Added sitemap-specific URL serialization that converts ampersands to
+  `&amp;` for static, category, product, and image locations.
+- No database, schema, dependency, catalogue, or route-scope change was made.
+
+### Verification
+- The already-running `/sitemap.xml` endpoint returned HTTP 200.
+- The complete response parsed successfully as XML with 17 URL entries.
+- Confirmed zero unescaped ampersands remain in the response.
+- Targeted ESLint passed for `app/sitemap.ts`.
+- `tsc --noEmit` passed.
+- The development server was not started or stopped.

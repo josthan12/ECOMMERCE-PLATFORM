@@ -68,3 +68,23 @@ export const PromoDiscountType = {
 } as const
 
 export type PromoDiscountType = (typeof PromoDiscountType)[keyof typeof PromoDiscountType]
+
+
+export const NewsletterPostStatus = {
+  DRAFT: 'DRAFT',
+  SENDING: 'SENDING',
+  SENT: 'SENT',
+  FAILED: 'FAILED'
+} as const
+
+export type NewsletterPostStatus = (typeof NewsletterPostStatus)[keyof typeof NewsletterPostStatus]
+
+
+export const NewsletterDeliveryStatus = {
+  PENDING: 'PENDING',
+  SENT: 'SENT',
+  FAILED: 'FAILED',
+  SKIPPED: 'SKIPPED'
+} as const
+
+export type NewsletterDeliveryStatus = (typeof NewsletterDeliveryStatus)[keyof typeof NewsletterDeliveryStatus]

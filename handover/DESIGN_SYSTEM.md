@@ -42,6 +42,10 @@ When in doubt:
 | `--color-secondary` | `#6E2439` | Secondary accents |
 | `--color-accent` | `#C6A15B` | Premium highlights |
 | `--color-accent-light` | `#E2C98F` | Hover states |
+| `--color-ink` | `#101B31` | Stable premium dark panels |
+| `--color-ink-muted` | `#192843` | Layered content on ink panels |
+| `--color-on-ink` | `#FAF7F0` | Primary text on ink panels |
+| `--color-on-ink-muted` | `#C2C8D2` | Secondary text on ink panels |
 
 ---
 
@@ -470,14 +474,23 @@ Should include:
 Recommended order:
 
 1. Hero
-2. Featured Collections
-3. New Arrivals
-4. Trending Products
-5. Popular Sets
-6. Trust Section
-7. Reviews
-8. Newsletter
-9. Footer
+2. Trust Strip
+3. Featured Collections
+4. New Arrivals
+5. Collector Promise
+6. Newsletter
+7. Footer
+
+Current premium composition:
+
+- Hero copy and calls to action sit beside catalogue-driven collection imagery.
+- Featured collections use asymmetric editorial cards rather than a uniform
+  icon grid.
+- New arrivals use one large product spotlight plus supporting product cards.
+- Stable ink surfaces carry the hero, collector promise, newsletter, and
+  footer in both light and Collector Midnight themes.
+- Customer-facing copy must never expose internal milestones or implementation
+  status.
 
 ---
 

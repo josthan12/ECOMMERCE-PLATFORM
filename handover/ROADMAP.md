@@ -6,182 +6,171 @@ Phases 0–5 = shippable store (real products, real payments, real order fulfill
 ---
 
 ## Phase 0 — Project Setup ✅ COMPLETE
-
-- [x] Next.js (App Router) + TypeScript + TailwindCSS
-- [x] GitHub repo connected
-- [x] Vercel deployment (auto-deploy from main)
-- [x] Neon PostgreSQL database provisioned
-- [x] Prisma 7 initialized
-- [x] ngrok set up for local webhook testing
-- [x] HitPay sandbox account created
-- [x] Environment variables documented
-
----
-
 ## Phase 1 — Data Model & Auth ✅ COMPLETE
-
-- [x] Prisma schema: User, Address models
-- [x] Role enum: CUSTOMER, STAFF, ADMIN
-- [x] Clerk authentication integrated
-- [x] Sign-in and sign-up pages
-- [x] Clerk webhook → creates User row on signup
-- [x] lib/prisma.ts singleton (Prisma 7 PrismaPg adapter)
-- [x] Own account promoted to ADMIN
-
----
-
 ## Phase 2 — Admin Panel ✅ COMPLETE
-
-- [x] Admin layout with role-based access protection
-- [x] Admin dashboard shell with sidebar navigation
-- [x] Product Type Builder (create types + custom fields)
-- [x] Product Builder (dynamic form from type field definitions)
-- [x] Products list page
-- [x] API routes: /api/admin/product-types, /api/admin/products
-- [x] ProductVariant schema added
-- [x] Product Variant UI
-- [x] Category Builder (create/edit categories with SEO + banner)
-- [x] Category list page and API routes
-
-**Phase 2 addendum (2026-07-17, well after this phase, outside original scope):** none of Categories, Products, or Product Types had any edit capability at all until this addendum — every one of them was create-and-list only, with Prisma Studio as the only way to fix a mistake. Closed as a genuine gap, not a deferred nice-to-have, once noticed mid-session:
-- [x] Category — full edit (`PUT /api/admin/categories/[id]`) and real hard delete (`DELETE`). Slug locked after creation.
-- [x] Product — full edit (`PUT /api/admin/products/[id]`), including non-destructive variant add/edit/remove. Archive, not hard delete (`PATCH /api/admin/products/[id]/archive`, `Product.archived`), modeled on Shopify's own archive-vs-delete distinction (researched, not guessed). `productTypeId` and `slug` both locked after creation.
-- [x] Product Type — full edit (`PUT /api/admin/product-types/[id]`), including field add/edit/reorder. `ProductField.key` and `.type` locked once a field exists; removing a field blocked server-side if any product still holds data in it. **No delete, no type-reassignment feature — deliberate, permanent decision**, not deferred: `Product.productTypeId` is required with no cascade from `ProductType`, so safe deletion isn't structurally possible without a real reassignment feature, which was judged not worth building for an expected rare, low-volume need. See DECISIONS.md.
-
----
-
 ## Phase 3 — Public Storefront ✅ COMPLETE
-
-- [x] Modular homepage section renderer
-- [x] Section types: Hero Banner, Featured Products, Category Grid, Newsletter
-- [x] Category page route (/category/[slug]) with filters + product grid
-- [x] Product page route (/product/[slug]) with gallery + variant selector
-- [x] Spec table rendered from product type field schema
-- [x] Variant selector (drives image swap, price update)
-- [x] Basic filtering and sorting on category pages
-
----
-
 ## Phase 4 — Cart, Checkout & HitPay ✅ COMPLETE FOR MVP
-(One item deliberately deferred, one blocked externally — see checklist below and DECISIONS.md)
-
-- [x] Cart state with Zustand (localStorage-persisted — deliberate choice over DB-backed for this stage)
-- [x] GST calculation module (9% Singapore GST) — later extended in Phase 5 to also tax the shipping fee
-- [x] HitPay Payment Request creation via REST API
-- [x] HitPay hosted checkout integration (redirect-based)
-- [x] Webhook endpoint: /api/webhooks/hitpay
-- [x] HMAC signature verification on HitPay webhook
-- [x] Order status: Pending Payment → Paid / Payment Failed
-- [x] Order confirmation page (real breakdown + access control), cancellation messaging updated to instruct customers to refresh after completing payment via QR. **Extended 2026-07-17** with a verified, read-only confirmation view for unauthenticated visitors (common with QR payments completed on a different device than the one used to check out) — see DECISIONS.md.
-- [x] Automatic background reconciliation for abandoned/expired orders — **RESOLVED 2026-07-15**. Originally deferred (2026-07-13), reversed after real usage confirmed the browser-Back-button gap was a genuine recurring problem, not a theoretical one. Implemented as a scheduled sweep (`/api/cron/reconcile-orders`, every 5 minutes via cron-job.org) rather than GitHub Actions/Vercel Cron — see DECISIONS.md (2026-07-15).
-- [x] Custom branded order confirmation + payment-failed emails (Resend + React Email) — HitPay's built-in receipt retained as a secondary receipt
-- [x] Test: PayNow QR flow (sandbox) — including abandonment/expiry path, fully verified
-- [ ] Test: Card flow (sandbox) — blocked, requires bank account setup on HitPay account
-- [~] Test: Failed payment flow (sandbox) — `expired` path fully verified; `failed` status specifically not directly observed but shares identical code
-- [ ] Test: Webhook retry behavior — not explicitly tested; idempotency guard in place by design
-- [x] **(Added in Phase 5 session)** Fulfillment method selection at checkout (Delivery / Self Collection), flat shipping fee, GST applied to shipping — see Phase 5 below and DECISIONS.md (2026-07-14)
-- [x] **Full production deployment to Vercel (2026-07-15), verified end-to-end (2026-07-17)** — custom domain (`biggyballs69.gay`) connected, `NEXT_PUBLIC_APP_URL` updated, full successful payment path re-tested on the live domain, all env vars and both webhook registrations (Clerk + HitPay, ngrok + Vercel) confirmed.
-
----
-
 ## Phase 5 — Order Fulfillment ✅ COMPLETE FOR MVP
-(Several items dropped by deliberate decision, one deferred — see DECISIONS.md 2026-07-14)
 
-- [x] Orders queue: list/filter/sort by status
-- [~] Bulk actions (mark packed, bulk export) — **deliberately deferred**, not built. Genuinely not needed at current order volume; revisit if that changes.
-- [x] Order detail page: customer info, items, payment status, status timeline
-- [x] Status lifecycle: branched by fulfillment method —
-      Delivery: Pending → Paid → Processing → Packed → Shipped → Delivered → Completed
-      Self Collection: Pending → Paid → Processing → Packed → Completed (skips Shipped/Delivered)
-- [ ] ~~First courier API integration (Ninja Van or Qxpress)~~ — **dropped**. Admin self-fulfills shipping and prints own labels.
-- [ ] ~~Generate shipping label action~~ — **dropped**, same reasoning as above.
-- [x] Manual tracking number — now the *only* tracking mechanism (not a "fallback" as originally scoped, since no courier API exists to fall back from)
-- [ ] ~~Courier status sync (webhook/polling)~~ — **dropped**, no courier API exists to sync with.
-- [x] Customer notifications on status change (email) — Shipped notification (delivery) and Ready-for-Collection notification (self-collection), both via Resend/React Email, following the Phase 4 email pattern
-- [ ] ~~Returns: admin approval flow~~ — **dropped entirely**. Folded into the same manual refund process below; not a separate feature.
-- [x] Refunds — **manual record-keeping only**. No HitPay Refund API integration (deliberately rejected — see DECISIONS.md), no automatic stock restoration (deliberately rejected). Admin marks an order "Refunded" after handling the actual refund entirely outside the app.
-- [x] Customer-facing order tracking in My Account — `/account/orders` + `/account/orders/[id]`
-
-**Also added this phase, outside original scope:** self-collection as a checkout-time fulfillment option (with its own flat fee, defaulting to free), and a pickup-location display (hardcoded constant, not DB-managed).
+(Unchanged from prior sessions — see previous ROADMAP.md revisions and
+SESSION_LOG.md Sessions 1–9 for full history of these phases.)
 
 ---
 
-## Phase 6 — Search & AI Shopping Assistant (IN PROGRESS — search complete, AI deliberately deferred)
+## Phase 6 — Search & AI Shopping Assistant (IN PROGRESS — search complete, AI still fully deferred)
 
-- [ ] ~~Meilisearch provisioned and product indexing wired~~ — **skipped by deliberate decision (2026-07-17).** Typo tolerance was confirmed not required for this store; Meilisearch's core value over plain Postgres search is exactly that (plus relevance ranking/faceting at scale), so it was judged pure infrastructure overhead — a new external service, plus either a recurring hosted cost or a new persistent server to self-host and maintain — with no corresponding benefit at this store's size. Revisit if catalog size grows significantly or a typo-tolerance requirement emerges. See DECISIONS.md.
-- [x] Full-text search on storefront — **built without typo tolerance**, by deliberate choice (re-worded from the original "Typo-tolerant" framing to match what was actually decided and built — see DECISIONS.md, 2026-07-17). Prisma-based case-insensitive `contains` match on `Product.name`/`description`, filtered to exclude archived products. Includes: `/search` results page, a shared `ProductCard` component (extracted from the category page and `FeaturedProducts`), and a debounced (300ms) live-suggestion dropdown in the header (`SearchBar.tsx` + `/api/search/suggestions`, showing image/name/category/price, capped at 6 results).
-- [ ] AI natural language search (LLM extracts filters → queries — architecture direction already decided as tool-calling against Prisma directly, not Meilisearch, consistent with the decision above; nothing built yet)
-- [ ] AI Shopping Assistant chat UI
-- [ ] Function/tool calling against real product API (no hallucinated products)
-- [ ] PDPA consent flow before AI accesses personal data
-- [ ] AI Memory: long-term preferences stored post-consent
-- [ ] Settings page: view/edit/delete AI preferences
+- [x] Full-text search on storefront (Prisma-based, no Meilisearch)
+- [ ] AI natural language search — unstarted, untouched since Session 10
+- [ ] AI Shopping Assistant chat UI — unstarted
+- [ ] Function/tool calling against real product API — unstarted
+- [ ] PDPA consent flow before AI accesses personal data — unstarted
+- [ ] AI Memory / preferences settings page — unstarted
+
+No change this session. Still explicitly deferred, not abandoned.
 
 ---
 
-## Phase 7 — Homepage Builder, Theme & CMS
+## Phase 7 — Homepage Builder, Theme & CMS (IN PROGRESS — theming and coupon codes complete, rest unstarted)
 
-- [ ] Homepage Builder: drag-and-drop section reordering
-- [ ] Per-section config (data source, layout, padding, animation)
-- [ ] Theme Builder: color/typography/spacing via CSS variables
-- [ ] Dark mode / light mode toggle
-- [ ] CMS pages: About, FAQ, Terms, Privacy (PDPA), Returns, Shipping
-- [ ] Promotions: coupon codes
-- [ ] Promotions: flash sale scheduling
-- [ ] Promotions: bundle pricing
+- [ ] Homepage Builder: drag-and-drop section reordering — **unstarted**. Homepage remains a hardcoded composition in `app/page.tsx`.
+- [ ] Per-section config (data source, layout, padding, animation) — **unstarted**
+- [x] **Theme Builder — the visual result is complete, the "builder" is not (2026-07-22).** A full, real design system was implemented site-wide (storefront + entire admin panel) against three admin-supplied brand documents (VISION.md, DESIGN_SYSTEM.md, UI_PATTERNS.md): Tailwind v4 CSS-first tokens for color/typography/spacing/shadow/radius, Geist as the site's sole typeface, `lucide-react` icons, shared UI primitives (`Button`/`Badge`/`Card`/`MetricCard`), and consistent motion (`ScrollReveal.tsx`, hover states) throughout. **This is not yet admin-editable** — colors/fonts/spacing live as hardcoded CSS custom properties in `globals.css`, not a database-backed settings UI. If "Theme Builder" is meant literally (an admin can change the palette without a code deploy), that remains unbuilt.
+- [x] **Dark mode / light mode toggle — COMPLETE (2026-07-22).** Collector Midnight palette selected via Visualizer; header sun/moon button; OS preference on first visit; manual override persisted in `localStorage`; pre-paint `data-theme` initialization avoids flashing and hydration mismatch. No new dependency.
+- [x] **CMS pages — partial (2026-07-22).** Built: global `Footer.tsx`, `/faq` (real content), `/about`, `/contact` (both finalized by the admin directly). **Deliberately not built, by explicit admin decision, not deferral:** Terms & Conditions, Shipping, Returns, Help Center. No `CMSPage` database model exists — all pages built are hand-written, hardcoded Next.js pages, not a CMS-backed system.
+- [x] **Promotions: coupon codes — COMPLETE (2026-07-22).** `PromoCode` model, full admin CRUD (`/admin/promo-codes`), checkout integration (live preview + real application), whole-order-only scope (no product/category targeting), percentage or fixed-amount discount with optional minimum-order and maximum-discount-cap fields, single-use-until-admin-reactivates lifecycle. Deliberately scoped narrower than a general marketing-coupon system — see DECISIONS.md 2026-07-22 for full reasoning. Discount is applied before GST calculation; GST itself was made fully conditional in the same pass (`GST_ENABLED`, since the store is not currently GST-registered) — see `lib/gst.ts` and DECISIONS.md.
+- [ ] Promotions: flash sale scheduling — **unstarted, unscoped**
+- [ ] Promotions: bundle pricing — **unstarted, unscoped**
 
-**Note (2026-07-17):** storefront and admin styling was called out again this session as genuinely "ugly," with meaningfully more surface area now built on the bare-Tailwind baseline (search UI, product cards, several new admin edit forms) since this was last raised. Worth deciding at the start of the next session whether to do all of Phase 7 as originally scoped, or split out a smaller, faster "real theme pass" (just the Theme Builder / visual polish, without the drag-and-drop builder or CMS/promotions) ahead of finishing Phase 6's AI assistant. See NEXT_TASK.md.
+**Also added this session, not originally part of Phase 7's scope:**
+- Admin Dashboard Summary (`/admin`) — real revenue/expense/profit tracking, `recharts`-powered charts (Revenue Trend, New Customers, Delivery vs. Self-Collection split, Top 5 Products), and — once Promotions landed — Total Discounts Given / Discount Codes Used metrics.
+- Expense tracking (`/admin/expenses`) — a flat, deliberately relation-free cost log the admin manages by hand, feeding the dashboard's Profit calculation.
+
+**Completed (2026-07-28):** Newsletter preference wiring is account-only
+single opt-in. Signed-out visitors authenticate through Clerk; authenticated
+users can subscribe/unsubscribe through `/api/newsletter`, with current state
+and consent timestamps stored on `User`. The admin can create/edit/preview
+drafts at `/admin/newsletters`, include an image path or hosted image URL, and
+manually broadcast only after confirming. Per-recipient delivery records
+support safe retry without intentionally resending successful deliveries.
+
+---
+
+## Premium Storefront Redesign (ACTIVE — GATED MILESTONES)
+
+- [x] **Milestone 1 — Storefront identity and homepage (2026-07-28).**
+      Premium customer header/navigation, PokeSunshineTCG animated landing
+      with the admin-supplied logo and tagline, asymmetric collection
+      presentation, featured-arrival spotlight, richer product cards,
+      simplified store promises, newsletter treatment, multi-column footer,
+      stable ink surface tokens, and responsive mobile navigation.
+- [x] **Review Gate 1 — final visual direction.** The 2026-07-29 refinement
+      pass added real `/categories` and `/products` destinations, an accessible
+      standardized category carousel, eight-card New arrivals grid, separate
+      email senders, enhanced reduced-motion-safe logo animation, Back controls
+      on both catalogue indexes, and a simpler homepage without the promise
+      strip. Admin
+      approved light mode, Collector Midnight, desktop/mobile density,
+      carousel interaction, filters, and motion.
+- [x] **Milestone 2 — catalogue model confirmation (2026-07-29).** The admin
+      deliberately retained the existing flat model: categories are TCG lines
+      such as Pokemon English, Pokemon Japanese, and Riftbound English; each
+      product is a set; purchasable formats are variants. No hierarchy,
+      migration, admin-field, or nested-route work is required.
+- [x] **Review Gate 2 — navigation and content model.** The admin confirmed
+      Category -> Product/Set -> Variant/Format and confirmed that adding a
+      format through the existing combination editor is sufficiently simple.
+- [x] **Milestone 3 — collection and product merchandising (2026-07-29).** Premium set
+      landing pages, filters, result counts, product gallery/purchase-panel
+      improvements, related products, and responsive/dark-mode polish are
+      implemented and have passed automated and browser self-review.
+- [x] **Review Gate 3 — commerce experience.** Admin approved the
+      representative category, set, product, and cart journey.
+- [x] **Milestone 4 — cart/checkout consistency, SEO alignment, and QA
+      implementation (2026-07-29).** Cart, checkout, checkout status, search,
+      and customer order surfaces are aligned with both themes. Canonical and
+      social metadata, a database-backed sitemap, flat-catalogue
+      Product/BreadcrumbList data, focused accessibility improvements,
+      self-hosted fonts, image loading, and Next 16 build cleanup are complete.
+      Targeted lint, route types, TypeScript, and the 43-route production build
+      pass.
+- [ ] **Review Gate 4 — launch-readiness visual/interaction review.** Admin
+      checks cart, checkout, search, order history/receipt, responsive layout,
+      both themes, `/sitemap.xml`, and representative page metadata using the
+      user-run local server.
 
 ---
 
 ## Phase 8 — Performance, SEO, Accessibility, Compliance
 
 - [ ] ISR/SSR strategy confirmed per page type
-- [ ] Image optimization via Next.js Image
+- [ ] Image optimization via Next.js Image — **in progress (2026-07-23).**
+      Product cards, product detail, search suggestions, and cart thumbnails
+      share `CatalogImage`: repository-local paths use Next.js `Image`, with
+      a temporary native fallback for remote URLs in the disposable test
+      database. Product presentation is standardized to a square source/display
+      canvas with `object-contain`; homepage category icons use square artwork
+      in uniform 3:2 `object-cover` tiles. Product create/edit both verify the
+      required main image and optional variant filenames before submission.
+      Category create/edit now verify required local icon filenames; the
+      incompatible wide category-detail banner was removed. The local hero
+      poster now uses Next.js Image and correctly replaces the video for
+      reduced-motion users. Only post-database-reset removal of the legacy
+      remote branch remains.
 - [ ] CDN caching headers
-- [ ] Structured data (Product, BreadcrumbList schema.org)
-- [ ] OpenGraph + Twitter Card meta tags
-- [ ] XML sitemap generation
-- [ ] Canonical URLs
-- [ ] WCAG AA audit (axe / Lighthouse)
-- [ ] Keyboard navigation test through checkout
+- [x] Structured data (Product, BreadcrumbList schema.org) — **complete
+      (2026-07-23).** Product detail pages expose absolute URLs, images, and
+      per-variant SGD offers with optional SKUs and stock-derived
+      availability. Product and category detail routes expose breadcrumb
+      trails. JSON-LD serialization escapes `<` so admin-managed catalog text
+      cannot break out of the script payload.
+- [x] OpenGraph + Twitter Card meta tags — root defaults plus category/product
+      overrides added in Milestone 4
+- [x] XML sitemap generation — hourly database-backed `/sitemap.xml` containing
+      public content, non-empty categories, and non-archived products
+- [x] Canonical URLs — public content/catalogue routes complete; product-list
+      filters and pagination canonicalize to the base catalogue route
+- [ ] WCAG AA audit (axe / Lighthouse) — focused code review and remediation
+      completed for skip navigation, focus visibility, search announcements,
+      mobile-menu Escape behaviour, checkout labels, quantity controls, and
+      order tables; formal automated/assistive-technology audit remains
+- [ ] Keyboard navigation test through checkout — code-level control audit
+      passed; interactive test remains at Review Gate 4
 - [ ] Screen reader test through checkout
 - [ ] PDPA: consent, export, deletion verified end-to-end
 - [ ] Audit logging on all admin actions
 - [ ] Confirmed: no raw card data touches own servers
+- [ ] **Deferred by the admin: legal review of the "all sales are final"
+      wording.** Not part of the current milestone and not resolved.
 
 ---
 
 ## Phase 9 — Launch
 
-- [ ] HitPay switched to live keys (production only)
-- [ ] Live courier API credentials — **note: no longer applicable per Phase 5 decision to self-fulfill shipping; remove or replace with "own shipping process finalized" if this item is revisited**
-- [ ] DNS + SSL + domain cutover on Vercel — **partially done ahead of schedule (2026-07-17):** custom domain (`biggyballs69.gay`) is connected and SSL is live, motivated by an email-deliverability fix found mid-session rather than by reaching this phase in order. Genuine production credentials (separate Clerk prod instance, separate Neon prod branch, live HitPay keys) remain outstanding, still explicitly this phase's scope.
-- [ ] Error tracking (Sentry)
-- [ ] Uptime monitoring
-- [ ] Alert on HitPay webhook failures specifically
-- [ ] Soft launch: handful of real orders end-to-end
-- [ ] Full loop verified: payment → fulfillment → delivery → customer tracking
+(Unchanged from Session 10's ROADMAP.md — custom domain connected ahead of
+schedule, genuine production credentials and the rest of this phase remain
+outstanding. No work done on this phase this session.)
+
+### Final pre-live gate — explicit admin requirement
+
+- [ ] Remind the admin to rotate/regenerate every deployment API key and
+      secret before the final production deployment. Review Clerk, HitPay,
+      Resend, Neon/PostgreSQL, cron/webhook secrets, and every other populated
+      deployment secret; update local and hosting environments without
+      recording secret values in source control.
+- [ ] After a separate explicit confirmation, wipe the disposable Prisma
+      catalogue, account/order, newsletter, promotion, and operational test
+      data immediately before the real catalogue and live store are opened.
+      This is destructive and must never be inferred from milestone approval.
+- [ ] Regenerate/reseed only the production data the admin explicitly approves,
+      then run one final production smoke test before announcing the site live.
 
 ---
 
 ## Future Features (Post-Launch)
 
-- AR Product Preview
-- Virtual Try-On
-- Subscription Products (HitPay recurring billing)
-- Marketplace / Multi-vendor support
-- Live Shopping Streams
-- Loyalty Program + Referral System
-- Gift Registry + Gift Cards
-- In-person POS (HitPay POS terminal)
-- Regional expansion (Malaysia, Philippines — HitPay already supports)
-- Headless API (REST + GraphQL)
-- Webhooks + plugin system
-- Multi-language (Simplified Chinese, Malay, Tamil)
-- A/B testing for layouts and promotions
-- Self-collection: paid fee (currently free but config-driven, ready to flip)
-- Self-collection pickup address: move from hardcoded constant to admin-editable DB setting, if it ever needs to change more than rarely
-- Bulk order actions (mark packed in bulk, CSV export) — deferred from Phase 5
-- Meilisearch — revisit if catalog size or a typo-tolerance requirement makes plain Postgres search insufficient (deferred 2026-07-17, see DECISIONS.md)
-- Product Type reassignment — a real feature for moving an existing product to a different type with proper attribute field-mapping, if this is ever needed more than rarely (deferred 2026-07-17, see DECISIONS.md)
+(Unchanged from Session 10's ROADMAP.md — AR Preview, Virtual Try-On,
+Subscriptions, Marketplace, Live Shopping, Loyalty/Referral, Gift
+Registry/Cards, POS, regional expansion, Headless API, multi-language,
+A/B testing, paid self-collection, admin-editable pickup address, bulk
+order actions, Meilisearch, Product Type reassignment — all still
+explicitly available to revisit later, none rejected forever.)

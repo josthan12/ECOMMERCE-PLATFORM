@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { ImageOff } from 'lucide-react'
+import { ArrowUpRight, ImageOff } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import CatalogImage from './CatalogImage'
 
 export type ProductCardVariant = { price: number; stock: number }
 
@@ -42,24 +43,24 @@ export default function ProductCard({
     <Link
       href={`/product/${product.slug}`}
       className={cn(
-        'group relative block overflow-hidden rounded-lg border border-border-light bg-surface shadow-card',
-        'transition-all duration-250 ease-out',
-        'hover:-translate-y-1.5 hover:border-accent hover:shadow-dropdown'
+        'group relative flex h-full flex-col overflow-hidden rounded-xl border border-border-light bg-surface shadow-card',
+        'transition-all duration-[250ms] ease-out',
+        'hover:-translate-y-1 hover:border-accent hover:shadow-dropdown'
       )}
     >
       {showOutOfStockBadge && outOfStock && (
-        <span className="absolute right-2.5 top-2.5 z-10 rounded-pill bg-primary/90 px-2.5 py-1 text-xs font-medium text-text-inverse">
+        <span className="absolute right-3 top-3 z-10 rounded-pill bg-ink/90 px-2.5 py-1 text-[10px] font-semibold tracking-[0.08em] text-on-ink uppercase backdrop-blur-sm">
           Out of Stock
         </span>
       )}
 
-      <div className="aspect-[3/4] overflow-hidden bg-surface-muted">
+      <div className="relative aspect-square overflow-hidden border-b border-border-light bg-surface-muted">
         {product.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <CatalogImage
             src={product.imageUrl}
             alt=""
-            className="h-full w-full object-cover transition-transform duration-[350ms] ease-out group-hover:scale-105"
+            sizes="(max-width: 639px) 50vw, (max-width: 767px) 33vw, (max-width: 1399px) 25vw, 350px"
+            className="p-3 transition-transform duration-500 ease-out group-hover:scale-[1.035]"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
@@ -68,11 +69,27 @@ export default function ProductCard({
         )}
       </div>
 
-      <div className="p-4">
-        <Heading className="line-clamp-2 text-sm font-medium text-text">
+      <div className="flex flex-1 flex-col p-4 md:p-5">
+        <div className="flex items-center justify-between gap-2 text-[10px] font-semibold tracking-[0.1em] uppercase">
+          <span className={outOfStock ? 'text-text-muted' : 'text-success'}>
+            {outOfStock ? 'Unavailable' : 'In stock'}
+          </span>
+          <span className="text-text-light">
+            {product.variants.length}{' '}
+            {product.variants.length === 1 ? 'format' : 'formats'}
+          </span>
+        </div>
+        <Heading className="mt-3 min-h-10 line-clamp-2 text-sm font-medium leading-5 text-text md:text-base">
           {product.name}
         </Heading>
-        <p className="mt-1.5 font-medium text-primary">{formatPrice(product.variants)}</p>
+        <div className="mt-auto flex items-end justify-between gap-3 pt-5">
+          <p className="font-display text-base font-semibold text-primary md:text-lg">
+            {formatPrice(product.variants)}
+          </p>
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-text-muted transition-colors group-hover:border-accent group-hover:bg-accent group-hover:text-accent-foreground">
+            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+          </span>
+        </div>
       </div>
     </Link>
   )

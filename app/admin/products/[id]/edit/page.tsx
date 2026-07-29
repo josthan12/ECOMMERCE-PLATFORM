@@ -1,9 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { AlertCircle, Package, Plus, X, Lock } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Loader2, Package, Plus, X, Lock } from 'lucide-react'
 import Button from '../../../../components/ui/Button'
+import {
+  getCatalogImageFilename,
+  getCatalogImagePath,
+  verifyCatalogImageFile,
+} from '@/lib/catalogImages'
 
 type ProductField = {
   id: string
@@ -21,13 +26,17 @@ type ProductType = {
 }
 
 type VariantOption = { name: string; values: string }
+type ImageVerificationStatus = 'idle' | 'checking' | 'verified' | 'error'
 type VariantRow = {
   id?: string
   combination: Record<string, string>
   price: string
   stock: string
   sku: string
-  imageUrl: string
+  imageFilename: string
+  legacyImageUrl: string
+  imageStatus: ImageVerificationStatus
+  imageMessage: string
 }
 
 const inputClass =
@@ -50,7 +59,16 @@ function generateCombinations(options: VariantOption[]): VariantRow[] {
     return acc.flatMap((combo) => option.values.map((v) => ({ ...combo, [option.name]: v })))
   }, [])
 
-  return combos.map((combination) => ({ combination, price: '', stock: '', sku: '', imageUrl: '' }))
+  return combos.map((combination) => ({
+    combination,
+    price: '',
+    stock: '',
+    sku: '',
+    imageFilename: '',
+    legacyImageUrl: '',
+    imageStatus: 'idle',
+    imageMessage: '',
+  }))
 }
 
 function comboKey(combo: Record<string, string>) {
@@ -69,7 +87,11 @@ export default function EditProductPage() {
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [imageUrl, setImageUrl] = useState('')
+  const [imageFilename, setImageFilename] = useState('')
+  const imageFilenameRef = useRef('')
+  const [legacyImageUrl, setLegacyImageUrl] = useState('')
+  const [imageStatus, setImageStatus] = useState<ImageVerificationStatus>('idle')
+  const [imageMessage, setImageMessage] = useState('')
   const [attributes, setAttributes] = useState<Record<string, any>>({})
 
   const [variantOptions, setVariantOptions] = useState<VariantOption[]>([])
@@ -89,7 +111,18 @@ export default function EditProductPage() {
         setProductType(product.productType)
         setName(product.name)
         setDescription(product.description || '')
-        setImageUrl(product.imageUrl || '')
+        const productImageFilename = getCatalogImageFilename(product.imageUrl, 'products') || ''
+        imageFilenameRef.current = productImageFilename
+        setImageFilename(productImageFilename)
+        setLegacyImageUrl(product.imageUrl && !productImageFilename ? product.imageUrl : '')
+        setImageStatus('idle')
+        setImageMessage(
+          productImageFilename
+            ? `Loaded: ${product.imageUrl}. Verify before saving.`
+            : product.imageUrl
+              ? 'Replace the current remote image with a local filename and verify it.'
+              : 'Add and verify a main product image before saving.'
+        )
         setAttributes(product.attributes || {})
 
         const optionsArray: VariantOption[] = Object.entries(product.variantOptions || {}).map(
@@ -97,14 +130,24 @@ export default function EditProductPage() {
         )
         setVariantOptions(optionsArray)
 
-        const variantRows: VariantRow[] = product.variants.map((v: any) => ({
-          id: v.id,
-          combination: v.combination,
-          price: v.price.toString(),
-          stock: v.stock.toString(),
-          sku: v.sku || '',
-          imageUrl: v.imageUrl || '',
-        }))
+        const variantRows: VariantRow[] = product.variants.map((v: any) => {
+          const variantImageFilename = getCatalogImageFilename(v.imageUrl, 'variants') || ''
+          return {
+            id: v.id,
+            combination: v.combination,
+            price: v.price.toString(),
+            stock: v.stock.toString(),
+            sku: v.sku || '',
+            imageFilename: variantImageFilename,
+            legacyImageUrl: v.imageUrl && !variantImageFilename ? v.imageUrl : '',
+            imageStatus: 'idle',
+            imageMessage: variantImageFilename
+              ? `Loaded: ${v.imageUrl}. Verify before saving.`
+              : v.imageUrl
+                ? 'Replace or remove this legacy remote image.'
+                : '',
+          }
+        })
         setVariants(variantRows)
       } catch (err: any) {
         setError(err.message)
@@ -245,12 +288,56 @@ export default function EditProductPage() {
     setVariants((prev) => [...prev, ...newRows])
   }
 
-  function updateVariantRow(index: number, field: 'price' | 'stock' | 'sku' | 'imageUrl', value: string) {
-    setVariants((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)))
+  function updateVariantRow(index: number, field: 'price' | 'stock' | 'sku' | 'imageFilename', value: string) {
+    setVariants((prev) => prev.map((row, i) => {
+      if (i !== index) return row
+      if (field === 'imageFilename') {
+        return { ...row, imageFilename: value, imageStatus: 'idle', imageMessage: '' }
+      }
+      return { ...row, [field]: value }
+    }))
   }
 
   function removeVariantRow(index: number) {
     setVariants((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function removeLegacyVariantImage(index: number) {
+    setVariants((prev) => prev.map((row, i) => (
+      i === index ? { ...row, legacyImageUrl: '', imageMessage: '' } : row
+    )))
+  }
+
+  async function verifyProductImage() {
+    setImageStatus('checking')
+    setImageMessage('Checking file...')
+    const filename = imageFilename
+    const verificationError = await verifyCatalogImageFile(filename, 'products')
+
+    if (imageFilenameRef.current !== filename) return
+    setImageStatus(verificationError ? 'error' : 'verified')
+    setLegacyImageUrl(verificationError ? legacyImageUrl : '')
+    setImageMessage(
+      verificationError || `Verified: ${getCatalogImagePath('products', filename)}`
+    )
+  }
+
+  async function verifyVariantImage(index: number) {
+    const filename = variants[index]?.imageFilename ?? ''
+    setVariants((prev) => prev.map((row, i) => (
+      i === index ? { ...row, imageStatus: 'checking', imageMessage: 'Checking file...' } : row
+    )))
+
+    const verificationError = await verifyCatalogImageFile(filename, 'variants')
+    setVariants((prev) => prev.map((row, i) => {
+      if (i !== index || row.imageFilename !== filename) return row
+      return {
+        ...row,
+        legacyImageUrl: verificationError ? row.legacyImageUrl : '',
+        imageStatus: verificationError ? 'error' : 'verified',
+        imageMessage: verificationError || `Verified: ${getCatalogImagePath('variants', filename)}`,
+      }
+    }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -263,6 +350,18 @@ export default function EditProductPage() {
     }
     if (variants.some((v) => v.price === '' || v.stock === '')) {
       setError('Every variant needs a price and stock value.')
+      return
+    }
+    if (imageStatus !== 'verified') {
+      setError('Verify the main product image before saving.')
+      return
+    }
+    if (variants.some((v) => v.legacyImageUrl)) {
+      setError('Replace or remove every legacy remote variant image before saving.')
+      return
+    }
+    if (variants.some((v) => v.imageFilename.trim() && v.imageStatus !== 'verified')) {
+      setError('Verify every variant image filename that has been entered.')
       return
     }
 
@@ -282,10 +381,19 @@ export default function EditProductPage() {
         body: JSON.stringify({
           name,
           description,
-          imageUrl,
+          imageUrl: getCatalogImagePath('products', imageFilename),
           attributes,
           variantOptions: variantOptionsJson,
-          variants,
+          variants: variants.map((variant) => ({
+            id: variant.id,
+            combination: variant.combination,
+            price: variant.price,
+            stock: variant.stock,
+            sku: variant.sku,
+            imageUrl: variant.imageFilename.trim()
+              ? getCatalogImagePath('variants', variant.imageFilename)
+              : '',
+          })),
         }),
       })
 
@@ -306,6 +414,11 @@ export default function EditProductPage() {
   if (initialLoading) {
     return <div className="max-w-2xl text-sm text-text-muted">Loading...</div>
   }
+
+  const imagesVerified = imageStatus === 'verified' && variants.every(
+    (variant) => !variant.legacyImageUrl
+      && (!variant.imageFilename.trim() || variant.imageStatus === 'verified')
+  )
 
   return (
     <div className="max-w-2xl">
@@ -362,14 +475,57 @@ export default function EditProductPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-text">Product Image URL</label>
-            <input
-              type="text"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://..."
-              className={`w-full ${inputClass}`}
-            />
+            <label htmlFor="productImageFilename" className="mb-1.5 block text-sm font-medium text-text">
+              Product Image Filename <span className="text-error">*</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                id="productImageFilename"
+                type="text"
+                value={imageFilename}
+                onChange={(e) => {
+                  imageFilenameRef.current = e.target.value
+                  setImageFilename(e.target.value)
+                  setImageStatus('idle')
+                  setImageMessage('')
+                }}
+                placeholder="charizard-ex.webp"
+                required
+                className={`min-w-0 flex-1 ${inputClass}`}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={verifyProductImage}
+                disabled={!imageFilename.trim() || imageStatus === 'checking'}
+                className="shrink-0 gap-1.5"
+              >
+                {imageStatus === 'checking' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : imageStatus === 'verified' ? (
+                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                ) : null}
+                {imageStatus === 'checking' ? 'Checking' : imageStatus === 'verified' ? 'Verified' : 'Verify'}
+              </Button>
+            </div>
+            <p className="mt-1 text-xs text-text-light">
+              File location: public/images/products/ · Recommended: 1000 × 1000 WebP
+            </p>
+            {legacyImageUrl && (
+              <p className="mt-1 break-all text-xs text-warning">Current remote image: {legacyImageUrl}</p>
+            )}
+            {imageMessage && (
+              <p className={`mt-1 text-sm ${
+                imageStatus === 'verified'
+                  ? 'text-success'
+                  : imageStatus === 'error'
+                    ? 'text-error'
+                    : 'text-text-muted'
+              }`}>
+                {imageMessage}
+              </p>
+            )}
           </div>
         </div>
 
@@ -450,7 +606,7 @@ export default function EditProductPage() {
                     <th className="px-3 py-2 font-medium">Price (SGD)</th>
                     <th className="px-3 py-2 font-medium">Stock</th>
                     <th className="px-3 py-2 font-medium">SKU (optional)</th>
-                    <th className="px-3 py-2 font-medium">Image URL (optional)</th>
+                    <th className="px-3 py-2 font-medium">Image filename (optional)</th>
                     <th className="px-3 py-2"></th>
                   </tr>
                 </thead>
@@ -490,13 +646,54 @@ export default function EditProductPage() {
                         />
                       </td>
                       <td className="px-3 py-2">
-                        <input
-                          type="text"
-                          value={row.imageUrl}
-                          onChange={(e) => updateVariantRow(i, 'imageUrl', e.target.value)}
-                          className={`w-40 ${cellInputClass}`}
-                          placeholder="https://..."
-                        />
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={row.imageFilename}
+                            onChange={(e) => updateVariantRow(i, 'imageFilename', e.target.value)}
+                            className={`w-40 ${cellInputClass}`}
+                            placeholder="variant.webp"
+                            aria-label={`Image filename for variant ${i + 1}`}
+                          />
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => verifyVariantImage(i)}
+                            disabled={!row.imageFilename.trim() || row.imageStatus === 'checking'}
+                            className="shrink-0 gap-1.5"
+                          >
+                            {row.imageStatus === 'checking' ? (
+                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                            ) : row.imageStatus === 'verified' ? (
+                              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                            ) : null}
+                            {row.imageStatus === 'checking' ? 'Checking' : row.imageStatus === 'verified' ? 'Verified' : 'Verify'}
+                          </Button>
+                        </div>
+                        {row.legacyImageUrl && (
+                          <div className="mt-1 max-w-64 text-xs text-warning">
+                            <p className="break-all">Legacy remote image: {row.legacyImageUrl}</p>
+                            <button
+                              type="button"
+                              onClick={() => removeLegacyVariantImage(i)}
+                              className="mt-1 font-medium underline underline-offset-2"
+                            >
+                              Remove legacy image
+                            </button>
+                          </div>
+                        )}
+                        {row.imageMessage && (
+                          <p className={`mt-1 max-w-64 text-xs ${
+                            row.imageStatus === 'verified'
+                              ? 'text-success'
+                              : row.imageStatus === 'error'
+                                ? 'text-error'
+                                : 'text-text-muted'
+                          }`}>
+                            {row.imageMessage}
+                          </p>
+                        )}
                       </td>
                       <td className="px-3 py-2">
                         <button
@@ -516,9 +713,14 @@ export default function EditProductPage() {
           )}
         </div>
 
-        <Button type="submit" disabled={loading} className="w-full">
+        <Button type="submit" disabled={loading || !imagesVerified} className="w-full">
           {loading ? 'Saving...' : 'Save Changes'}
         </Button>
+        {!imagesVerified && (
+          <p className="text-center text-sm text-text-muted">
+            Verify the main image and every entered variant image, and replace or remove legacy remote variant images before saving.
+          </p>
+        )}
       </form>
     </div>
   )

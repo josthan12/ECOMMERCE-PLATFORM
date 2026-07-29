@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { isCatalogImagePath } from '@/lib/catalogImages'
 
 async function requireAdmin() {
   const { userId } = await auth()
@@ -43,6 +44,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   if (!name) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  }
+  if (!isCatalogImagePath(bannerImageUrl, 'categories')) {
+    return NextResponse.json(
+      { error: 'A valid local category image path is required' },
+      { status: 400 }
+    )
   }
 
   const existing = await prisma.category.findUnique({ where: { id } })

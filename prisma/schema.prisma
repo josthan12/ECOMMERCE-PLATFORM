@@ -12,21 +12,25 @@ enum Role {
   STAFF
   ADMIN
 }
+
 enum FulfillmentMethod {
   DELIVERY
   SELF_COLLECTION
 }
 
 model User {
-  id        String    @id @default(cuid())
-  clerkId   String    @unique
-  email     String    @unique
-  name      String?
-  role      Role      @default(CUSTOMER)
-  addresses Address[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  orders Order[]
+  id                       String    @id @default(cuid())
+  clerkId                  String    @unique
+  email                    String    @unique
+  name                     String?
+  role                     Role      @default(CUSTOMER)
+  newsletterSubscribed     Boolean   @default(false)
+  newsletterSubscribedAt   DateTime?
+  newsletterUnsubscribedAt DateTime?
+  addresses                Address[]
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  orders                   Order[]
 }
 
 model Address {
@@ -83,33 +87,33 @@ model ProductField {
 }
 
 model Product {
-  id             String           @id @default(cuid())
-  productTypeId  String
-  productType    ProductType      @relation(fields: [productTypeId], references: [id])
-  name           String
-  slug           String           @unique
-  description    String?
-  attributes     Json
-  variantOptions Json?
-  imageUrl       String?
-  variants       ProductVariant[]
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id               String            @id @default(cuid())
+  productTypeId    String
+  productType      ProductType       @relation(fields: [productTypeId], references: [id])
+  name             String
+  slug             String            @unique
+  description      String?
+  attributes       Json
+  variantOptions   Json?
+  imageUrl         String?
+  variants         ProductVariant[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   categoryProducts CategoryProduct[]
-  archived Boolean @default(false)
+  archived         Boolean           @default(false)
 }
 
 model ProductVariant {
-  id         String   @id @default(cuid())
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   combination Json
-  price      Float
-  stock      Int      @default(0)
-  sku        String?
-  imageUrl   String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  price       Float
+  stock       Int      @default(0)
+  sku         String?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Category {
@@ -123,16 +127,16 @@ model Category {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  products       CategoryProduct[]
+  products CategoryProduct[]
 }
 
 model CategoryProduct {
-  id         String   @id @default(cuid())
+  id         String @id @default(cuid())
   categoryId String
   productId  String
 
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([categoryId, productId])
 }
@@ -151,27 +155,27 @@ enum OrderStatus {
 }
 
 model Order {
-  id                 String      @id @default(cuid())
-  userId             String
-  user               User        @relation(fields: [userId], references: [id])
-  status             OrderStatus @default(PENDING_PAYMENT)
+  id                     String            @id @default(cuid())
+  userId                 String
+  user                   User              @relation(fields: [userId], references: [id])
+  status                 OrderStatus       @default(PENDING_PAYMENT)
   hitpayPaymentRequestId String?
   // Shipping address — snapshotted at order time, immutable afterward
-  shippingBlock      String?
-  shippingUnitNumber String?
-  shippingStreet     String?
-  shippingPostalCode String?
-  fulfillmentMethod FulfillmentMethod @default(DELIVERY)
-  shippingFee       Float             @default(0)
-  trackingNumber    String?
-  subtotal           Float
-  gstAmount          Float
-  total              Float
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
-  promoCode      String?
-  discountAmount Float    @default(0)
-  items              OrderItem[]
+  shippingBlock          String?
+  shippingUnitNumber     String?
+  shippingStreet         String?
+  shippingPostalCode     String?
+  fulfillmentMethod      FulfillmentMethod @default(DELIVERY)
+  shippingFee            Float             @default(0)
+  trackingNumber         String?
+  subtotal               Float
+  gstAmount              Float
+  total                  Float
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  promoCode              String?
+  discountAmount         Float             @default(0)
+  items                  OrderItem[]
 }
 
 model OrderItem {
@@ -187,15 +191,15 @@ model OrderItem {
 }
 
 model Expense {
-  id         String   @id @default(cuid())
-  title      String
-  category   String
-  amount     Float
-  incurredAt DateTime @default(now())
-  notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  isSystemGenerated Boolean @default(false)
+  id                String   @id @default(cuid())
+  title             String
+  category          String
+  amount            Float
+  incurredAt        DateTime @default(now())
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  isSystemGenerated Boolean  @default(false)
 }
 
 enum PromoDiscountType {
@@ -215,4 +219,52 @@ model PromoCode {
   usedByOrderId     String?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
+}
+
+enum NewsletterPostStatus {
+  DRAFT
+  SENDING
+  SENT
+  FAILED
+}
+
+enum NewsletterDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model NewsletterPost {
+  id             String               @id @default(cuid())
+  topic          String
+  subject        String
+  previewText    String?
+  body           String
+  imageUrl       String?
+  status         NewsletterPostStatus @default(DRAFT)
+  sentAt         DateTime?
+  recipientCount Int                  @default(0)
+  successCount   Int                  @default(0)
+  failureCount   Int                  @default(0)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  deliveries     NewsletterDelivery[]
+}
+
+model NewsletterDelivery {
+  id               String                   @id @default(cuid())
+  newsletterPostId String
+  newsletterPost   NewsletterPost           @relation(fields: [newsletterPostId], references: [id], onDelete: Cascade)
+  userId           String
+  email            String
+  status           NewsletterDeliveryStatus @default(PENDING)
+  resendEmailId    String?
+  error            String?
+  sentAt           DateTime?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  @@unique([newsletterPostId, userId])
+  @@index([newsletterPostId, status])
 }

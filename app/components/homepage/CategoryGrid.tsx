@@ -1,49 +1,62 @@
-import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { ImageOff } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
+import { prisma } from '@/lib/prisma'
 import ScrollReveal from '../ScrollReveal'
+import CategoryCarousel from './CategoryCarousel'
 
 export default async function CategoryGrid() {
   const categories = await prisma.category.findMany({
+    include: {
+      _count: {
+        select: {
+          products: {
+            where: { product: { archived: false } },
+          },
+        },
+      },
+    },
     orderBy: { createdAt: 'desc' },
   })
 
   if (categories.length === 0) return null
 
   return (
-    <section id="categories" className="mx-auto max-w-[1400px] px-4 py-12 md:px-8 md:py-16">
-      <ScrollReveal>
-        <h2 className="font-display text-2xl font-semibold text-primary md:text-3xl">
-          Shop by Category
-        </h2>
-      </ScrollReveal>
-      <div className="mt-8 grid grid-cols-2 gap-5 sm:grid-cols-3 md:gap-6 md:grid-cols-4">
-        {categories.map((category, index) => (
-          <ScrollReveal key={category.id} delayMs={index * 60}>
-            <Link
-              href={`/category/${category.slug}`}
-              className="group block overflow-hidden rounded-lg border border-border-light bg-surface shadow-card transition-all duration-250 ease-out hover:-translate-y-1.5 hover:border-accent hover:shadow-dropdown"
-            >
-              <div className="aspect-[4/3] overflow-hidden bg-surface-muted">
-                {category.bannerImageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={category.bannerImageUrl}
-                    alt=""
-                    className="h-full w-full object-cover transition-transform duration-[350ms] ease-out group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <ImageOff className="h-5 w-5 text-text-light" aria-hidden="true" />
-                  </div>
-                )}
-              </div>
-              <div className="p-4">
-                <h3 className="font-medium text-text">{category.name}</h3>
-              </div>
-            </Link>
-          </ScrollReveal>
-        ))}
+    <section id="categories" className="scroll-mt-40 bg-surface-muted/55 py-16 md:py-24">
+      <div className="mx-auto max-w-[1440px] px-4 md:px-8">
+        <ScrollReveal className="flex items-end justify-between gap-5">
+          <h2 className="font-display text-3xl font-semibold tracking-[-0.025em] text-primary md:text-5xl">
+            Categories
+          </h2>
+          <Link
+            href="/categories"
+            className="group hidden items-center gap-2 text-sm font-semibold text-primary sm:inline-flex"
+          >
+            View all categories
+            <ArrowRight
+              className="h-4 w-4 transition-transform group-hover:translate-x-1"
+              aria-hidden="true"
+            />
+          </Link>
+        </ScrollReveal>
+
+        <CategoryCarousel
+          categories={categories.map((category) => ({
+            id: category.id,
+            slug: category.slug,
+            name: category.name,
+            description: category.description,
+            bannerImageUrl: category.bannerImageUrl,
+            productCount: category._count.products,
+          }))}
+        />
+
+        <Link
+          href="/categories"
+          className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary sm:hidden"
+        >
+          View all categories
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
       </div>
     </section>
   )

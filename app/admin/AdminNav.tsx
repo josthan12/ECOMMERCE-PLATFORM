@@ -10,6 +10,7 @@ import {
   ClipboardList,
   Receipt,
   Ticket,
+  Mail,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { href: '/admin/orders', label: 'Orders', icon: ClipboardList },
   { href: '/admin/expenses', label: 'Expenses', icon: Receipt },
   { href: '/admin/promo-codes', label: 'Promo Codes', icon: Ticket },
+  { href: '/admin/newsletters', label: 'Newsletters', icon: Mail },
 ]
 
 export default function AdminNav() {

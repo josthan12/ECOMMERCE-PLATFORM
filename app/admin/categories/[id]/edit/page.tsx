@@ -1,14 +1,21 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { AlertCircle, FolderTree } from 'lucide-react'
+import { AlertCircle, CheckCircle2, FolderTree, Loader2 } from 'lucide-react'
 import Button from '../../../../components/ui/Button'
+import {
+  getCatalogImageFilename,
+  getCatalogImagePath,
+  verifyCatalogImageFile,
+} from '@/lib/catalogImages'
 
 type Product = {
   id: string
   name: string
 }
+
+type ImageVerificationStatus = 'idle' | 'checking' | 'verified' | 'error'
 
 export default function EditCategoryPage() {
   const router = useRouter()
@@ -20,7 +27,11 @@ export default function EditCategoryPage() {
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [bannerImageUrl, setBannerImageUrl] = useState('')
+  const [imageFilename, setImageFilename] = useState('')
+  const imageFilenameRef = useRef('')
+  const [legacyImageUrl, setLegacyImageUrl] = useState('')
+  const [imageStatus, setImageStatus] = useState<ImageVerificationStatus>('idle')
+  const [imageMessage, setImageMessage] = useState('')
   const [seoTitle, setSeoTitle] = useState('')
   const [seoDescription, setSeoDescription] = useState('')
 
@@ -45,7 +56,25 @@ export default function EditCategoryPage() {
 
         setName(categoryData.name)
         setDescription(categoryData.description || '')
-        setBannerImageUrl(categoryData.bannerImageUrl || '')
+        const categoryImageFilename = getCatalogImageFilename(
+          categoryData.bannerImageUrl,
+          'categories'
+        ) || ''
+        imageFilenameRef.current = categoryImageFilename
+        setImageFilename(categoryImageFilename)
+        setLegacyImageUrl(
+          categoryData.bannerImageUrl && !categoryImageFilename
+            ? categoryData.bannerImageUrl
+            : ''
+        )
+        setImageStatus('idle')
+        setImageMessage(
+          categoryImageFilename
+            ? `Loaded: ${categoryData.bannerImageUrl}. Verify before saving.`
+            : categoryData.bannerImageUrl
+              ? 'Replace the current remote image with a local filename and verify it.'
+              : 'Add and verify a category image before saving.'
+        )
         setSeoTitle(categoryData.seoTitle || '')
         setSeoDescription(categoryData.seoDescription || '')
         setSelectedProductIds(categoryData.productIds)
@@ -67,9 +96,29 @@ export default function EditCategoryPage() {
     )
   }
 
+  async function verifyCategoryImage() {
+    setImageStatus('checking')
+    setImageMessage('Checking file...')
+    const filename = imageFilename
+    const verificationError = await verifyCatalogImageFile(filename, 'categories')
+
+    if (imageFilenameRef.current !== filename) return
+    setImageStatus(verificationError ? 'error' : 'verified')
+    setLegacyImageUrl(verificationError ? legacyImageUrl : '')
+    setImageMessage(
+      verificationError || `Verified: ${getCatalogImagePath('categories', filename)}`
+    )
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+
+    if (imageStatus !== 'verified') {
+      setError('Verify the category image before saving.')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -79,7 +128,7 @@ export default function EditCategoryPage() {
         body: JSON.stringify({
           name,
           description,
-          bannerImageUrl,
+          bannerImageUrl: getCatalogImagePath('categories', imageFilename),
           seoTitle,
           seoDescription,
           productIds: selectedProductIds,
@@ -152,17 +201,57 @@ export default function EditCategoryPage() {
           </div>
 
           <div>
-            <label htmlFor="bannerImageUrl" className="mb-1.5 block text-sm font-medium text-text">
-              Banner Image URL
+            <label htmlFor="categoryImageFilename" className="mb-1.5 block text-sm font-medium text-text">
+              Category Image Filename <span className="text-error">*</span>
             </label>
-            <input
-              id="bannerImageUrl"
-              type="text"
-              value={bannerImageUrl}
-              onChange={(e) => setBannerImageUrl(e.target.value)}
-              placeholder="https://..."
-              className="min-h-[44px] w-full rounded-md border border-border bg-surface px-3 text-sm text-text placeholder:text-text-light focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
-            />
+            <div className="flex items-center gap-2">
+              <input
+                id="categoryImageFilename"
+                type="text"
+                value={imageFilename}
+                onChange={(e) => {
+                  imageFilenameRef.current = e.target.value
+                  setImageFilename(e.target.value)
+                  setImageStatus('idle')
+                  setImageMessage('')
+                }}
+                placeholder="pokemon-en.webp"
+                required
+                className="min-h-[44px] min-w-0 flex-1 rounded-md border border-border bg-surface px-3 text-sm text-text placeholder:text-text-light focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={verifyCategoryImage}
+                disabled={!imageFilename.trim() || imageStatus === 'checking'}
+                className="shrink-0 gap-1.5"
+              >
+                {imageStatus === 'checking' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : imageStatus === 'verified' ? (
+                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                ) : null}
+                {imageStatus === 'checking' ? 'Checking' : imageStatus === 'verified' ? 'Verified' : 'Verify'}
+              </Button>
+            </div>
+            <p className="mt-1 text-xs text-text-light">
+              File location: public/images/categories/ · Recommended: 1024 × 1024 WebP
+            </p>
+            {legacyImageUrl && (
+              <p className="mt-1 break-all text-xs text-warning">Current remote image: {legacyImageUrl}</p>
+            )}
+            {imageMessage && (
+              <p className={`mt-1 text-sm ${
+                imageStatus === 'verified'
+                  ? 'text-success'
+                  : imageStatus === 'error'
+                    ? 'text-error'
+                    : 'text-text-muted'
+              }`}>
+                {imageMessage}
+              </p>
+            )}
           </div>
         </div>
 
@@ -223,9 +312,14 @@ export default function EditCategoryPage() {
           )}
         </div>
 
-        <Button type="submit" disabled={loading} className="w-full">
+        <Button type="submit" disabled={loading || imageStatus !== 'verified'} className="w-full">
           {loading ? 'Saving...' : 'Save Changes'}
         </Button>
+        {imageStatus !== 'verified' && (
+          <p className="text-center text-sm text-text-muted">
+            Verify the category image before saving.
+          </p>
+        )}
       </form>
     </div>
   )

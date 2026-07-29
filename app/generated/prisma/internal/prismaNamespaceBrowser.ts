@@ -62,7 +62,9 @@ export const ModelName = {
   Order: 'Order',
   OrderItem: 'OrderItem',
   Expense: 'Expense',
-  PromoCode: 'PromoCode'
+  PromoCode: 'PromoCode',
+  NewsletterPost: 'NewsletterPost',
+  NewsletterDelivery: 'NewsletterDelivery'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -87,6 +89,9 @@ export const UserScalarFieldEnum = {
   email: 'email',
   name: 'name',
   role: 'role',
+  newsletterSubscribed: 'newsletterSubscribed',
+  newsletterSubscribedAt: 'newsletterSubscribedAt',
+  newsletterUnsubscribedAt: 'newsletterUnsubscribedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -259,6 +264,41 @@ export const PromoCodeScalarFieldEnum = {
 } as const
 
 export type PromoCodeScalarFieldEnum = (typeof PromoCodeScalarFieldEnum)[keyof typeof PromoCodeScalarFieldEnum]
+
+
+export const NewsletterPostScalarFieldEnum = {
+  id: 'id',
+  topic: 'topic',
+  subject: 'subject',
+  previewText: 'previewText',
+  body: 'body',
+  imageUrl: 'imageUrl',
+  status: 'status',
+  sentAt: 'sentAt',
+  recipientCount: 'recipientCount',
+  successCount: 'successCount',
+  failureCount: 'failureCount',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type NewsletterPostScalarFieldEnum = (typeof NewsletterPostScalarFieldEnum)[keyof typeof NewsletterPostScalarFieldEnum]
+
+
+export const NewsletterDeliveryScalarFieldEnum = {
+  id: 'id',
+  newsletterPostId: 'newsletterPostId',
+  userId: 'userId',
+  email: 'email',
+  status: 'status',
+  resendEmailId: 'resendEmailId',
+  error: 'error',
+  sentAt: 'sentAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type NewsletterDeliveryScalarFieldEnum = (typeof NewsletterDeliveryScalarFieldEnum)[keyof typeof NewsletterDeliveryScalarFieldEnum]
 
 
 export const SortOrder = {

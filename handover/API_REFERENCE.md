@@ -199,12 +199,12 @@ Creates a new product with its variants in a single nested Prisma create. Requir
 {
   "name": "Nike Air Force 1",
   "description": "Optional",
-  "imageUrl": "https://... (optional, fallback/default product image)",
+  "imageUrl": "/images/products/nike-air-force-1.webp",
   "productTypeId": "cuid",
   "attributes": { "brand": "Nike", "material": "Leather" },
   "variantOptions": { "Size": ["7", "8", "9"], "Color": ["Red", "Blue"] },
   "variants": [
-    { "combination": { "Size": "7", "Color": "Red" }, "price": "120.00", "stock": "5", "sku": "AF1-7-RED", "imageUrl": "https://... (optional)" },
+    { "combination": { "Size": "7", "Color": "Red" }, "price": "120.00", "stock": "5", "sku": "AF1-7-RED", "imageUrl": "/images/variants/af1-7-red.webp" },
     { "combination": { "Size": "7", "Color": "Blue" }, "price": "120.00", "stock": "3", "sku": "AF1-7-BLU", "imageUrl": "" }
   ]
 }
@@ -215,9 +215,13 @@ Creates a new product with its variants in a single nested Prisma create. Requir
 - `price` and `stock` do not exist on `Product` — each `ProductVariant` has its own
 - `attributes` stores type-specific describing fields as JSON
 - `variantOptions` stores the option definitions (what options exist and their possible values)
-- `imageUrl` on the product is optional and acts as the fallback/default image shown on the storefront (category grid, featured products, and the product page before/without a variant-specific image)
-- `imageUrl` on each variant is optional; when set, the storefront product page shows it in place of the product's `imageUrl` once that variant is selected
-- `variants` array must contain at least one entry — request is rejected with `400` if empty, or if any variant is missing `price`/`stock`
+- `imageUrl` on a newly created product is required and must match
+  `/images/products/<valid-image-filename>`; the admin form accepts only the
+  filename and verifies the deployed static file before enabling creation
+- `imageUrl` on each variant is optional; when set, it must match
+  `/images/variants/<valid-image-filename>` and the admin form requires that
+  file to be verified before creation
+- `variants` array must contain at least one entry — request is rejected with `400` if empty, if any variant is missing `price`/`stock`, or if product/variant image paths do not match their required local folders
 - Variants are created via nested Prisma `create` in the same transaction as the `Product`
 - `archived` defaults to `false` and is not settable at creation — a product is always created visible; use the archive endpoint below to hide it afterward
 
@@ -250,11 +254,11 @@ Updates a product's name/description/image/attributes/variantOptions and its var
 {
   "name": "Nike Air Force 1",
   "description": "Updated description",
-  "imageUrl": "https://...",
+  "imageUrl": "/images/products/nike-air-force-1.webp",
   "attributes": { "brand": "Nike", "material": "Leather" },
   "variantOptions": { "Size": ["7", "8", "9"], "Color": ["Red", "Blue"] },
   "variants": [
-    { "id": "existing-variant-cuid", "combination": { "Size": "7", "Color": "Red" }, "price": "125.00", "stock": "4", "sku": "AF1-7-RED", "imageUrl": "" },
+    { "id": "existing-variant-cuid", "combination": { "Size": "7", "Color": "Red" }, "price": "125.00", "stock": "4", "sku": "AF1-7-RED", "imageUrl": "/images/variants/af1-7-red.webp" },
     { "combination": { "Size": "9", "Color": "Blue" }, "price": "120.00", "stock": "6", "sku": "", "imageUrl": "" }
   ]
 }
@@ -262,13 +266,19 @@ Updates a product's name/description/image/attributes/variantOptions and its var
 
 **Behavior:**
 - Variants with an `id` are updated in place; variants without one are created new; any existing variant whose `id` is missing from the submitted array is deleted.
+- The main product image is required and must match
+  `/images/products/<valid-image-filename>`. Optional variant images must
+  match `/images/variants/<valid-image-filename>`.
+- The edit form converts existing local paths back to filenames and requires
+  fresh file verification before saving. Legacy remote variant images must be
+  explicitly replaced or removed.
 - Safe to delete a variant even if historical orders reference it — `OrderItem.productVariantId` is a snapshot, not a live FK (see DATABASE_SCHEMA.md).
 - At least one variant required overall; every variant needs `price` and `stock`, same validation as creation.
 - All variant create/update/delete plus the product's own field update happen in one Prisma nested `update` call.
 
 **Response:** `200` — the updated `Product` with nested `variants`.
 
-**Errors:** `401`, `403`, `404` (product not found), `400` (missing name, no variants, missing price/stock on a variant)
+**Errors:** `401`, `403`, `404` (product not found), `400` (missing name, no variants, missing price/stock on a variant, or invalid local image path)
 
 **File:** `app/api/admin/products/[id]/route.ts`
 
@@ -311,7 +321,7 @@ Returns all categories with product count.
     "name": "Sneakers",
     "slug": "sneakers",
     "description": "...",
-    "bannerImageUrl": "https://...",
+    "bannerImageUrl": "/images/categories/sneakers.webp",
     "seoTitle": "Sneakers",
     "seoDescription": "...",
     "_count": { "products": 3 }
@@ -333,7 +343,7 @@ Creates a new category with optional product assignments in a single nested Pris
 {
   "name": "Sneakers",
   "description": "Optional description",
-  "bannerImageUrl": "https://...",
+  "bannerImageUrl": "/images/categories/sneakers.webp",
   "seoTitle": "Optional, defaults to name",
   "seoDescription": "Optional",
   "productIds": ["cuid1", "cuid2"]
@@ -341,6 +351,12 @@ Creates a new category with optional product assignments in a single nested Pris
 ```
 
 **Notes:**
+- `bannerImageUrl` is required for new categories and must match
+  `/images/categories/<valid-image-filename>`. The admin form accepts the
+  filename, verifies the real static image, and stores the completed path.
+- The field name remains `bannerImageUrl` in the database/API for schema
+  compatibility, but the asset is now the category tile icon; the old
+  full-width category-detail banner was removed.
 - `slug` is auto-generated from `name`
 - `seoTitle` defaults to `name` if not provided
 - `productIds` is optional — a category can be created with zero products assigned
@@ -632,7 +648,308 @@ Server Component, auth-gated. Fetches the order and its items, then checks `orde
 
 ---
 
+## Newsletter
+
+### GET /api/newsletter
+Returns the signed-in user's current newsletter preference.
+
+**Auth:** Required. The email address is never accepted from the browser;
+the endpoint resolves the local `User` through the authenticated Clerk ID.
+
+**Response:** `200` — `{ "subscribed": boolean }`
+
+**Errors:** `401` when signed out or when no synced local user exists.
+
+### POST /api/newsletter
+Single opt-in. Sets `newsletterSubscribed = true`, records
+`newsletterSubscribedAt`, and clears `newsletterUnsubscribedAt`. Repeated
+requests are idempotent and do not replace the original active opt-in time.
+
+**Auth:** Required.
+
+**Response:** `200` — `{ "subscribed": true }`
+
+### DELETE /api/newsletter
+Opts the signed-in user out, setting `newsletterSubscribed = false` and
+recording `newsletterUnsubscribedAt`. Repeated requests are idempotent.
+
+**Auth:** Required.
+
+**Response:** `200` — `{ "subscribed": false }`
+
+**File:** `app/api/newsletter/route.ts`
+
+---
+
+## Admin — Newsletters
+
+All routes require a synced local user with `role = ADMIN`.
+
+### GET /api/admin/newsletters
+Returns newsletter posts newest first.
+
+### POST /api/admin/newsletters
+Creates a `DRAFT`. Required fields are `topic`, `subject`, and `body`.
+`previewText` and `imageUrl` are optional. Images must use a root-relative
+`/images/...` path or secure `https://` URL. Saving never sends email.
+
+### GET /api/admin/newsletters/[id]
+Returns one post with its delivery count.
+
+### PUT /api/admin/newsletters/[id]
+Updates topic, subject, preview text, body, and image. Only `DRAFT` posts can
+be edited.
+
+### DELETE /api/admin/newsletters/[id]
+Deletes a post only while it is `DRAFT`.
+
+### POST /api/admin/newsletters/[id]/broadcast
+Explicitly broadcasts a `DRAFT`, or retries failed deliveries for a `FAILED`
+post. The first attempt snapshots the current opted-in audience. Each
+delivery re-checks the current subscription, uses its own Resend idempotency
+key, and records `SENT`, `FAILED`, or `SKIPPED`. Successful deliveries are
+not resent by a retry.
+
+**Response:** `200` with `{ post, successCount, failureCount, skippedCount }`.
+
+**Errors:** `401` unauthenticated; `403` non-admin; `409` invalid lifecycle,
+no subscribers, or broadcast failure.
+
+**Files:** `app/api/admin/newsletters/route.ts`,
+`app/api/admin/newsletters/[id]/route.ts`, and
+`app/api/admin/newsletters/[id]/broadcast/route.ts`.
+
+---
+
 ## Planned API Routes (Not Yet Built)
 GET/PUT    /api/admin/orders             Bulk order actions — deferred, see ROADMAP.md Phase 5
 
-Note: `GET /api/products` and `GET /api/products/[slug]` (listed in earlier planning) were not built as separate API routes. Public category and product browsing (`/category/[slug]`, `/product/[slug]`, `/search`) are Server Components that query Prisma directly, consistent with the "Server Components can use Prisma directly" convention — no API route needed since nothing is mutated. Sort/filter on the category page, and the query on the search page, are both handled via `searchParams`, not a query API. `/api/search/suggestions` is the one storefront exception, since it's called from a Client Component (`SearchBar.tsx`) that can't call Prisma directly. The same overall pattern extends to `/admin/orders`, `/admin/orders/[id]`, `/account/orders`, and `/account/orders/[id]`.
+Note: `GET /api/products` and `GET /api/products/[slug]` (listed in earlier planning) were not built as separate API routes. Public category and product browsing (`/categories`, `/products`, `/category/[slug]`, `/product/[slug]`, `/search`) are Server Components that query Prisma directly, consistent with the "Server Components can use Prisma directly" convention — no API route needed since nothing is mutated. Sort/filter on `/products` and the category page, and the query on the search page, are handled via `searchParams`, not a query API. `/products` adds category selection and 24-product pagination to the shared sort/in-stock controls. `/api/search/suggestions` is the one storefront exception, since it's called from a Client Component (`SearchBar.tsx`) that can't call Prisma directly. The same overall pattern extends to `/admin/orders`, `/admin/orders/[id]`, `/account/orders`, and `/account/orders/[id]`.
+
+# API_REFERENCE.md — ADDITIONS FROM SESSION 11 (2026-07-22)
+
+Merge these sections into the existing API_REFERENCE.md at the appropriate
+locations (Admin section additions after the existing "Admin — Orders"
+block; the checkout addition goes alongside the existing Checkout section).
+All existing routes and their documented behavior are unchanged.
+
+---
+
+## Admin — Expenses
+
+### GET /api/admin/expenses
+Returns all expenses, newest `incurredAt` first.
+
+**Auth:** Admin only.
+
+**Response:**
+```json
+[
+  {
+    "id": "cuid",
+    "title": "Shipping - Order #1234",
+    "category": "Shipping",
+    "amount": 5.50,
+    "incurredAt": "2026-07-20T00:00:00.000Z",
+    "notes": null,
+    "isSystemGenerated": false,
+    "createdAt": "...",
+    "updatedAt": "..."
+  }
+]
+```
+
+**File:** `app/api/admin/expenses/route.ts`
+
+---
+
+### POST /api/admin/expenses
+Creates a new expense.
+
+**Auth:** Admin only.
+
+**Request body:**
+```json
+{
+  "title": "Packaging materials - July",
+  "category": "Packaging",
+  "amount": "42.00",
+  "incurredAt": "2026-07-20",
+  "notes": "Optional"
+}
+```
+
+**Notes:**
+- `title`, `category`, `amount` required; `amount` must parse to a
+  non-negative number
+- `incurredAt` defaults to now if omitted
+- `isSystemGenerated` is **not** settable via this route — always `false`
+  for admin-created expenses; only `lib/recordDiscountExpense.ts` sets it
+  `true`, via direct Prisma calls, not this API
+
+**Response:** `201` — the created Expense.
+
+**File:** `app/api/admin/expenses/route.ts`
+
+---
+
+### GET / PUT / DELETE /api/admin/expenses/[id]
+Standard CRUD, admin only. `PUT` re-validates the same fields as `POST`.
+`DELETE` is a real hard delete — no archive concept for Expense, nothing
+depends on it.
+
+**File:** `app/api/admin/expenses/[id]/route.ts`
+
+---
+
+## Admin — Promo Codes
+
+### GET /api/admin/promo-codes
+Returns all promo codes, newest first.
+
+**Auth:** Admin only.
+
+**File:** `app/api/admin/promo-codes/route.ts`
+
+---
+
+### POST /api/admin/promo-codes
+Creates a new promo code.
+
+**Auth:** Admin only.
+
+**Request body:**
+```json
+{
+  "code": "welcome10",
+  "discountType": "PERCENTAGE",
+  "discountValue": "10",
+  "minOrderValue": "50",
+  "maxDiscountAmount": "20",
+  "active": true
+}
+```
+
+**Notes:**
+- `code` is normalized to uppercase server-side (`WELCOME10`) and must be
+  unique — a duplicate returns `400`
+- `discountType` must be `PERCENTAGE` or `FIXED_AMOUNT`
+- `discountValue` must be positive; if `PERCENTAGE`, must not exceed 100
+- `minOrderValue`/`maxDiscountAmount` are optional; omit or send empty
+  string for "no minimum"/"no cap"
+
+**Response:** `201` — the created PromoCode.
+
+**File:** `app/api/admin/promo-codes/route.ts`
+
+---
+
+### GET / PUT /api/admin/promo-codes/[id]
+Standard read/update, admin only. `PUT` re-validates identically to
+`POST`. Editing a promo code's discount rules has **no retroactive effect**
+on any order that already used it — `Order.promoCode`/`discountAmount` are
+independent historical snapshots.
+
+**File:** `app/api/admin/promo-codes/[id]/route.ts`
+
+---
+
+### DELETE /api/admin/promo-codes/[id]
+Real hard delete. Safe even if the code was previously used — the
+associated order's discount record lives independently on `Order`, not on
+this row.
+
+**File:** `app/api/admin/promo-codes/[id]/route.ts`
+
+---
+
+### PATCH /api/admin/promo-codes/[id]/toggle-active
+Sets `active` directly.
+
+**Request body:** `{ "active": true }`
+
+**Auth:** Admin only.
+
+**File:** `app/api/admin/promo-codes/[id]/toggle-active/route.ts`
+
+---
+
+### PATCH /api/admin/promo-codes/[id]/reactivate
+Clears `usedAt` and `usedByOrderId` back to `null`, making the code
+usable again. Does **not** touch `active` — a reactivated code that was
+also deactivated remains deactivated until separately toggled back on.
+
+**Auth:** Admin only.
+
+**Response:** `200` — the updated PromoCode.
+
+**File:** `app/api/admin/promo-codes/[id]/reactivate/route.ts`
+
+---
+
+## Checkout — Promo Code Preview
+
+### POST /api/checkout/apply-promo
+Validates a promo code and returns the computed discount, **without
+mutating anything**. Called live from `CheckoutForm.tsx` as the customer
+applies a code. The real, authoritative application happens inside
+`POST /api/checkout` itself, which re-validates from scratch — this
+endpoint's result is never trusted as the final word.
+
+**Auth:** Required (any authenticated user).
+
+**Request body:**
+```json
+{ "code": "WELCOME10", "subtotal": 120.00 }
+```
+
+**Behavior:**
+- Rejects if the code doesn't exist, isn't `active`, or `usedAt` is already set
+- Rejects if `subtotal` is below the code's `minOrderValue`
+- Computes the discount via `lib/promoCode.ts`'s shared `computeDiscountAmount()`
+
+**Response:** `200` —
+```json
+{ "valid": true, "code": "WELCOME10", "discountAmount": 12.00 }
+```
+
+**Errors:** `401`, `400` (invalid/inactive/used code, or minimum not met)
+
+**File:** `app/api/checkout/apply-promo/route.ts`
+
+---
+
+## Checkout — Updated
+
+### POST /api/checkout (behavior addition)
+In addition to everything previously documented, now accepts an optional
+`promoCode` field:
+
+```json
+{
+  "items": [...],
+  "fulfillmentMethod": "DELIVERY",
+  "...": "...",
+  "promoCode": "WELCOME10"
+}
+```
+
+**New behavior:**
+- If `promoCode` is present, it is re-validated from scratch inside the
+  same `$transaction` that creates the Order (never trusts the client or
+  the earlier `/api/checkout/apply-promo` preview call) — same principle
+  already applied to price/stock re-verification.
+- On success: `PromoCode.usedAt`/`usedByOrderId` are set in the same
+  transaction as the Order's creation; `Order.promoCode`/`discountAmount`
+  are populated; GST is calculated on `(subtotal - discountAmount) +
+  shippingFee`.
+- On an invalid/inactive/already-used code, or a subtotal below
+  `minOrderValue`: the whole transaction is rolled back (via a thrown
+  `INVALID_PROMO`/`PROMO_MIN_ORDER_NOT_MET` error) — no Order is created,
+  no stock is decremented, and the promo code is **not** marked used.
+
+**New error responses:** `400` with `INVALID_PROMO` or
+`PROMO_MIN_ORDER_NOT_MET` message text, in addition to all previously
+documented error cases.
+
+**File:** `app/api/checkout/route.ts`

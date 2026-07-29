@@ -1,10 +1,11 @@
 import { prisma } from '@/lib/prisma';
-import { resend, FROM_EMAIL } from './resend';
+import { resend, ORDER_FROM_EMAIL } from './resend';
 import OrderConfirmationEmail from './templates/orderConfirmation';
 import PaymentFailedEmail from './templates/paymentFailed';
 import ShippingNotificationEmail from './templates/shippingNotification';
 import ReadyForCollectionEmail from './templates/readyForCollection';
 import { SELF_COLLECTION_ADDRESS } from '@/lib/constants';
+import { GST_ENABLED, GST_RATE_DISPLAY } from '@/lib/gst';
 
 export async function sendOrderConfirmationEmail(orderId: string) {
   try {
@@ -18,7 +19,7 @@ export async function sendOrderConfirmationEmail(orderId: string) {
     }
 
     await resend.emails.send({
-      from: FROM_EMAIL,
+      from: ORDER_FROM_EMAIL,
       to: order.user.email,
       subject: `Order confirmed — ${order.id}`,
       react: OrderConfirmationEmail({
@@ -30,7 +31,13 @@ export async function sendOrderConfirmationEmail(orderId: string) {
           price: i.price,
         })),
         subtotal: order.subtotal,
+        promoCode: order.promoCode,
+        discountAmount: order.discountAmount,
+        shippingFee: order.shippingFee,
+        fulfillmentMethod: order.fulfillmentMethod,
         gstAmount: order.gstAmount,
+        gstEnabled: GST_ENABLED,
+        gstRateDisplay: GST_RATE_DISPLAY,
         total: order.total,
         shippingBlock: order.shippingBlock ?? '',
         shippingUnitNumber: order.shippingUnitNumber,
@@ -55,7 +62,7 @@ export async function sendPaymentFailedEmail(orderId: string) {
     }
 
     await resend.emails.send({
-      from: FROM_EMAIL,
+      from: ORDER_FROM_EMAIL,
       to: order.user.email,
       subject: `Payment unsuccessful — ${order.id}`,
       react: PaymentFailedEmail({
@@ -80,7 +87,7 @@ export async function sendShippingNotificationEmail(orderId: string) {
     }
 
     await resend.emails.send({
-      from: FROM_EMAIL,
+      from: ORDER_FROM_EMAIL,
       to: order.user.email,
       subject: `Your order has shipped — ${order.id}`,
       react: ShippingNotificationEmail({
@@ -109,7 +116,7 @@ export async function sendReadyForCollectionEmail(orderId: string) {
     }
 
     await resend.emails.send({
-      from: FROM_EMAIL,
+      from: ORDER_FROM_EMAIL,
       to: order.user.email,
       subject: `Your order is ready for collection — ${order.id}`,
       react: ReadyForCollectionEmail({

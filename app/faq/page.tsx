@@ -6,6 +6,7 @@ import { GST_ENABLED, GST_RATE_DISPLAY } from '@/lib/gst'
 export const metadata: Metadata = {
   title: 'FAQ',
   description: 'Answers to common questions about ordering, shipping, self-collection, and our sales policy.',
+  alternates: { canonical: '/faq' },
 }
 
 type FaqItem = { q: string; a: string }

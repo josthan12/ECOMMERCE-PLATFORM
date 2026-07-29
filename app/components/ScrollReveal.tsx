@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 
 interface ScrollRevealProps {
@@ -17,29 +17,24 @@ interface ScrollRevealProps {
  */
 export default function ScrollReveal({ children, className, delayMs = 0 }: ScrollRevealProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const [isVisible, setIsVisible] = useState(false)
-  const [reducedMotion, setReducedMotion] = useState(false)
+  const [hasIntersected, setHasIntersected] = useState(false)
+  const reducedMotion = useSyncExternalStore(
+    subscribeToReducedMotion,
+    getReducedMotionSnapshot,
+    () => false
+  )
+  const isVisible = reducedMotion || hasIntersected
 
   useEffect(() => {
-    const mql = window.matchMedia('(prefers-reduced-motion: reduce)')
-    setReducedMotion(mql.matches)
-    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [])
+    if (reducedMotion) return
 
-  useEffect(() => {
-    if (reducedMotion) {
-      setIsVisible(true)
-      return
-    }
     const node = ref.current
     if (!node) return
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setIsVisible(true)
+          setHasIntersected(true)
           observer.disconnect()
         }
       },
@@ -62,4 +57,14 @@ export default function ScrollReveal({ children, className, delayMs = 0 }: Scrol
       {children}
     </div>
   )
+}
+
+function subscribeToReducedMotion(onStoreChange: () => void) {
+  const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+  mediaQuery.addEventListener('change', onStoreChange)
+  return () => mediaQuery.removeEventListener('change', onStoreChange)
+}
+
+function getReducedMotionSnapshot() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }

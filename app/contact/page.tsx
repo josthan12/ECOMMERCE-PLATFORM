@@ -4,6 +4,7 @@ export const metadata: Metadata = {
   title: 'Contact',
   description:
     'Get in touch with PokeSunshineTCG via Telegram or email for questions, support, or business enquiries.',
+  alternates: { canonical: '/contact' },
 }
 
 export default function ContactPage() {
@@ -16,7 +17,7 @@ export default function ContactPage() {
       <div className="mt-6 space-y-5 leading-relaxed text-text-muted">
         <p>
           Have a question about an order, a product, or anything else? Feel free to
-          get in touch—we're happy to help.
+          get in touch—we’re happy to help.
         </p>
 
         <div className="rounded-lg border border-border-light bg-surface p-6 shadow-card">
@@ -54,7 +55,7 @@ export default function ContactPage() {
         </div>
 
         <p>
-          We'll get back to you as soon as possible. Thank you for reaching out!
+          We’ll get back to you as soon as possible. Thank you for reaching out!
         </p>
       </div>
     </div>

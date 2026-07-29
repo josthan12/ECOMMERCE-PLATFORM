@@ -1,9 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, Package, Plus, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Loader2, Package, Plus, X } from 'lucide-react'
 import Button from '../../../components/ui/Button'
+import {
+  getCatalogImagePath,
+  verifyCatalogImageFile,
+} from '@/lib/catalogImages'
 
 type ProductField = {
   id: string
@@ -21,12 +25,15 @@ type ProductType = {
 }
 
 type VariantOption = { name: string; values: string }
+type ImageVerificationStatus = 'idle' | 'checking' | 'verified' | 'error'
 type VariantRow = {
   combination: Record<string, string>
   price: string
   stock: string
   sku: string
-  imageUrl: string
+  imageFilename: string
+  imageStatus: ImageVerificationStatus
+  imageMessage: string
 }
 
 // No width baked in here on purpose — combining a fixed width utility
@@ -53,7 +60,15 @@ function generateCombinations(options: VariantOption[]): VariantRow[] {
     return acc.flatMap((combo) => option.values.map((v) => ({ ...combo, [option.name]: v })))
   }, [])
 
-  return combos.map((combination) => ({ combination, price: '', stock: '', sku: '', imageUrl: '' }))
+  return combos.map((combination) => ({
+    combination,
+    price: '',
+    stock: '',
+    sku: '',
+    imageFilename: '',
+    imageStatus: 'idle',
+    imageMessage: '',
+  }))
 }
 
 export default function NewProductPage() {
@@ -68,7 +83,10 @@ export default function NewProductPage() {
   const [attributes, setAttributes] = useState<Record<string, any>>({})
 
   const [variantOptions, setVariantOptions] = useState<VariantOption[]>([])
-  const [imageUrl, setImageUrl] = useState('')
+  const [imageFilename, setImageFilename] = useState('')
+  const imageFilenameRef = useRef('')
+  const [imageStatus, setImageStatus] = useState<ImageVerificationStatus>('idle')
+  const [imageMessage, setImageMessage] = useState('')
   const [variants, setVariants] = useState<VariantRow[]>([])
 
   const [loading, setLoading] = useState(false)
@@ -217,12 +235,48 @@ export default function NewProductPage() {
     setVariants(generateCombinations(variantOptions))
   }
 
-  function updateVariantRow(index: number, field: 'price' | 'stock' | 'sku' | 'imageUrl', value: string) {
-    setVariants((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)))
+  function updateVariantRow(index: number, field: 'price' | 'stock' | 'sku' | 'imageFilename', value: string) {
+    setVariants((prev) => prev.map((row, i) => {
+      if (i !== index) return row
+      if (field === 'imageFilename') {
+        return { ...row, imageFilename: value, imageStatus: 'idle', imageMessage: '' }
+      }
+      return { ...row, [field]: value }
+    }))
   }
 
   function removeVariantRow(index: number) {
     setVariants((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  async function verifyProductImage() {
+    setImageStatus('checking')
+    setImageMessage('Checking file...')
+    const filename = imageFilename
+    const verificationError = await verifyCatalogImageFile(filename, 'products')
+
+    if (imageFilenameRef.current !== filename) return
+    setImageStatus(verificationError ? 'error' : 'verified')
+    setImageMessage(
+      verificationError || `Verified: ${getCatalogImagePath('products', filename)}`
+    )
+  }
+
+  async function verifyVariantImage(index: number) {
+    const filename = variants[index]?.imageFilename ?? ''
+    setVariants((prev) => prev.map((row, i) => (
+      i === index ? { ...row, imageStatus: 'checking', imageMessage: 'Checking file...' } : row
+    )))
+
+    const verificationError = await verifyCatalogImageFile(filename, 'variants')
+    setVariants((prev) => prev.map((row, i) => {
+      if (i !== index || row.imageFilename !== filename) return row
+      return {
+        ...row,
+        imageStatus: verificationError ? 'error' : 'verified',
+        imageMessage: verificationError || `Verified: ${getCatalogImagePath('variants', filename)}`,
+      }
+    }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -235,6 +289,14 @@ export default function NewProductPage() {
     }
     if (variants.some((v) => v.price === '' || v.stock === '')) {
       setError('Every variant needs a price and stock value.')
+      return
+    }
+    if (imageStatus !== 'verified') {
+      setError('Verify the main product image before creating the product.')
+      return
+    }
+    if (variants.some((v) => v.imageFilename.trim() && v.imageStatus !== 'verified')) {
+      setError('Verify every variant image filename that has been entered.')
       return
     }
 
@@ -254,11 +316,19 @@ export default function NewProductPage() {
         body: JSON.stringify({
           name,
           description,
-          imageUrl,
+          imageUrl: getCatalogImagePath('products', imageFilename),
           productTypeId: selectedTypeId,
           attributes,
           variantOptions: variantOptionsJson,
-          variants,
+          variants: variants.map((variant) => ({
+            combination: variant.combination,
+            price: variant.price,
+            stock: variant.stock,
+            sku: variant.sku,
+            imageUrl: variant.imageFilename.trim()
+              ? getCatalogImagePath('variants', variant.imageFilename)
+              : '',
+          })),
         }),
       })
 
@@ -275,6 +345,10 @@ export default function NewProductPage() {
       setLoading(false)
     }
   }
+
+  const imagesVerified = imageStatus === 'verified' && variants.every(
+    (variant) => !variant.imageFilename.trim() || variant.imageStatus === 'verified'
+  )
 
   return (
     <div className="max-w-2xl">
@@ -339,14 +413,54 @@ export default function NewProductPage() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-text">Product Image URL</label>
-                <input
-                  type="text"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="https://..."
-                  className={`w-full ${inputClass}`}
-                />
+                <label htmlFor="productImageFilename" className="mb-1.5 block text-sm font-medium text-text">
+                  Product Image Filename <span className="text-error">*</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="productImageFilename"
+                    type="text"
+                    value={imageFilename}
+                    onChange={(e) => {
+                      imageFilenameRef.current = e.target.value
+                      setImageFilename(e.target.value)
+                      setImageStatus('idle')
+                      setImageMessage('')
+                    }}
+                    placeholder="charizard-ex.webp"
+                    required
+                    className={`min-w-0 flex-1 ${inputClass}`}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={verifyProductImage}
+                    disabled={!imageFilename.trim() || imageStatus === 'checking'}
+                    className="shrink-0 gap-1.5"
+                  >
+                    {imageStatus === 'checking' ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : imageStatus === 'verified' ? (
+                      <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                    ) : null}
+                    {imageStatus === 'checking' ? 'Checking' : imageStatus === 'verified' ? 'Verified' : 'Verify'}
+                  </Button>
+                </div>
+                <p className="mt-1 text-xs text-text-light">
+                  File location: public/images/products/ · Recommended: 1000 × 1000 WebP
+                </p>
+                {imageMessage && (
+                  <p className={`mt-1 text-sm ${
+                    imageStatus === 'verified'
+                      ? 'text-success'
+                      : imageStatus === 'error'
+                        ? 'text-error'
+                        : 'text-text-muted'
+                  }`}>
+                    {imageMessage}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -433,7 +547,7 @@ export default function NewProductPage() {
                         <th className="px-3 py-2 font-medium">Price (SGD)</th>
                         <th className="px-3 py-2 font-medium">Stock</th>
                         <th className="px-3 py-2 font-medium">SKU (optional)</th>
-                        <th className="px-3 py-2 font-medium">Image URL (optional)</th>
+                        <th className="px-3 py-2 font-medium">Image filename (optional)</th>
                         <th className="px-3 py-2"></th>
                       </tr>
                     </thead>
@@ -473,13 +587,42 @@ export default function NewProductPage() {
                             />
                           </td>
                           <td className="px-3 py-2">
-                            <input
-                              type="text"
-                              onChange={(e) => updateVariantRow(i, 'imageUrl', e.target.value)}
-                              value={row.imageUrl}
-                              className={`w-40 ${cellInputClass}`}
-                              placeholder="https://..."
-                            />
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                onChange={(e) => updateVariantRow(i, 'imageFilename', e.target.value)}
+                                value={row.imageFilename}
+                                className={`w-40 ${cellInputClass}`}
+                                placeholder="variant.webp"
+                                aria-label={`Image filename for variant ${i + 1}`}
+                              />
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => verifyVariantImage(i)}
+                                disabled={!row.imageFilename.trim() || row.imageStatus === 'checking'}
+                                className="shrink-0 gap-1.5"
+                              >
+                                {row.imageStatus === 'checking' ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                                ) : row.imageStatus === 'verified' ? (
+                                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                                ) : null}
+                                {row.imageStatus === 'checking' ? 'Checking' : row.imageStatus === 'verified' ? 'Verified' : 'Verify'}
+                              </Button>
+                            </div>
+                            {row.imageMessage && (
+                              <p className={`mt-1 max-w-64 text-xs ${
+                                row.imageStatus === 'verified'
+                                  ? 'text-success'
+                                  : row.imageStatus === 'error'
+                                    ? 'text-error'
+                                    : 'text-text-muted'
+                              }`}>
+                                {row.imageMessage}
+                              </p>
+                            )}
                           </td>
                           <td className="px-3 py-2">
                             <button
@@ -499,9 +642,14 @@ export default function NewProductPage() {
               )}
             </div>
 
-            <Button type="submit" disabled={loading} className="w-full">
+            <Button type="submit" disabled={loading || !imagesVerified} className="w-full">
               {loading ? 'Creating...' : 'Create Product'}
             </Button>
+            {!imagesVerified && (
+              <p className="text-center text-sm text-text-muted">
+                Verify the main image and every entered variant image before creating the product.
+              </p>
+            )}
           </>
         )}
       </form>
