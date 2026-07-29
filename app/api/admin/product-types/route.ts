@@ -1,5 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
+import { revalidateStorefront } from '@/lib/revalidateStorefront'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
@@ -56,6 +57,8 @@ export async function POST(req: Request) {
     },
     include: { fields: true },
   })
+
+  revalidateStorefront()
 
   return NextResponse.json(productType)
 }

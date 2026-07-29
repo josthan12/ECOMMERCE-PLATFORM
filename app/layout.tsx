@@ -7,6 +7,8 @@ import Footer from "@/app/components/Footer";
 import { getSiteUrl } from "@/lib/structuredData";
 import "./globals.css";
 
+export const revalidate = 60;
+
 const geist = localFont({
   src: "./fonts/geist-latin.woff2",
   variable: "--font-geist",

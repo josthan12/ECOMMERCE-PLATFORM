@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 import { isCatalogImagePath } from '@/lib/catalogImages'
+import { revalidateStorefront } from '@/lib/revalidateStorefront'
 
 async function requireAdmin() {
   const { userId } = await auth()
@@ -116,6 +117,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     },
     include: { variants: true },
   })
+
+  revalidateStorefront()
 
   return NextResponse.json(product)
 }

@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 import { isCatalogImagePath } from '@/lib/catalogImages'
+import { revalidateStorefront } from '@/lib/revalidateStorefront'
 
 export async function GET() {
   const { userId } = await auth()
@@ -59,6 +60,8 @@ export async function POST(req: Request) {
     },
     include: { products: { include: { product: true } } },
   })
+
+  revalidateStorefront()
 
   return NextResponse.json(category)
 }

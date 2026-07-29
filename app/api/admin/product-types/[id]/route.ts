@@ -1,5 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
+import { revalidateStorefront } from '@/lib/revalidateStorefront'
 import { NextResponse } from 'next/server'
 
 async function requireAdmin() {
@@ -160,6 +161,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       include: { fields: { orderBy: { order: 'asc' } } },
     })
   })
+
+  revalidateStorefront()
 
   return NextResponse.json(productType)
 }

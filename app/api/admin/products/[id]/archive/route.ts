@@ -1,5 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
+import { revalidateStorefront } from '@/lib/revalidateStorefront'
 import { NextResponse } from 'next/server'
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -24,5 +25,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const product = await prisma.product.update({ where: { id }, data: { archived } })
+  revalidateStorefront()
+
   return NextResponse.json(product)
 }

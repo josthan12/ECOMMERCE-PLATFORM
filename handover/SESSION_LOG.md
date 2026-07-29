@@ -2241,3 +2241,80 @@ starting or stopping the admin-run development server.
 - Targeted ESLint passed for `app/sitemap.ts`.
 - `tsc --noEmit` passed.
 - The development server was not started or stopped.
+
+---
+
+## Session 29
+
+Date: 2026-07-29
+
+### Objective
+Create a disposable production catalogue sample from the admin's inventory
+workbook so its presentation can be reviewed before the separately approved
+database reset.
+
+### Catalogue Preview Import
+- Created the `TCG Set` product type and `Pokemon English` category.
+- Added eight products: Ascended Heroes, Phantasmal Flames, Destined Rivals,
+  Prismatic Evolution, Surging Sparks, Paradox Rift, Fusion Strike, and Silver
+  Tempest.
+- Added 12 variants and 54 total stock units using the workbook's positive
+  quantities and prices.
+- Omitted every `NA` and zero-stock workbook entry at the admin's direction.
+- Corrected the workbook typo `Ascended Heros` to `Ascended Heroes`.
+- Reused the existing category and product placeholder images. No descriptions,
+  custom attributes, variant images, or SKUs were introduced.
+- Ran the import in a transaction and removed the temporary import script after
+  completion.
+- No application source, database schema, migration, or dependency changed.
+
+### Verification
+- Queried the database after the transaction and confirmed eight products,
+  12 variants, and 54 total stock units.
+- Verified the live Pokemon English category page reports eight sets, 12
+  formats, and eight available products.
+- Verified the live Prismatic Evolution product page exposes the four expected
+  format selectors, prices, and stock state.
+- The database wipe was not performed and remains gated on separate explicit
+  admin approval after catalogue review.
+- The development server was not started or stopped.
+
+---
+
+## Session 30
+
+Date: 2026-07-29
+
+### Objective
+Make database-backed storefront catalogue pages refresh automatically while
+retaining cached production performance.
+
+### Storefront Revalidation
+- Added a 60-second route revalidation fallback at the root layout. This
+  covers direct database changes and import scripts that bypass application
+  mutation endpoints.
+- Added one shared storefront revalidation helper that invalidates the root
+  layout route tree for refresh on its next visit.
+- Called the helper only after successful product creation/edit/archive,
+  category creation/edit/deletion, and product-type creation/edit operations.
+- Kept the broad invalidation deliberately simple. Catalogue mutations are
+  infrequent, and the fallback prevents missed external changes from remaining
+  stale indefinitely.
+- No database, migration, dependency, environment variable, or API contract
+  changed.
+
+### Verification
+- `git diff --check` passed.
+- Targeted ESLint reported 15 existing `no-explicit-any` errors on untouched
+  product and product-type API lines. The same target passed with only that
+  documented legacy rule suppressed; the new code introduced no lint finding.
+- `tsc --noEmit` passed.
+- Prisma Client generation passed.
+- The production build passed compilation, TypeScript checking, page-data
+  collection, and generation of all 43 pages.
+- The build output reports a one-minute revalidation interval for `/`,
+  `/categories`, and other static routes beneath the root layout.
+- Existing multiple-lockfile workspace-root and PostgreSQL SSL-mode warnings
+  remain unchanged.
+- The development server was not started or stopped.
+- Production verification remains pending deployment of this code.

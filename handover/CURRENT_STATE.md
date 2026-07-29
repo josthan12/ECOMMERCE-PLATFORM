@@ -20,8 +20,10 @@ Proxy convention.
 ## Current Objective
 Continue collecting admin feedback at Review Gate 4 on cart, checkout, search,
 order history, and canonical/social metadata. The sitemap XML defect found
-during the gate is fixed and verified. The admin runs the local server; no
-preview server was started or stopped during the repair.
+during the gate is fixed and verified. A disposable Pokemon English catalogue
+preview is now live for inventory-layout review. Storefront catalogue
+revalidation is implemented locally and awaits deployment verification. The
+database reset remains paused until the admin explicitly approves it.
 
 ---
 
@@ -110,6 +112,26 @@ preview server was started or stopped during the repair.
       Next.js serializes them. The live endpoint returned 17 URL entries,
       parsed successfully as XML, and contained zero unescaped ampersands.
       Targeted ESLint and TypeScript passed.
+* [x] **Disposable TCG catalogue preview import (Session 29).** Added one
+      `TCG Set` product type, the `Pokemon English` category, eight set
+      products, and 12 positive-stock variants from the admin's sample
+      workbook. `NA` and zero-stock entries were omitted, `Ascended Heros`
+      was corrected to `Ascended Heroes`, and existing placeholder images
+      were reused. The import added 54 units of stock and was verified on the
+      live category and Prismatic Evolution product pages. No application
+      source, schema, migration, or dependency changed. The records remain
+      disposable and are included in the later explicitly approved reset.
+* [x] **Storefront catalogue cache refresh (Session 30).** Added a shared
+      storefront revalidation helper and invoked it after successful product,
+      category, and product-type mutations. The root route now uses a
+      60-second ISR fallback, so imports or direct database changes that bypass
+      the admin APIs still appear automatically. Admin mutations invalidate
+      the cached route tree for refresh on its next visit. No database,
+      migration, dependency, environment, or API-contract change was made.
+      Targeted lint with the documented legacy `no-explicit-any` rule
+      suppressed, TypeScript, Prisma generation, and the production build
+      passed. The build reports a one-minute revalidation interval for the
+      homepage and `/categories`.
 * [x] **Phase 8 structured data (Session 20).** Product detail pages emit
       schema.org `Product` JSON-LD with absolute product/image URLs and
       per-variant SGD offers, SKUs when present, and stock-derived
@@ -281,6 +303,10 @@ preview server was started or stopped during the repair.
   data, and focused accessibility/performance work are implemented and have
   passed automated verification. Interactive desktop/mobile and both-theme
   review remains on the admin-run local server.
+* **Disposable catalogue review.** The admin is reviewing the eight imported
+  Pokemon English sets and 12 variants in production. The cache-refresh change
+  must be deployed and the homepage plus `/categories` rechecked before the
+  admin decides whether to proceed with the separately gated database reset.
 
 ---
 
@@ -307,10 +333,11 @@ preview server was started or stopped during the repair.
   categories are TCG lines, products are sets, and variants are purchasable
   formats. Do not reintroduce Product Line -> Era -> Set hierarchy work unless
   the admin explicitly changes this decision.
-* **Current database content is disposable test data.** Names and imagery such
-  as cups, bottles, jackets, and laptops demonstrate the new layouts but are
-  not representative of the intended TCG catalogue. Milestone 2 must pair the
-  hierarchy work with a real content-entry/reset plan.
+* **Current database content is disposable test data.** It now includes the
+  temporary Pokemon English workbook preview alongside older demonstration
+  records. Recalculate the exact deletion set immediately before any reset,
+  preserve only the confirmed admin account, and require explicit approval
+  before executing the destructive operation.
 * **Theme is still hardcoded in `globals.css`, not admin-editable.** What
   was built this session is a real, complete *design system* — it is not
   the admin-facing "Theme Builder" ROADMAP.md's Phase 7 originally
@@ -334,13 +361,11 @@ preview server was started or stopped during the repair.
 
 ## Immediate Next Task
 
-Review Milestone 4 in a user-run local server: cart, checkout, checkout status,
-search, My orders, and an order receipt in light mode, Collector Midnight, and
-mobile. The browser-reported `/sitemap.xml` issue is repaired and the result
-passes XML validation; continue by inspecting canonical/social metadata. After
-approval, choose the next focused launch task from payment/webhook testing,
-formal accessibility testing, PDPA/account-data workflows, observability, or
-the existing whole-project lint baseline.
+Deploy the catalogue cache-refresh change, then verify that the homepage New
+arrivals section and `/categories` include the disposable Pokemon English
+records. If the inventory presentation is approved, recalculate and present
+the database reset scope, then wait for separate explicit approval before
+deleting anything. The reset must preserve only the confirmed admin account.
 
 ---
 
