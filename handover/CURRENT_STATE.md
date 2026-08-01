@@ -6,8 +6,9 @@ Milestones 1 through 4 are implemented, and the catalogue model remains:
 Category -> Product/Set -> Variant/Format. The proposed hierarchical catalogue
 migration was cancelled in favour of this simpler existing model. Phase 8 now
 has canonical metadata, social metadata, a dynamic sitemap, structured-data
-alignment, and a focused accessibility/performance pass. Formal assistive-
-technology testing and the remaining operational/compliance items stay open.
+alignment, and a focused accessibility/performance pass. A non-destructive
+technical launch audit is complete; its High-severity remediation and formal
+assistive-technology/operational verification remain open.
 
 ## Current Feature
 Milestone 4 aligned cart, checkout, checkout status, search, and customer order
@@ -18,12 +19,15 @@ improvements, above-the-fold image loading, self-hosted Geist, and the Next 16
 Proxy convention.
 
 ## Current Objective
-Continue collecting admin feedback at Review Gate 4 on cart, checkout, search,
-order history, and canonical/social metadata. The sitemap XML defect found
-during the gate is fixed and verified. A disposable Pokemon English catalogue
-preview is now live for inventory-layout review. Storefront catalogue
-revalidation is implemented locally and awaits deployment verification. The
-database reset remains paused until the admin explicitly approves it.
+Deploy and verify the approved Next.js 16.2.11 security patch, then review and
+approve the next focused Phase 2 remediation batch. The current technical
+decision remains NO-GO: production uses a Clerk development instance; payment
+terminal transitions need atomic idempotency; reconciliation can omit
+confirmation email; browser security headers and monitoring are missing; and
+live color contrast has WCAG AA failures. The local framework upgrade,
+catalogue refresh, cart, sitemap, route protection, canonical/structured data,
+build, and TypeScript checks passed. The database reset remains paused until a
+later, separate explicit confirmation.
 
 ---
 
@@ -350,10 +354,12 @@ database reset remains paused until the admin explicitly approves it.
 * **Product Type deletion/reassignment, bulk order actions, Meilisearch** —
   unchanged, still deliberately deferred per Session 10's DECISIONS.md
   entries.
-* Remaining launch work includes card-payment sandbox coverage, the unverified
-  `failed` webhook path, production credentials, error tracking, uptime
-  monitoring, formal WCAG/assistive-technology checks, PDPA workflows, and
-  admin audit logging. Local product and category paths render through
+* Remaining launch work is tracked in `handover/LAUNCH_AUDIT.md`. It includes
+  production Clerk credentials, patched dependencies, concurrency-safe payment
+  transitions, reconciliation email parity, security headers, contrast fixes,
+  sandbox failure/expiry coverage, error tracking, uptime monitoring, formal
+  assistive-technology checks, and admin audit logging. Local product and
+  category paths render through
   `next/image`; the remote compatibility branch remains only for disposable
   test database records.
 
@@ -361,11 +367,12 @@ database reset remains paused until the admin explicitly approves it.
 
 ## Immediate Next Task
 
-Deploy the catalogue cache-refresh change, then verify that the homepage New
-arrivals section and `/categories` include the disposable Pokemon English
-records. If the inventory presentation is approved, recalculate and present
-the database reset scope, then wait for separate explicit approval before
-deleting anything. The reset must preserve only the confirmed admin account.
+Commit/deploy the approved Next.js 16.2.11 patch and verify the Vercel build.
+Then present the atomic/idempotent payment-transition and reconciliation-email
+batch as its own implementation plan, including any schema impact, and wait for
+approval. Do not wipe data during Phase 2. The final reset still requires a
+later, separate explicit confirmation and must preserve only the confirmed
+admin account.
 
 ---
 
@@ -421,3 +428,7 @@ deleting anything. The reset must preserve only the confirmed admin account.
   API key and deployment secret, then request separate explicit confirmation
   before wiping all disposable Prisma data. Neither action is authorized by
   ordinary milestone approval; both belong to the last launch gate.
+- **Legal and PDPA scope boundary:** all legal wording, policies, and PDPA
+  coverage are handled solely by the admin and their lawyer. Engineering may
+  assess technical feasibility, authorization, data security, and data flows,
+  but must not present work as legal or PDPA compliance certification.

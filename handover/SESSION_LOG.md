@@ -2318,3 +2318,94 @@ retaining cached production performance.
   remain unchanged.
 - The development server was not started or stopped.
 - Production verification remains pending deployment of this code.
+
+---
+
+## Session 31
+
+Date: 2026-08-01
+
+### Objective
+Perform Phase 1 of the approved launch-readiness sequence as a non-destructive
+technical audit, excluding all legal and PDPA coverage.
+
+### Audit Work
+- Added `handover/LAUNCH_AUDIT.md` with PASS, FAIL, and USER REQUIRED results,
+  severity, evidence, and recommended remediation.
+- Confirmed the production catalogue refresh, cart behavior, valid sitemap,
+  canonical/structured data, route protection, both themes, and responsive
+  navigation.
+- Confirmed HSTS and cache behavior; found missing production browser security
+  policies and a missing `/robots.txt` route.
+- Verified the production deployment is using a Clerk development instance.
+- Completed a static authorization, secret-handling, raw-card-data, HitPay,
+  webhook, reconciliation, stock-restoration, email, and cron review.
+- Identified concurrency/idempotency risks in terminal payment transitions,
+  duplicate discount/email side effects, missing confirmation email on paid
+  reconciliation, and reconciliation before ownership validation.
+- Ran automated semantic and computed-color accessibility checks; found live
+  WCAG AA contrast failures and a missing empty-cart `h1`.
+- Confirmed no environment/secret files are tracked and no raw card fields are
+  present. No secret values were displayed.
+- Recorded that legal wording, legal policies, and PDPA coverage are solely
+  owner/lawyer-managed and outside engineering scope.
+
+### Verification
+- `tsc --noEmit` passed.
+- Production build passed and generated 43 routes without starting a server.
+- Whole-project ESLint reported the existing 42 errors and one warning.
+- Read-only dependency audit checked 677 packages and reported 20 advisories:
+  11 High, 9 Moderate, and no Critical. Next.js 16.2.9 is affected; the audit
+  identifies 16.2.11 as the current patched minimum.
+- Production unauthenticated cron access returned `401`; signed-out customer
+  and admin pages redirected to Clerk sign-in.
+- Browser-local cart test data was removed after verification. No order,
+  payment, database row, deployment setting, or external-service setting was
+  created or changed.
+- The development server was not started or stopped.
+
+### Decision
+Technical launch status is NO-GO pending the High-severity audit remediations
+and Phase 2 authenticated/sandbox/monitoring verification. No database wipe is
+authorized during Phase 2.
+
+---
+
+## Session 32
+
+Date: 2026-08-02
+
+### Objective
+Implement approved Phase 2 Batch 1: patch the Next.js security baseline and
+verify that the application still builds without starting the development
+server.
+
+### Changes
+- Updated `next` and `eslint-config-next` from 16.2.9 to 16.2.11.
+- Regenerated the npm lockfile and installed the locked graph. Next.js,
+  `@next/env`, `@next/eslint-plugin-next`, and the Windows SWC binary all resolve
+  to 16.2.11. No pnpm lockfile was introduced.
+- Left React/React DOM and all application code, database schema, environment
+  variables, deployment settings, and external services unchanged.
+- Updated the launch audit and handover plan to record Batch 1 as locally
+  remediated with production deployment verification still required.
+
+### Verification
+- Read the bundled Next.js 16 upgrade/install guidance before changing package
+  versions.
+- Prisma Client generation passed.
+- `tsc --noEmit` passed.
+- Whole-project ESLint remains exactly at the documented baseline: 42 errors
+  and one warning; the package upgrade introduced no new lint finding.
+- Next.js 16.2.11 production build passed compilation, TypeScript, page-data
+  collection, and generation of all 43 static pages/routes.
+- Follow-up npm audit fell from 20 advisories to 9: 5 High, 4 Moderate, and no
+  Critical. The prior Next.js proxy/Server Action/SSRF/cache advisories are
+  gone. Residual `sharp`, `postcss`, Prisma/tooling, `brace-expansion`,
+  `fast-uri`, and `valibot` findings remain a separate batch; the unsafe forced
+  Next.js 9.3.3 downgrade was not applied.
+- The existing workspace-root and PostgreSQL SSL-mode warnings remain.
+- The first sandboxed build failed only because Turbopack was denied read access
+  to the inferred `C:\Users\crate` workspace root; the approved unrestricted
+  rerun completed successfully.
+- The development server was not started or stopped.

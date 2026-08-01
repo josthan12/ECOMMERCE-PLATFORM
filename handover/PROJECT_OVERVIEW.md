@@ -35,10 +35,17 @@ Engineers who will extend the platform later. The codebase should expose clean e
 * Modular Homepage Builder (drag-and-drop sections)
 * AI Shopping Assistant (personalized recommendations, gift suggestions)
 * Search (Meilisearch — typo-tolerant, natural language)
-* CMS Pages (About, FAQ, Terms, Privacy/PDPA, Returns, Shipping)
+* CMS Pages (About and FAQ are implemented; legal/policy content is owner/lawyer-managed)
 * Theme System (colors, typography, dark/light mode)
 * Promotions (coupons, flash sales, bundle pricing)
-* PDPA Compliance (consent management, data export, data deletion)
+
+### Engineering Scope Boundary
+
+Legal wording, policies, and PDPA coverage are owned exclusively by the store
+owner and their lawyer. Engineering work may assess technical feasibility,
+authentication, authorization, data security, and data-flow behavior, but must
+not claim or certify legal or PDPA compliance unless the owner explicitly
+changes this direction.
 
 ---
 
@@ -111,6 +118,7 @@ ecommerce-platform/
 - Fast, accessible, SEO-friendly shopping experience on desktop and mobile
 - Payments processed exclusively through HitPay with PayNow and local wallets
 - GST correctly calculated and displayed at checkout
-- AI shopping assistant with PDPA-compliant personalization
+- AI shopping assistant with technically secure personalization if that
+  deferred feature is resumed; legal/privacy coverage remains owner-managed
 - Full order lifecycle from payment to delivery trackable in admin dashboard
 - Clean APIs so future developers can extend without refactoring core

@@ -23,10 +23,11 @@ SESSION_LOG.md Sessions 1–9 for full history of these phases.)
 - [ ] AI natural language search — unstarted, untouched since Session 10
 - [ ] AI Shopping Assistant chat UI — unstarted
 - [ ] Function/tool calling against real product API — unstarted
-- [ ] PDPA consent flow before AI accesses personal data — unstarted
 - [ ] AI Memory / preferences settings page — unstarted
 
 No change this session. Still explicitly deferred, not abandoned.
+Any legal/privacy requirements for a future AI feature are owner/lawyer-managed;
+engineering scope is limited to technical access controls and data security.
 
 ---
 
@@ -100,9 +101,12 @@ support safe retry without intentionally resending successful deliveries.
 
 ---
 
-## Phase 8 — Performance, SEO, Accessibility, Compliance
+## Phase 8 — Performance, SEO, Accessibility, Technical Security
 
-- [ ] ISR/SSR strategy confirmed per page type
+- [x] ISR/SSR strategy confirmed per page type — **verified 2026-08-01.**
+      Public catalogue pages inherit a 60-second route revalidation fallback;
+      authenticated and mutation routes remain dynamic. Production cache and
+      prerender headers were observed during the launch audit.
 - [ ] Image optimization via Next.js Image — **in progress (2026-07-23).**
       Product cards, product detail, search suggestions, and cart thumbnails
       share `CatalogImage`: repository-local paths use Next.js `Image`, with
@@ -136,11 +140,23 @@ support safe retry without intentionally resending successful deliveries.
 - [ ] Keyboard navigation test through checkout — code-level control audit
       passed; interactive test remains at Review Gate 4
 - [ ] Screen reader test through checkout
-- [ ] PDPA: consent, export, deletion verified end-to-end
 - [ ] Audit logging on all admin actions
-- [ ] Confirmed: no raw card data touches own servers
-- [ ] **Deferred by the admin: legal review of the "all sales are final"
-      wording.** Not part of the current milestone and not resolved.
+- [x] Confirmed: no raw card data touches own servers — **verified by the
+      2026-08-01 technical audit.** The current integration creates a hosted
+      HitPay PayNow request and contains no card-number/CVV/expiry fields.
+- [x] Non-destructive technical launch audit — **complete 2026-08-01.** See
+      `handover/LAUNCH_AUDIT.md`; current decision is NO-GO pending the listed
+      High-severity remediations and Phase 2 interactive checks.
+- [ ] Remediate and retest the approved technical launch-audit batches.
+      - [x] Batch 1: Next.js and `eslint-config-next` patched from 16.2.9 to
+        16.2.11 locally; Prisma generation, TypeScript, unchanged lint baseline,
+        production build, and advisory delta verified on 2026-08-02.
+        Production deployment verification remains open.
+
+Legal wording, legal policies, and PDPA coverage are permanently outside the
+engineering roadmap unless the owner explicitly changes direction. They are
+handled solely by the owner and their lawyer; technical findings are not legal
+or PDPA compliance certification.
 
 ---
 

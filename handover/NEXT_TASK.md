@@ -1,42 +1,31 @@
-# Immediate Next Task: Milestone 4 Review Gate
+# Immediate Next Task: Deploy Batch 1, Then Plan Payment Idempotency
 
-Milestone 4 is implemented and has passed targeted ESLint, generated Next.js
-route types, TypeScript, and a production build covering all 43 routes.
+Phase 2 Batch 1 is implemented locally. Next.js, `eslint-config-next`, all
+Next.js platform packages, and the Windows SWC binary are locked at `16.2.11`.
+Prisma generation, TypeScript, and the production build pass. ESLint remains at
+the pre-existing 42 errors and one warning. The npm advisory count fell from 20
+to 9; no Critical advisory remains and the prior Next.js-specific advisories
+are gone.
 
-The admin should run the local server and verify:
+## User-Present Step
 
-1. Cart empty/populated states, quantity controls, removal, totals, and the
-   checkout call to action.
-2. Delivery and self-collection checkout, fulfilment-fee loading/retry,
-   address labels, promotion-code feedback, order totals, and payment handoff.
-3. Checkout success/pending/failure states.
-4. Search suggestions, search result/no-result states, and keyboard focus.
-5. My orders and a representative order receipt, including mobile table
-   scrolling.
-6. All of the above in light and Collector Midnight themes on desktop/mobile.
-7. `/sitemap.xml`, a public canonical URL, and representative product/category
-   social metadata.
+The admin should review, commit, and deploy Batch 1. Verify the Vercel build and
+the production storefront before marking the framework blocker PASS. Do not use
+`npm audit fix --force`; its current suggestion would make an unsafe breaking
+downgrade to Next.js 9.3.3.
 
-Do not restart the server on the admin's behalf; they explicitly chose to run
-it themselves.
+## Next Approval Required
 
----
+Before changing payment code or schema, present a focused implementation plan
+for the next batch:
 
-## After Approval
+1. Make completed, failed, and expired order transitions atomic and
+   idempotent.
+2. Route HitPay webhook and reconciliation through the same transition service.
+3. Guarantee exactly-once stock restoration, promotional expense recording,
+   and confirmation/failure emails under duplicate or concurrent delivery.
+4. Validate order ownership before checkout-success reconciliation.
+5. Propose any schema migration separately and wait for approval.
 
-Choose one focused launch-readiness task:
-
-1. HitPay sandbox coverage, including the currently unverified failed-webhook
-   path.
-2. Formal axe/Lighthouse and screen-reader checkout testing.
-3. PDPA consent, export, and deletion workflow verification.
-4. Error tracking and uptime monitoring.
-5. Resolve the existing whole-project lint baseline in a dedicated admin/API
-   cleanup (42 errors and one warning as of Session 27).
-
-The flat catalogue model remains approved:
-Category -> Product/Set -> Variant/Format.
-
-The final go-live gate must remind the admin to rotate every API key/secret and,
-only after separate explicit confirmation, wipe all disposable Prisma data,
-reseed approved production content, and run a final production smoke test.
+Do not wipe data during Phase 2. Do not start or stop the development server
+unless the admin explicitly asks.
