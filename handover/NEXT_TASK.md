@@ -1,31 +1,26 @@
-# Immediate Next Task: Deploy Batch 1, Then Plan Payment Idempotency
+# Immediate Next Task: Deploy and Test Payment Idempotency
 
-Phase 2 Batch 1 is implemented locally. Next.js, `eslint-config-next`, all
-Next.js platform packages, and the Windows SWC binary are locked at `16.2.11`.
-Prisma generation, TypeScript, and the production build pass. ESLint remains at
-the pre-existing 42 errors and one warning. The npm advisory count fell from 20
-to 9; no Critical advisory remains and the prior Next.js-specific advisories
-are gone.
+Phase 2 Batch 2 is implemented locally. It adds an atomic compare-and-set
+payment transition, durable `OrderEmailDelivery` records with stable Resend
+idempotency keys, cron retries, and ownership validation before authenticated
+checkout-success reconciliation. Prisma validation/generation, TypeScript,
+targeted lint, and the Next.js 16.2.11 production build pass. Whole-project
+ESLint remains at the pre-existing 42 errors and one warning.
 
-## User-Present Step
+## Deployment Checkpoint
 
-The admin should review, commit, and deploy Batch 1. Verify the Vercel build and
-the production storefront before marking the framework blocker PASS. Do not use
-`npm audit fix --force`; its current suggestion would make an unsafe breaking
-downgrade to Next.js 9.3.3.
+The additive migration `20260802000000_add_order_email_deliveries` was applied
+successfully to Neon on 2026-08-02, and the post-check reports the database
+schema up to date. Commit and deploy the matching application code next. The
+migration added only two enums and the `OrderEmailDelivery` table and did not
+rewrite existing orders.
 
-## Next Approval Required
+## User-Present Verification
 
-Before changing payment code or schema, present a focused implementation plan
-for the next batch:
-
-1. Make completed, failed, and expired order transitions atomic and
-   idempotent.
-2. Route HitPay webhook and reconciliation through the same transition service.
-3. Guarantee exactly-once stock restoration, promotional expense recording,
-   and confirmation/failure emails under duplicate or concurrent delivery.
-4. Validate order ownership before checkout-success reconciliation.
-5. Propose any schema migration separately and wait for approval.
+After deployment, exercise HitPay sandbox completed, failed, and expired paths.
+Include duplicate/concurrent webhook and reconciliation delivery, then verify
+exactly one terminal status, stock restoration or promotional expense, and
+confirmation/failure email delivery record per order.
 
 Do not wipe data during Phase 2. Do not start or stop the development server
 unless the admin explicitly asks.

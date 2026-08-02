@@ -261,7 +261,32 @@ A customer order. Created at checkout with live-verified price/stock; shipping a
 | createdAt | DateTime | Auto |
 | updatedAt | DateTime | Auto |
 
-Relations: `items OrderItem[]`
+Relations: `items OrderItem[]`, `emailDeliveries OrderEmailDelivery[]`
+
+---
+
+### OrderEmailDelivery
+Durable outbox record for payment confirmation and payment-failure email.
+Created in the same transaction as the winning terminal payment transition;
+actual Resend delivery occurs after the transaction and can be retried without
+changing order correctness.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (cuid) | Primary key; also forms part of the stable Resend idempotency key. |
+| orderId | String | FK → Order.id (cascade delete). |
+| type | OrderEmailType | `CONFIRMATION` or `PAYMENT_FAILED`. |
+| email | String | Recipient snapshot captured when the order reaches its terminal payment status, keeping retry payloads stable. |
+| status | OrderEmailDeliveryStatus | `PENDING`, `SENT`, or `FAILED`; default `PENDING`. |
+| attemptCount | Int | Default `0`; delivery stops automatically after five claimed attempts. |
+| resendEmailId | String? | Provider delivery ID after Resend accepts the message. |
+| error | String? | Sanitized delivery error, capped at 500 characters by application code. |
+| sentAt | DateTime? | Set after provider acceptance. |
+| createdAt | DateTime | Auto |
+| updatedAt | DateTime | Auto |
+
+Constraints: `@@unique([orderId, type])`,
+`@@index([status, createdAt])`.
 
 ---
 
@@ -297,7 +322,7 @@ Expenses and Profit (`Revenue − Expenses`) metrics.
 | amount | Float | |
 | incurredAt | DateTime | Default: now(). Editable — admin may log a cost after the fact |
 | notes | String? | Optional |
-| **isSystemGenerated** | **Boolean** | **(Added 2026-07-22)** Default: `false`. `true` only for rows auto-created by `lib/recordDiscountExpense.ts` when a promo-discounted order reaches `PAID`. Lets dashboard aggregates (Total Discounts Given, Discount Codes Used) reliably isolate auto-generated rows from manual entries — see API_REFERENCE.md and DECISIONS.md for why a string-category match alone was judged too fragile. |
+| **isSystemGenerated** | **Boolean** | **(Added 2026-07-22)** Default: `false`. `true` only for rows auto-created inside `lib/payments/transitionOrderPayment.ts` when a promo-discounted order atomically reaches `PAID`. Lets dashboard aggregates (Total Discounts Given, Discount Codes Used) reliably isolate auto-generated rows from manual entries — see API_REFERENCE.md and DECISIONS.md for why a string-category match alone was judged too fragile. |
 | createdAt | DateTime | Auto |
 | updatedAt | DateTime | Auto |
 
@@ -418,6 +443,7 @@ PromoCode  ← standalone, no relations (Order.promoCode is a plain string snaps
 | add_promo_and_discount_tracking | **(2026-07-22)** Added `PromoCode` model, `PromoDiscountType` enum, `Order.promoCode`, `Order.discountAmount`, `Expense.isSystemGenerated` |
 | 20260722175234_add_newsletter_subscription | Added account newsletter preference and consent timestamps to `User` |
 | 20260728133000_add_newsletter_posts | Added `NewsletterPost`, `NewsletterDelivery`, and their status enums |
+| 20260802000000_add_order_email_deliveries | Added `OrderEmailDelivery`, `OrderEmailType`, and `OrderEmailDeliveryStatus` for durable idempotent payment emails. Applied to Neon on 2026-08-02. |
 
 ---
 

@@ -63,6 +63,11 @@ export type CategoryProduct = Prisma.CategoryProductModel
  */
 export type Order = Prisma.OrderModel
 /**
+ * Model OrderEmailDelivery
+ * 
+ */
+export type OrderEmailDelivery = Prisma.OrderEmailDeliveryModel
+/**
  * Model OrderItem
  * 
  */

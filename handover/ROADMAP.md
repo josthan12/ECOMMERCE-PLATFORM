@@ -149,9 +149,15 @@ support safe retry without intentionally resending successful deliveries.
       High-severity remediations and Phase 2 interactive checks.
 - [ ] Remediate and retest the approved technical launch-audit batches.
       - [x] Batch 1: Next.js and `eslint-config-next` patched from 16.2.9 to
-        16.2.11 locally; Prisma generation, TypeScript, unchanged lint baseline,
-        production build, and advisory delta verified on 2026-08-02.
-        Production deployment verification remains open.
+        16.2.11; Prisma generation, TypeScript, unchanged lint baseline,
+        production build, advisory delta, Vercel deployment, and production
+        storefront verification completed on 2026-08-02.
+      - [ ] Batch 2: atomic/idempotent terminal payment transitions, durable
+        confirmation/failure email delivery, cron retry, and pre-reconciliation
+        ownership validation are implemented locally. Prisma validation,
+        TypeScript, targeted lint, and production build pass. The additive Neon
+        migration was applied successfully on 2026-08-02; application
+        deployment and HitPay sandbox concurrency verification remain open.
 
 Legal wording, legal policies, and PDPA coverage are permanently outside the
 engineering roadmap unless the owner explicitly changes direction. They are

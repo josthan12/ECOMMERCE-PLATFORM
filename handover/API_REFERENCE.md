@@ -565,10 +565,13 @@ For `fulfillmentMethod: "SELF_COLLECTION"`, all `shipping*` fields are ignored (
 - Atomically checks and decrements stock per variant — rejects `409` if insufficient. **As of 2026-07-17, this same atomic check also excludes archived products** (`product: { archived: false }` added to the `updateMany` where-clause) — an archived item still sitting in a stale client-side cart is rejected with the same `409 OUT_OF_STOCK`-style response as a genuinely out-of-stock item, rather than a new error type
 - Snapshots live price/product name/combination onto each `OrderItem`
 - Computes `shippingFee` from `SHIPPING_FEE_SGD` or `SELF_COLLECTION_FEE_SGD` depending on `fulfillmentMethod`
-- Calculates GST via `lib/gst.ts` on `subtotal + shippingFee` combined (changed Phase 5)
+- Calculates GST via `lib/gst.ts` on `(subtotal - discountAmount) + shippingFee`
 - Creates `Order` (status `PENDING_PAYMENT`, `fulfillmentMethod`, `shippingFee`, nulled address fields for self-collection) + nested `OrderItem[]` in one transaction
 - Calls HitPay to create a Payment Request (form-urlencoded, PayNow only, `expires_after: '5 mins'`) — amount is `order.total`, which already includes `shippingFee`
-- If the HitPay call fails after Order creation, runs a compensating transaction (`lib/orders.ts` → `markOrderFailedAndRestoreStock`)
+- If the HitPay call fails after Order creation, calls the shared atomic
+  `transitionOrderPayment(orderId, 'PAYMENT_FAILED')` service. Only the first
+  `PENDING_PAYMENT` transition can restore stock and create the failure-email
+  delivery record.
 
 **Response:** `201` — `{ "orderId": "cuid", "checkoutUrl": "https://checkout.sandbox.hit-pay.com/..." }`
 
@@ -582,7 +585,10 @@ For `fulfillmentMethod: "SELF_COLLECTION"`, all `shipping*` fields are ignored (
 Order confirmation page. `?orderId=`, `?status=`, and `?reference=` are all read from `searchParams` (`reference` added 2026-07-17 — appended by HitPay itself to the `redirect_url` on a real redirect, not something this app generates).
 
 **Behavior:**
-- **Authenticated visitor, order belongs to them:** full behavior unchanged from Phase 4/5 — reconciles if stale, shows the cosmetic `status=canceled` message, a pending/failed status message, or the full paid order breakdown, depending on the order's real status.
+- **Authenticated visitor, order belongs to them:** verifies ownership before
+  calling reconciliation, then shows the cosmetic `status=canceled` message, a
+  pending/failed status message, or the full paid order breakdown, depending on
+  the order's real status.
 - **Authenticated visitor, order does NOT belong to them, or order doesn't exist:** `notFound()` (404) — unchanged, a real security boundary.
 - **Unauthenticated visitor (added 2026-07-17):** no `notFound()` fallback anymore. Instead:
   - If `reference` is present AND matches that order's `Order.hitpayPaymentRequestId` AND the order's real status is `PAID` → shows a genuine "Payment received!" message. No order details (items, address, total) are shown or fetched beyond the one comparison needed.
@@ -605,9 +611,18 @@ Receives HitPay's payment status webhook, verifies its signature, and updates th
 
 **Behavior:**
 - Looks up `Order` by `reference_number` (our `Order.id`)
-- Idempotent — no-ops if the order is no longer `PENDING_PAYMENT`
-- `status: "completed"` → `Order.status = PAID`, triggers `sendOrderConfirmationEmail`
-- `status: "failed"` → `markOrderFailedAndRestoreStock(orderId)`
+- Routes terminal statuses through the same atomic compare-and-set service as
+  reconciliation and checkout compensation. A duplicate or concurrent caller
+  that loses the `PENDING_PAYMENT` transition cannot repeat stock or expense
+  side effects.
+- `status: "completed"` → atomically sets `PAID`, creates the promotional
+  expense when applicable, and creates one `CONFIRMATION` delivery record.
+- `status: "failed"`, `"canceled"`, or `"expired"` → atomically sets
+  `PAYMENT_FAILED`, restores stock, and creates one `PAYMENT_FAILED` delivery
+  record.
+- Payment emails send after the database transaction using a stable Resend
+  idempotency key. Provider failure is recorded for cron retry and never rolls
+  back the terminal order state.
 
 **Note:** HitPay does not fire this webhook for expired or cancelled requests — only genuine `completed`/`failed` transitions. Expiry is instead handled by lazy reconciliation on the order confirmation page (see `app/checkout/success/page.tsx`) and by the scheduled cron sweep (`app/api/cron/reconcile-orders/route.ts`).
 
@@ -619,14 +634,18 @@ Receives HitPay's payment status webhook, verifies its signature, and updates th
 
 ## Background Jobs
 
-### GET or POST /api/cron/reconcile-orders
-Scheduled sweep that reconciles any `PENDING_PAYMENT` order older than 6 minutes against HitPay's real status, restoring stock and marking the order `PAYMENT_FAILED` where appropriate. Triggered every 5 minutes by cron-job.org (external, non-browser caller).
+### GET /api/cron/reconcile-orders
+Scheduled sweep that reconciles any `PENDING_PAYMENT` order older than 6 minutes against HitPay's real status and retries up to 25 pending/failed payment-email deliveries per invocation. Triggered every 5 minutes by cron-job.org (external, non-browser caller).
 
 **Auth:** `CRON_SECRET` shared-secret check, via `Authorization: Bearer <secret>` header or `?secret=` query param — not Clerk auth, since the caller has no browser session.
 
-**Behavior:** Uses the shared `reconcileOrderIfStale` implementation from `lib/reconcileOrder.ts` (the same function `/checkout/success` calls), processed via `Promise.allSettled` across all matching orders in one invocation.
+**Behavior:** Uses `reconcileOrderIfStale` for stale orders; completed, failed,
+canceled, and expired provider results all route through the shared atomic
+payment-transition service. In parallel, it retries `OrderEmailDelivery` rows
+in `PENDING`/`FAILED` state whose attempt count is below five. Both groups use
+`Promise.allSettled`, so one failed item does not prevent the rest of the sweep.
 
-**Response:** `200` — `{ "checked": number, "succeeded": number, "failed": number }`
+**Response:** `200` — `{ "checked": number, "succeeded": number, "failed": number, "emailDeliveries": { "checked": number, "succeeded": number, "failed": number } }`
 
 **File:** `app/api/cron/reconcile-orders/route.ts`
 
@@ -784,8 +803,9 @@ Creates a new expense.
   non-negative number
 - `incurredAt` defaults to now if omitted
 - `isSystemGenerated` is **not** settable via this route — always `false`
-  for admin-created expenses; only `lib/recordDiscountExpense.ts` sets it
-  `true`, via direct Prisma calls, not this API
+  for admin-created expenses; only the paid-order transaction in
+  `lib/payments/transitionOrderPayment.ts` sets it `true`, via direct Prisma
+  calls, not this API
 
 **Response:** `201` — the created Expense.
 

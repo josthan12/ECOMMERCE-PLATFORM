@@ -338,6 +338,7 @@ export type OrderWhereInput = {
   discountAmount?: Prisma.FloatFilter<"Order"> | number
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   items?: Prisma.OrderItemListRelationFilter
+  emailDeliveries?: Prisma.OrderEmailDeliveryListRelationFilter
 }
 
 export type OrderOrderByWithRelationInput = {
@@ -361,6 +362,7 @@ export type OrderOrderByWithRelationInput = {
   discountAmount?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
   items?: Prisma.OrderItemOrderByRelationAggregateInput
+  emailDeliveries?: Prisma.OrderEmailDeliveryOrderByRelationAggregateInput
 }
 
 export type OrderWhereUniqueInput = Prisma.AtLeast<{
@@ -387,6 +389,7 @@ export type OrderWhereUniqueInput = Prisma.AtLeast<{
   discountAmount?: Prisma.FloatFilter<"Order"> | number
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   items?: Prisma.OrderItemListRelationFilter
+  emailDeliveries?: Prisma.OrderEmailDeliveryListRelationFilter
 }, "id">
 
 export type OrderOrderByWithAggregationInput = {
@@ -459,6 +462,7 @@ export type OrderCreateInput = {
   discountAmount?: number
   user: Prisma.UserCreateNestedOneWithoutOrdersInput
   items?: Prisma.OrderItemCreateNestedManyWithoutOrderInput
+  emailDeliveries?: Prisma.OrderEmailDeliveryCreateNestedManyWithoutOrderInput
 }
 
 export type OrderUncheckedCreateInput = {
@@ -481,6 +485,7 @@ export type OrderUncheckedCreateInput = {
   promoCode?: string | null
   discountAmount?: number
   items?: Prisma.OrderItemUncheckedCreateNestedManyWithoutOrderInput
+  emailDeliveries?: Prisma.OrderEmailDeliveryUncheckedCreateNestedManyWithoutOrderInput
 }
 
 export type OrderUpdateInput = {
@@ -503,6 +508,7 @@ export type OrderUpdateInput = {
   discountAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   user?: Prisma.UserUpdateOneRequiredWithoutOrdersNestedInput
   items?: Prisma.OrderItemUpdateManyWithoutOrderNestedInput
+  emailDeliveries?: Prisma.OrderEmailDeliveryUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderUncheckedUpdateInput = {
@@ -525,6 +531,7 @@ export type OrderUncheckedUpdateInput = {
   promoCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   discountAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   items?: Prisma.OrderItemUncheckedUpdateManyWithoutOrderNestedInput
+  emailDeliveries?: Prisma.OrderEmailDeliveryUncheckedUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderCreateManyInput = {
@@ -733,6 +740,20 @@ export type EnumFulfillmentMethodFieldUpdateOperationsInput = {
   set?: $Enums.FulfillmentMethod
 }
 
+export type OrderCreateNestedOneWithoutEmailDeliveriesInput = {
+  create?: Prisma.XOR<Prisma.OrderCreateWithoutEmailDeliveriesInput, Prisma.OrderUncheckedCreateWithoutEmailDeliveriesInput>
+  connectOrCreate?: Prisma.OrderCreateOrConnectWithoutEmailDeliveriesInput
+  connect?: Prisma.OrderWhereUniqueInput
+}
+
+export type OrderUpdateOneRequiredWithoutEmailDeliveriesNestedInput = {
+  create?: Prisma.XOR<Prisma.OrderCreateWithoutEmailDeliveriesInput, Prisma.OrderUncheckedCreateWithoutEmailDeliveriesInput>
+  connectOrCreate?: Prisma.OrderCreateOrConnectWithoutEmailDeliveriesInput
+  upsert?: Prisma.OrderUpsertWithoutEmailDeliveriesInput
+  connect?: Prisma.OrderWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.OrderUpdateToOneWithWhereWithoutEmailDeliveriesInput, Prisma.OrderUpdateWithoutEmailDeliveriesInput>, Prisma.OrderUncheckedUpdateWithoutEmailDeliveriesInput>
+}
+
 export type OrderCreateNestedOneWithoutItemsInput = {
   create?: Prisma.XOR<Prisma.OrderCreateWithoutItemsInput, Prisma.OrderUncheckedCreateWithoutItemsInput>
   connectOrCreate?: Prisma.OrderCreateOrConnectWithoutItemsInput
@@ -766,6 +787,7 @@ export type OrderCreateWithoutUserInput = {
   promoCode?: string | null
   discountAmount?: number
   items?: Prisma.OrderItemCreateNestedManyWithoutOrderInput
+  emailDeliveries?: Prisma.OrderEmailDeliveryCreateNestedManyWithoutOrderInput
 }
 
 export type OrderUncheckedCreateWithoutUserInput = {
@@ -787,6 +809,7 @@ export type OrderUncheckedCreateWithoutUserInput = {
   promoCode?: string | null
   discountAmount?: number
   items?: Prisma.OrderItemUncheckedCreateNestedManyWithoutOrderInput
+  emailDeliveries?: Prisma.OrderEmailDeliveryUncheckedCreateNestedManyWithoutOrderInput
 }
 
 export type OrderCreateOrConnectWithoutUserInput = {
@@ -839,6 +862,110 @@ export type OrderScalarWhereInput = {
   discountAmount?: Prisma.FloatFilter<"Order"> | number
 }
 
+export type OrderCreateWithoutEmailDeliveriesInput = {
+  id?: string
+  status?: $Enums.OrderStatus
+  hitpayPaymentRequestId?: string | null
+  shippingBlock?: string | null
+  shippingUnitNumber?: string | null
+  shippingStreet?: string | null
+  shippingPostalCode?: string | null
+  fulfillmentMethod?: $Enums.FulfillmentMethod
+  shippingFee?: number
+  trackingNumber?: string | null
+  subtotal: number
+  gstAmount: number
+  total: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  promoCode?: string | null
+  discountAmount?: number
+  user: Prisma.UserCreateNestedOneWithoutOrdersInput
+  items?: Prisma.OrderItemCreateNestedManyWithoutOrderInput
+}
+
+export type OrderUncheckedCreateWithoutEmailDeliveriesInput = {
+  id?: string
+  userId: string
+  status?: $Enums.OrderStatus
+  hitpayPaymentRequestId?: string | null
+  shippingBlock?: string | null
+  shippingUnitNumber?: string | null
+  shippingStreet?: string | null
+  shippingPostalCode?: string | null
+  fulfillmentMethod?: $Enums.FulfillmentMethod
+  shippingFee?: number
+  trackingNumber?: string | null
+  subtotal: number
+  gstAmount: number
+  total: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  promoCode?: string | null
+  discountAmount?: number
+  items?: Prisma.OrderItemUncheckedCreateNestedManyWithoutOrderInput
+}
+
+export type OrderCreateOrConnectWithoutEmailDeliveriesInput = {
+  where: Prisma.OrderWhereUniqueInput
+  create: Prisma.XOR<Prisma.OrderCreateWithoutEmailDeliveriesInput, Prisma.OrderUncheckedCreateWithoutEmailDeliveriesInput>
+}
+
+export type OrderUpsertWithoutEmailDeliveriesInput = {
+  update: Prisma.XOR<Prisma.OrderUpdateWithoutEmailDeliveriesInput, Prisma.OrderUncheckedUpdateWithoutEmailDeliveriesInput>
+  create: Prisma.XOR<Prisma.OrderCreateWithoutEmailDeliveriesInput, Prisma.OrderUncheckedCreateWithoutEmailDeliveriesInput>
+  where?: Prisma.OrderWhereInput
+}
+
+export type OrderUpdateToOneWithWhereWithoutEmailDeliveriesInput = {
+  where?: Prisma.OrderWhereInput
+  data: Prisma.XOR<Prisma.OrderUpdateWithoutEmailDeliveriesInput, Prisma.OrderUncheckedUpdateWithoutEmailDeliveriesInput>
+}
+
+export type OrderUpdateWithoutEmailDeliveriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
+  hitpayPaymentRequestId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shippingBlock?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shippingUnitNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shippingStreet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shippingPostalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fulfillmentMethod?: Prisma.EnumFulfillmentMethodFieldUpdateOperationsInput | $Enums.FulfillmentMethod
+  shippingFee?: Prisma.FloatFieldUpdateOperationsInput | number
+  trackingNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
+  gstAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  total?: Prisma.FloatFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  promoCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  discountAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  user?: Prisma.UserUpdateOneRequiredWithoutOrdersNestedInput
+  items?: Prisma.OrderItemUpdateManyWithoutOrderNestedInput
+}
+
+export type OrderUncheckedUpdateWithoutEmailDeliveriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumOrderStatusFieldUpdateOperationsInput | $Enums.OrderStatus
+  hitpayPaymentRequestId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shippingBlock?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shippingUnitNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shippingStreet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  shippingPostalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fulfillmentMethod?: Prisma.EnumFulfillmentMethodFieldUpdateOperationsInput | $Enums.FulfillmentMethod
+  shippingFee?: Prisma.FloatFieldUpdateOperationsInput | number
+  trackingNumber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subtotal?: Prisma.FloatFieldUpdateOperationsInput | number
+  gstAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  total?: Prisma.FloatFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  promoCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  discountAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  items?: Prisma.OrderItemUncheckedUpdateManyWithoutOrderNestedInput
+}
+
 export type OrderCreateWithoutItemsInput = {
   id?: string
   status?: $Enums.OrderStatus
@@ -858,6 +985,7 @@ export type OrderCreateWithoutItemsInput = {
   promoCode?: string | null
   discountAmount?: number
   user: Prisma.UserCreateNestedOneWithoutOrdersInput
+  emailDeliveries?: Prisma.OrderEmailDeliveryCreateNestedManyWithoutOrderInput
 }
 
 export type OrderUncheckedCreateWithoutItemsInput = {
@@ -879,6 +1007,7 @@ export type OrderUncheckedCreateWithoutItemsInput = {
   updatedAt?: Date | string
   promoCode?: string | null
   discountAmount?: number
+  emailDeliveries?: Prisma.OrderEmailDeliveryUncheckedCreateNestedManyWithoutOrderInput
 }
 
 export type OrderCreateOrConnectWithoutItemsInput = {
@@ -916,6 +1045,7 @@ export type OrderUpdateWithoutItemsInput = {
   promoCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   discountAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   user?: Prisma.UserUpdateOneRequiredWithoutOrdersNestedInput
+  emailDeliveries?: Prisma.OrderEmailDeliveryUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderUncheckedUpdateWithoutItemsInput = {
@@ -937,6 +1067,7 @@ export type OrderUncheckedUpdateWithoutItemsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   promoCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   discountAmount?: Prisma.FloatFieldUpdateOperationsInput | number
+  emailDeliveries?: Prisma.OrderEmailDeliveryUncheckedUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderCreateManyUserInput = {
@@ -978,6 +1109,7 @@ export type OrderUpdateWithoutUserInput = {
   promoCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   discountAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   items?: Prisma.OrderItemUpdateManyWithoutOrderNestedInput
+  emailDeliveries?: Prisma.OrderEmailDeliveryUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderUncheckedUpdateWithoutUserInput = {
@@ -999,6 +1131,7 @@ export type OrderUncheckedUpdateWithoutUserInput = {
   promoCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   discountAmount?: Prisma.FloatFieldUpdateOperationsInput | number
   items?: Prisma.OrderItemUncheckedUpdateManyWithoutOrderNestedInput
+  emailDeliveries?: Prisma.OrderEmailDeliveryUncheckedUpdateManyWithoutOrderNestedInput
 }
 
 export type OrderUncheckedUpdateManyWithoutUserInput = {
@@ -1028,10 +1161,12 @@ export type OrderUncheckedUpdateManyWithoutUserInput = {
 
 export type OrderCountOutputType = {
   items: number
+  emailDeliveries: number
 }
 
 export type OrderCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   items?: boolean | OrderCountOutputTypeCountItemsArgs
+  emailDeliveries?: boolean | OrderCountOutputTypeCountEmailDeliveriesArgs
 }
 
 /**
@@ -1049,6 +1184,13 @@ export type OrderCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extens
  */
 export type OrderCountOutputTypeCountItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.OrderItemWhereInput
+}
+
+/**
+ * OrderCountOutputType without action
+ */
+export type OrderCountOutputTypeCountEmailDeliveriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.OrderEmailDeliveryWhereInput
 }
 
 
@@ -1073,6 +1215,7 @@ export type OrderSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   discountAmount?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   items?: boolean | Prisma.Order$itemsArgs<ExtArgs>
+  emailDeliveries?: boolean | Prisma.Order$emailDeliveriesArgs<ExtArgs>
   _count?: boolean | Prisma.OrderCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["order"]>
 
@@ -1145,6 +1288,7 @@ export type OrderOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = ru
 export type OrderInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   items?: boolean | Prisma.Order$itemsArgs<ExtArgs>
+  emailDeliveries?: boolean | Prisma.Order$emailDeliveriesArgs<ExtArgs>
   _count?: boolean | Prisma.OrderCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type OrderIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1159,6 +1303,7 @@ export type $OrderPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   objects: {
     user: Prisma.$UserPayload<ExtArgs>
     items: Prisma.$OrderItemPayload<ExtArgs>[]
+    emailDeliveries: Prisma.$OrderEmailDeliveryPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1575,6 +1720,7 @@ export interface Prisma__OrderClient<T, Null = never, ExtArgs extends runtime.Ty
   readonly [Symbol.toStringTag]: "PrismaPromise"
   user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   items<T extends Prisma.Order$itemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Order$itemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  emailDeliveries<T extends Prisma.Order$emailDeliveriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Order$emailDeliveriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderEmailDeliveryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2044,6 +2190,30 @@ export type Order$itemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArg
   take?: number
   skip?: number
   distinct?: Prisma.OrderItemScalarFieldEnum | Prisma.OrderItemScalarFieldEnum[]
+}
+
+/**
+ * Order.emailDeliveries
+ */
+export type Order$emailDeliveriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the OrderEmailDelivery
+   */
+  select?: Prisma.OrderEmailDeliverySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the OrderEmailDelivery
+   */
+  omit?: Prisma.OrderEmailDeliveryOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OrderEmailDeliveryInclude<ExtArgs> | null
+  where?: Prisma.OrderEmailDeliveryWhereInput
+  orderBy?: Prisma.OrderEmailDeliveryOrderByWithRelationInput | Prisma.OrderEmailDeliveryOrderByWithRelationInput[]
+  cursor?: Prisma.OrderEmailDeliveryWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.OrderEmailDeliveryScalarFieldEnum | Prisma.OrderEmailDeliveryScalarFieldEnum[]
 }
 
 /**

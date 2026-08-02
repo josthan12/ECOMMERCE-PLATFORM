@@ -19,15 +19,16 @@ improvements, above-the-fold image loading, self-hosted Geist, and the Next 16
 Proxy convention.
 
 ## Current Objective
-Deploy and verify the approved Next.js 16.2.11 security patch, then review and
-approve the next focused Phase 2 remediation batch. The current technical
-decision remains NO-GO: production uses a Clerk development instance; payment
-terminal transitions need atomic idempotency; reconciliation can omit
-confirmation email; browser security headers and monitoring are missing; and
-live color contrast has WCAG AA failures. The local framework upgrade,
-catalogue refresh, cart, sitemap, route protection, canonical/structured data,
-build, and TypeScript checks passed. The database reset remains paused until a
-later, separate explicit confirmation.
+Review and deploy the locally implemented payment-idempotency batch. Its
+additive `OrderEmailDelivery` migration is already applied to Neon, so the
+matching application code is now the remaining deployment half.
+The current technical decision remains NO-GO: production uses a Clerk
+development instance; the payment batch still needs deployment and HitPay
+sandbox verification; browser security headers and monitoring are
+missing; and live color contrast has WCAG AA failures. The Next.js 16.2.11
+production deployment, catalogue refresh, cart, sitemap, route protection,
+canonical/structured data, build, and TypeScript checks passed. The database
+reset remains paused until a later, separate explicit confirmation.
 
 ---
 
@@ -280,11 +281,11 @@ later, separate explicit confirmation.
       (`discountedSubtotal` feeds `calculateTotalWithGST`), consistent with
       how GST is meant to apply to a net sale price. A discount is logged
       as an auto-generated `Expense` (`isSystemGenerated: true`, category
-      `"Promotion"`) **only once the order actually reaches `PAID`** — via
-      `lib/recordDiscountExpense.ts`, called from both the HitPay webhook's
-      `completed` handler and `lib/reconcileOrder.ts`'s stale-order sweep,
-      so it can never double-fire and never fires for an order that ends up
-      failing. Full admin CRUD at `/admin/promo-codes`, including a
+      `"Promotion"`) **only once the order actually reaches `PAID`** — inside
+      the winning compare-and-set transaction in
+      `lib/payments/transitionOrderPayment.ts`, so duplicate webhook or
+      reconciliation calls cannot double-fire it and it never fires for an
+      order that ends up failing. Full admin CRUD at `/admin/promo-codes`, including a
       dedicated Reactivate action (distinct from the independent
       Active/Inactive toggle — a code can be inactive-and-unused,
       active-and-used, etc., independently).
@@ -355,8 +356,8 @@ later, separate explicit confirmation.
   unchanged, still deliberately deferred per Session 10's DECISIONS.md
   entries.
 * Remaining launch work is tracked in `handover/LAUNCH_AUDIT.md`. It includes
-  production Clerk credentials, patched dependencies, concurrency-safe payment
-  transitions, reconciliation email parity, security headers, contrast fixes,
+  production Clerk credentials, deploying and sandbox-testing the locally
+  implemented payment-idempotency batch, security headers, contrast fixes,
   sandbox failure/expiry coverage, error tracking, uptime monitoring, formal
   assistive-technology checks, and admin audit logging. Local product and
   category paths render through
@@ -367,12 +368,11 @@ later, separate explicit confirmation.
 
 ## Immediate Next Task
 
-Commit/deploy the approved Next.js 16.2.11 patch and verify the Vercel build.
-Then present the atomic/idempotent payment-transition and reconciliation-email
-batch as its own implementation plan, including any schema impact, and wait for
-approval. Do not wipe data during Phase 2. The final reset still requires a
-later, separate explicit confirmation and must preserve only the confirmed
-admin account.
+Commit and deploy the local payment-idempotency patch; its additive Neon
+migration is already applied. Then exercise HitPay sandbox completed, failed,
+and expired paths plus duplicate/concurrent delivery. Do not wipe data during
+Phase 2. The final reset still requires a later, separate explicit confirmation
+and must preserve only the confirmed admin account.
 
 ---
 

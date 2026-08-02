@@ -136,6 +136,14 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
     notFound()
   }
 
+  const ownedOrder = await prisma.order.findFirst({
+    where: { id: orderId, userId: user.id },
+    select: { id: true },
+  })
+  if (!ownedOrder) {
+    notFound()
+  }
+
   const reconciled = await reconcileOrderIfStale(orderId)
 
   if (!reconciled || reconciled.userId !== user.id) {

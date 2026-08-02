@@ -372,6 +372,40 @@ export type EnumFulfillmentMethodWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumFulfillmentMethodFilter<$PrismaModel>
 }
 
+export type EnumOrderEmailTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.OrderEmailType | Prisma.EnumOrderEmailTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.OrderEmailType[] | Prisma.ListEnumOrderEmailTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.OrderEmailType[] | Prisma.ListEnumOrderEmailTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumOrderEmailTypeFilter<$PrismaModel> | $Enums.OrderEmailType
+}
+
+export type EnumOrderEmailDeliveryStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.OrderEmailDeliveryStatus | Prisma.EnumOrderEmailDeliveryStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.OrderEmailDeliveryStatus[] | Prisma.ListEnumOrderEmailDeliveryStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.OrderEmailDeliveryStatus[] | Prisma.ListEnumOrderEmailDeliveryStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumOrderEmailDeliveryStatusFilter<$PrismaModel> | $Enums.OrderEmailDeliveryStatus
+}
+
+export type EnumOrderEmailTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.OrderEmailType | Prisma.EnumOrderEmailTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.OrderEmailType[] | Prisma.ListEnumOrderEmailTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.OrderEmailType[] | Prisma.ListEnumOrderEmailTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumOrderEmailTypeWithAggregatesFilter<$PrismaModel> | $Enums.OrderEmailType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumOrderEmailTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumOrderEmailTypeFilter<$PrismaModel>
+}
+
+export type EnumOrderEmailDeliveryStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.OrderEmailDeliveryStatus | Prisma.EnumOrderEmailDeliveryStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.OrderEmailDeliveryStatus[] | Prisma.ListEnumOrderEmailDeliveryStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.OrderEmailDeliveryStatus[] | Prisma.ListEnumOrderEmailDeliveryStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumOrderEmailDeliveryStatusWithAggregatesFilter<$PrismaModel> | $Enums.OrderEmailDeliveryStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumOrderEmailDeliveryStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumOrderEmailDeliveryStatusFilter<$PrismaModel>
+}
+
 export type EnumPromoDiscountTypeFilter<$PrismaModel = never> = {
   equals?: $Enums.PromoDiscountType | Prisma.EnumPromoDiscountTypeFieldRefInput<$PrismaModel>
   in?: $Enums.PromoDiscountType[] | Prisma.ListEnumPromoDiscountTypeFieldRefInput<$PrismaModel>
@@ -754,6 +788,40 @@ export type NestedEnumFulfillmentMethodWithAggregatesFilter<$PrismaModel = never
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumFulfillmentMethodFilter<$PrismaModel>
   _max?: Prisma.NestedEnumFulfillmentMethodFilter<$PrismaModel>
+}
+
+export type NestedEnumOrderEmailTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.OrderEmailType | Prisma.EnumOrderEmailTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.OrderEmailType[] | Prisma.ListEnumOrderEmailTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.OrderEmailType[] | Prisma.ListEnumOrderEmailTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumOrderEmailTypeFilter<$PrismaModel> | $Enums.OrderEmailType
+}
+
+export type NestedEnumOrderEmailDeliveryStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.OrderEmailDeliveryStatus | Prisma.EnumOrderEmailDeliveryStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.OrderEmailDeliveryStatus[] | Prisma.ListEnumOrderEmailDeliveryStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.OrderEmailDeliveryStatus[] | Prisma.ListEnumOrderEmailDeliveryStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumOrderEmailDeliveryStatusFilter<$PrismaModel> | $Enums.OrderEmailDeliveryStatus
+}
+
+export type NestedEnumOrderEmailTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.OrderEmailType | Prisma.EnumOrderEmailTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.OrderEmailType[] | Prisma.ListEnumOrderEmailTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.OrderEmailType[] | Prisma.ListEnumOrderEmailTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumOrderEmailTypeWithAggregatesFilter<$PrismaModel> | $Enums.OrderEmailType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumOrderEmailTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumOrderEmailTypeFilter<$PrismaModel>
+}
+
+export type NestedEnumOrderEmailDeliveryStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.OrderEmailDeliveryStatus | Prisma.EnumOrderEmailDeliveryStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.OrderEmailDeliveryStatus[] | Prisma.ListEnumOrderEmailDeliveryStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.OrderEmailDeliveryStatus[] | Prisma.ListEnumOrderEmailDeliveryStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumOrderEmailDeliveryStatusWithAggregatesFilter<$PrismaModel> | $Enums.OrderEmailDeliveryStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumOrderEmailDeliveryStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumOrderEmailDeliveryStatusFilter<$PrismaModel>
 }
 
 export type NestedEnumPromoDiscountTypeFilter<$PrismaModel = never> = {

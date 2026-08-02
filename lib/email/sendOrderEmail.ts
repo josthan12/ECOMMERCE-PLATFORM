@@ -7,20 +7,23 @@ import ReadyForCollectionEmail from './templates/readyForCollection';
 import { SELF_COLLECTION_ADDRESS } from '@/lib/constants';
 import { GST_ENABLED, GST_RATE_DISPLAY } from '@/lib/gst';
 
-export async function sendOrderConfirmationEmail(orderId: string) {
-  try {
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: { items: true, user: true },
-    });
-    if (!order) {
-      console.error('[email] order not found for confirmation email', orderId);
-      return;
-    }
+export async function sendOrderConfirmationEmail(
+  orderId: string,
+  recipientEmail: string,
+  idempotencyKey: string
+) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { items: true },
+  });
+  if (!order) {
+    throw new Error(`Order ${orderId} was not found for its confirmation email.`);
+  }
 
-    await resend.emails.send({
+  return resend.emails.send(
+    {
       from: ORDER_FROM_EMAIL,
-      to: order.user.email,
+      to: recipientEmail,
       subject: `Order confirmed — ${order.id}`,
       react: OrderConfirmationEmail({
         orderId: order.id,
@@ -44,35 +47,35 @@ export async function sendOrderConfirmationEmail(orderId: string) {
         shippingStreet: order.shippingStreet ?? '',
         shippingPostalCode: order.shippingPostalCode ?? '',
       }),
-    });
-  } catch (err) {
-    console.error('[email] failed to send order confirmation', orderId, err);
-  }
+    },
+    { idempotencyKey }
+  );
 }
 
-export async function sendPaymentFailedEmail(orderId: string) {
-  try {
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: { user: true },
-    });
-    if (!order) {
-      console.error('[email] order not found for failed-payment email', orderId);
-      return;
-    }
+export async function sendPaymentFailedEmail(
+  orderId: string,
+  recipientEmail: string,
+  idempotencyKey: string
+) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+  });
+  if (!order) {
+    throw new Error(`Order ${orderId} was not found for its failed-payment email.`);
+  }
 
-    await resend.emails.send({
+  return resend.emails.send(
+    {
       from: ORDER_FROM_EMAIL,
-      to: order.user.email,
+      to: recipientEmail,
       subject: `Payment unsuccessful — ${order.id}`,
       react: PaymentFailedEmail({
         orderId: order.id,
         total: order.total,
       }),
-    });
-  } catch (err) {
-    console.error('[email] failed to send payment-failed email', orderId, err);
-  }
+    },
+    { idempotencyKey }
+  );
 }
 
 export async function sendShippingNotificationEmail(orderId: string) {

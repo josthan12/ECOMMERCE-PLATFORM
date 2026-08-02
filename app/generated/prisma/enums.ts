@@ -62,6 +62,23 @@ export const OrderStatus = {
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus]
 
 
+export const OrderEmailType = {
+  CONFIRMATION: 'CONFIRMATION',
+  PAYMENT_FAILED: 'PAYMENT_FAILED'
+} as const
+
+export type OrderEmailType = (typeof OrderEmailType)[keyof typeof OrderEmailType]
+
+
+export const OrderEmailDeliveryStatus = {
+  PENDING: 'PENDING',
+  SENT: 'SENT',
+  FAILED: 'FAILED'
+} as const
+
+export type OrderEmailDeliveryStatus = (typeof OrderEmailDeliveryStatus)[keyof typeof OrderEmailDeliveryStatus]
+
+
 export const PromoDiscountType = {
   PERCENTAGE: 'PERCENTAGE',
   FIXED_AMOUNT: 'FIXED_AMOUNT'

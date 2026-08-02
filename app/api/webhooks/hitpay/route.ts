@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
-import { markOrderFailedAndRestoreStock } from '@/lib/orders'
-import { sendOrderConfirmationEmail } from '@/lib/email/sendOrderEmail';
-import { recordDiscountExpenseIfApplicable } from '@/lib/recordDiscountExpense'
+import { transitionOrderPayment } from '@/lib/payments/transitionOrderPayment'
 
 export async function POST(req: Request) {
   const rawBody = await req.text()
@@ -42,19 +40,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Order not found' }, { status: 404 })
   }
 
-  if (order.status !== 'PENDING_PAYMENT') {
-    return NextResponse.json({ received: true, note: 'Already processed' }, { status: 200 })
-  }
-
   if (status === 'completed') {
-    await prisma.order.update({
-      where: { id: orderId },
-      data: { status: 'PAID' },
-    })
-    await recordDiscountExpenseIfApplicable(orderId)
-    await sendOrderConfirmationEmail(order.id)
-  } else if (status === 'failed') {
-    await markOrderFailedAndRestoreStock(orderId)
+    await transitionOrderPayment(orderId, 'PAID')
+  } else if (['failed', 'canceled', 'expired'].includes(status)) {
+    await transitionOrderPayment(orderId, 'PAYMENT_FAILED')
   }
 
   return NextResponse.json({ received: true }, { status: 200 })

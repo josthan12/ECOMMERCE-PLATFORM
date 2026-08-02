@@ -163,14 +163,13 @@ extra ceremony.
   available at any time).
 - **Discount-as-Expense timing is the inverse:** the auto-generated
   `Expense` row (`isSystemGenerated: true`) is only created once an order
-  actually reaches `PAID` — via `lib/recordDiscountExpense.ts`, called
-  from **both** `app/api/webhooks/hitpay/route.ts`'s `completed` handler
-  and `lib/reconcileOrder.ts`'s stale-order sweep (the same dual-call-site
-  pattern already established for `sendOrderConfirmationEmail` and
-  `markOrderFailedAndRestoreStock`). This asymmetry (burn-on-create vs.
-  expense-on-paid) is intentional: "the code is spent" and "money was
-  actually given away on a real sale" are treated as genuinely separate
-  facts.
+  actually reaches `PAID` — inside the same winning compare-and-set
+  transaction in `lib/payments/transitionOrderPayment.ts`. Webhook,
+  reconciliation, and checkout compensation all call that service, so
+  concurrent or duplicate delivery cannot repeat the expense or failed-order
+  stock restoration. This asymmetry (burn-on-create vs. expense-on-paid) is
+  intentional: "the code is spent" and "money was actually given away on a
+  real sale" are treated as genuinely separate facts.
 
 ### Public Storefront Pages
 `/`, `/categories`, `/products`, `/category/[slug]`, `/product/[slug]`,
@@ -233,6 +232,12 @@ them and can't reach Prisma directly.
   Resend client with a per-delivery idempotency key, and records success or
   failure. Saving a post never sends it. Lead images are references only;
   persistent upload storage remains a separate decision.
+- **Terminal payment processing** uses one atomic compare-and-set service.
+  The winning `PENDING_PAYMENT` → `PAID`/`PAYMENT_FAILED` transaction performs
+  the database side effects and creates one `OrderEmailDelivery` outbox row.
+  Resend runs only after commit with a stable per-delivery idempotency key;
+  delivery failures are recorded and retried by the reconciliation cron without
+  rolling back order, stock, or expense state.
 - **`Footer.tsx`** — global multi-column brand and navigation footer.
 - **`/faq`** (added 2026-07-22) — real content grounded only in facts already true of the site (payment method, GST conditionality, fulfillment options, sales policy pulled from `PurchaseNotice.tsx`). Deliberately did **not** reuse a reference FAQ document the admin uploaded, since it was identified as another real business's actual customer-service copy, not written for this project.
 - **`/about`, `/contact`** (added 2026-07-22) — real, admin-written content.
@@ -325,7 +330,7 @@ ecommerce-platform/
 │   ├── api/
 │   │   ├── webhooks/
 │   │   │   ├── clerk/route.ts
-│   │   │   └── hitpay/route.ts           ← Extended 2026-07-22: calls recordDiscountExpenseIfApplicable on `completed`; leftover debug console.logs removed
+│   │   │   └── hitpay/route.ts           ← Verifies signature, then delegates terminal status to the shared payment service
 │   │   ├── search/suggestions/route.ts
 │   │   ├── checkout/
 │   │   │   └── apply-promo/route.ts      ← (added 2026-07-22) Preview/validation only, never mutates
@@ -343,14 +348,15 @@ ecommerce-platform/
 │   ├── prisma.ts
 │   ├── gst.ts                            ← Extended 2026-07-22: GST_ENABLED, GST_RATE_DISPLAY exports
 │   ├── promoCode.ts                      ← (added 2026-07-22) computeDiscountAmount() — shared by preview and real checkout
-│   ├── recordDiscountExpense.ts          ← (added 2026-07-22) recordDiscountExpenseIfApplicable(orderId)
 │   ├── cn.ts                             ← (added 2026-07-22) className helper
 │   ├── validateAddress.ts
 │   ├── orderStatus.ts                    ← STATUS_STYLES/formatStatus — now consistently imported everywhere (deduplicated 2026-07-22; admin order detail page and OrderStatusActions previously had their own copies)
-│   ├── orders.ts
-│   ├── reconcileOrder.ts                 ← Extended 2026-07-22: calls recordDiscountExpenseIfApplicable on the `completed` path
+│   ├── reconcileOrder.ts                 ← Reads HitPay state, then delegates terminal changes to the shared service
 │   ├── constants.ts                      ← SELF_COLLECTION_ADDRESS, TELEGRAM_URL (added 2026-07-22)
+│   ├── payments/
+│   │   └── transitionOrderPayment.ts     ← Atomic terminal status, stock/expense, and email-outbox transaction
 │   └── email/
+│       └── deliverOrderEmail.ts          ← Durable Resend delivery/retry with stable idempotency keys
 │
 ├── prisma/
 │   ├── schema.prisma

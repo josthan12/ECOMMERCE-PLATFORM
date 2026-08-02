@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { calculateTotalWithGST } from '@/lib/gst'
 import { validateShippingAddress } from '@/lib/validateAddress'
-import { markOrderFailedAndRestoreStock } from '@/lib/orders'
+import { transitionOrderPayment } from '@/lib/payments/transitionOrderPayment'
 import { computeDiscountAmount } from '@/lib/promoCode'
 import { Prisma } from '@/app/generated/prisma/client'
 
@@ -197,7 +197,7 @@ export async function POST(req: Request) {
     const message = err instanceof Error ? err.message : 'UNKNOWN'
 
     if (message === 'HITPAY_REQUEST_FAILED' && orderId) {
-      await markOrderFailedAndRestoreStock(orderId)
+      await transitionOrderPayment(orderId, 'PAYMENT_FAILED')
       return NextResponse.json({ error: 'Could not initiate payment. Please try again.' }, { status: 502 })
     }
 

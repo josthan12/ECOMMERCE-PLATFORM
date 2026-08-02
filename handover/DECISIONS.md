@@ -604,6 +604,31 @@ Date:
 ---
 
 Decision:
+Use one atomic compare-and-set payment-transition service plus a durable
+`OrderEmailDelivery` outbox for completed, failed, canceled, and expired
+payment outcomes.
+
+Reason:
+The earlier separate `PENDING_PAYMENT` checks and updates allowed webhook,
+checkout compensation, lazy reconciliation, and cron reconciliation to race.
+Two callers could restore stock twice, create two promotional expenses, or
+send duplicate email; the reconciliation-paid path could also omit its email
+entirely. `lib/payments/transitionOrderPayment.ts` now conditionally updates
+only a still-pending order and performs the winning stock/expense work plus
+outbox creation in one Prisma transaction. The unique `(orderId, type)` outbox
+constraint and stable Resend idempotency key protect duplicate/concurrent
+email attempts, while recorded failures can be retried by cron. Resend remains
+outside the database transaction, preserving the earlier rule that provider
+availability must never roll back payment correctness. This supersedes the
+2026-07-06 `lib/orders.ts` helper placement and the 2026-07-13 catch-and-log-only
+payment-email mechanism, but not their centralization/non-blocking intent.
+
+Date:
+2026-08-02
+
+---
+
+Decision:
 Newsletter composition is database-backed, while broadcasting remains a
 separate explicit admin action with recipient confirmation. Each recipient
 gets a delivery row and a stable Resend idempotency key; retries skip

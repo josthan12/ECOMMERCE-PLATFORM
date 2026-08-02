@@ -2242,8 +2242,6 @@ starting or stopping the admin-run development server.
 - `tsc --noEmit` passed.
 - The development server was not started or stopped.
 
----
-
 ## Session 29
 
 Date: 2026-07-29
@@ -2409,3 +2407,57 @@ server.
   to the inferred `C:\Users\crate` workspace root; the approved unrestricted
   rerun completed successfully.
 - The development server was not started or stopped.
+
+---
+
+## Session 33
+
+Date: 2026-08-02
+
+### Objective
+Implement approved Phase 2 Batch 2: atomic/idempotent terminal payment
+transitions, durable payment-email retries, and ownership validation before
+checkout-success reconciliation.
+
+### Changes
+- Added one shared `transitionOrderPayment` compare-and-set service used by
+  checkout compensation, the HitPay webhook, and stale-order reconciliation.
+- Moved failed-order stock restoration and paid-order promotional expense
+  creation into the winning terminal-status transaction. Duplicate or
+  concurrent callers that lose the `PENDING_PAYMENT` update cannot repeat
+  either side effect.
+- Added the additive migration
+  `20260802000000_add_order_email_deliveries`. It defines confirmation/failure
+  delivery types, recipient snapshots, status, attempts, Resend ID, sanitized
+  error, and timestamps with a unique `(orderId, type)` constraint.
+- Added durable post-commit email delivery with stable Resend idempotency keys,
+  a five-attempt cap, and conditional updates that cannot overwrite an already
+  successful concurrent send with a later failure.
+- Extended the reconciliation cron to retry up to 25 pending/failed payment
+  emails per invocation while retaining its existing stale-payment sweep.
+- Changed authenticated checkout-success handling to verify ownership before
+  any HitPay reconciliation request or terminal-state side effect.
+- Removed the superseded `lib/orders.ts` and
+  `lib/recordDiscountExpense.ts` helpers and regenerated the tracked Prisma
+  client.
+- No environment variable, payment-provider configuration, dependency, or
+  customer-facing checkout design changed.
+
+### Verification
+- Read the bundled Next.js 16 route-handler and page guidance before editing.
+- Prisma format, schema validation, and client generation passed.
+- `tsc --noEmit` passed.
+- Targeted ESLint passed for every affected application file. Whole-project
+  ESLint remains exactly at the documented 42 errors and one warning.
+- The Next.js 16.2.11 production build passed compilation, TypeScript,
+  page-data collection, and generation of all 43 pages/routes.
+- The sandboxed build first hit the known Turbopack workspace-root access
+  restriction; the approved unrestricted rerun passed. Existing workspace-root
+  and PostgreSQL SSL-mode warnings remain.
+- Preflight found exactly one pending migration, then `prisma migrate deploy`
+  applied `20260802000000_add_order_email_deliveries` to Neon successfully; the
+  post-check reports the database schema up to date.
+- No orders, payments, or catalogue rows were created or deleted, no database
+  wipe occurred, and the development server was not started or stopped.
+  Deployment and HitPay sandbox duplicate/concurrent verification remain the
+  next checkpoint.

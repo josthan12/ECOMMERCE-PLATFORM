@@ -154,28 +154,58 @@ enum OrderStatus {
   REFUNDED
 }
 
+enum OrderEmailType {
+  CONFIRMATION
+  PAYMENT_FAILED
+}
+
+enum OrderEmailDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
 model Order {
-  id                     String            @id @default(cuid())
+  id                     String               @id @default(cuid())
   userId                 String
-  user                   User              @relation(fields: [userId], references: [id])
-  status                 OrderStatus       @default(PENDING_PAYMENT)
+  user                   User                 @relation(fields: [userId], references: [id])
+  status                 OrderStatus          @default(PENDING_PAYMENT)
   hitpayPaymentRequestId String?
   // Shipping address — snapshotted at order time, immutable afterward
   shippingBlock          String?
   shippingUnitNumber     String?
   shippingStreet         String?
   shippingPostalCode     String?
-  fulfillmentMethod      FulfillmentMethod @default(DELIVERY)
-  shippingFee            Float             @default(0)
+  fulfillmentMethod      FulfillmentMethod    @default(DELIVERY)
+  shippingFee            Float                @default(0)
   trackingNumber         String?
   subtotal               Float
   gstAmount              Float
   total                  Float
-  createdAt              DateTime          @default(now())
-  updatedAt              DateTime          @updatedAt
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
   promoCode              String?
-  discountAmount         Float             @default(0)
+  discountAmount         Float                @default(0)
   items                  OrderItem[]
+  emailDeliveries        OrderEmailDelivery[]
+}
+
+model OrderEmailDelivery {
+  id            String                   @id @default(cuid())
+  orderId       String
+  order         Order                    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type          OrderEmailType
+  email         String
+  status        OrderEmailDeliveryStatus @default(PENDING)
+  attemptCount  Int                      @default(0)
+  resendEmailId String?
+  error         String?
+  sentAt        DateTime?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  @@unique([orderId, type])
+  @@index([status, createdAt])
 }
 
 model OrderItem {

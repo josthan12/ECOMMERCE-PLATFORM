@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { markOrderFailedAndRestoreStock } from '@/lib/orders'
-import { recordDiscountExpenseIfApplicable } from '@/lib/recordDiscountExpense'
+import { transitionOrderPayment } from '@/lib/payments/transitionOrderPayment'
 
 export async function reconcileOrderIfStale(orderId: string) {
   const order = await prisma.order.findUnique({ where: { id: orderId } })
@@ -21,13 +20,11 @@ export async function reconcileOrderIfStale(orderId: string) {
   const hitpayData = await res.json()
 
   if (hitpayData.status === 'completed') {
-    const updated = await prisma.order.update({ where: { id: orderId }, data: { status: 'PAID' } })
-    await recordDiscountExpenseIfApplicable(orderId)
-    return updated
+    return transitionOrderPayment(orderId, 'PAID')
   }
 
   if (['failed', 'canceled', 'expired'].includes(hitpayData.status)) {
-    return markOrderFailedAndRestoreStock(orderId)
+    return transitionOrderPayment(orderId, 'PAYMENT_FAILED')
   }
 
   return order
