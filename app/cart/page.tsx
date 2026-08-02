@@ -46,9 +46,9 @@ export default function CartPage() {
         <span className="flex h-16 w-16 items-center justify-center rounded-full border border-border-light bg-surface text-primary shadow-card">
           <ShoppingBag className="h-7 w-7" aria-hidden="true" />
         </span>
-        <p className="mt-6 font-display text-3xl font-semibold tracking-[-0.03em] text-primary">
+        <h1 className="mt-6 font-display text-3xl font-semibold tracking-[-0.03em] text-primary">
           Your binder is empty.
-        </p>
+        </h1>
         <p className="mt-2 max-w-sm text-text-muted">
           Explore the catalogue and add a set or format you love.
         </p>

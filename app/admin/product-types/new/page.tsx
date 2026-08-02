@@ -61,8 +61,8 @@ export default function NewProductTypePage() {
 
       router.push('/admin/product-types')
       router.refresh()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create product type')
     } finally {
       setLoading(false)
     }

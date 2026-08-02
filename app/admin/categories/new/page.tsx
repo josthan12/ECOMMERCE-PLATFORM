@@ -90,8 +90,8 @@ export default function NewCategoryPage() {
 
       router.push('/admin/categories')
       router.refresh()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create category')
     } finally {
       setLoading(false)
     }

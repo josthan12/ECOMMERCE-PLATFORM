@@ -27,6 +27,7 @@ type ProductType = {
 
 type VariantOption = { name: string; values: string }
 type ImageVerificationStatus = 'idle' | 'checking' | 'verified' | 'error'
+type ProductAttributeValue = string | number | boolean
 type VariantRow = {
   id?: string
   combination: Record<string, string>
@@ -37,6 +38,23 @@ type VariantRow = {
   legacyImageUrl: string
   imageStatus: ImageVerificationStatus
   imageMessage: string
+}
+
+type ProductResponse = {
+  productType: ProductType
+  name: string
+  description: string | null
+  imageUrl: string | null
+  attributes: Record<string, ProductAttributeValue> | null
+  variantOptions: Record<string, string[]> | null
+  variants: Array<{
+    id: string
+    combination: Record<string, string>
+    price: number
+    stock: number
+    sku: string | null
+    imageUrl: string | null
+  }>
 }
 
 const inputClass =
@@ -92,7 +110,7 @@ export default function EditProductPage() {
   const [legacyImageUrl, setLegacyImageUrl] = useState('')
   const [imageStatus, setImageStatus] = useState<ImageVerificationStatus>('idle')
   const [imageMessage, setImageMessage] = useState('')
-  const [attributes, setAttributes] = useState<Record<string, any>>({})
+  const [attributes, setAttributes] = useState<Record<string, ProductAttributeValue>>({})
 
   const [variantOptions, setVariantOptions] = useState<VariantOption[]>([])
   const [variants, setVariants] = useState<VariantRow[]>([])
@@ -106,7 +124,7 @@ export default function EditProductPage() {
       try {
         const res = await fetch(`/api/admin/products/${productId}`)
         if (!res.ok) throw new Error('Product not found')
-        const product = await res.json()
+        const product = (await res.json()) as ProductResponse
 
         setProductType(product.productType)
         setName(product.name)
@@ -130,27 +148,27 @@ export default function EditProductPage() {
         )
         setVariantOptions(optionsArray)
 
-        const variantRows: VariantRow[] = product.variants.map((v: any) => {
-          const variantImageFilename = getCatalogImageFilename(v.imageUrl, 'variants') || ''
+        const variantRows: VariantRow[] = product.variants.map((variant) => {
+          const variantImageFilename = getCatalogImageFilename(variant.imageUrl, 'variants') || ''
           return {
-            id: v.id,
-            combination: v.combination,
-            price: v.price.toString(),
-            stock: v.stock.toString(),
-            sku: v.sku || '',
+            id: variant.id,
+            combination: variant.combination,
+            price: variant.price.toString(),
+            stock: variant.stock.toString(),
+            sku: variant.sku || '',
             imageFilename: variantImageFilename,
-            legacyImageUrl: v.imageUrl && !variantImageFilename ? v.imageUrl : '',
+            legacyImageUrl: variant.imageUrl && !variantImageFilename ? variant.imageUrl : '',
             imageStatus: 'idle',
             imageMessage: variantImageFilename
-              ? `Loaded: ${v.imageUrl}. Verify before saving.`
-              : v.imageUrl
+              ? `Loaded: ${variant.imageUrl}. Verify before saving.`
+              : variant.imageUrl
                 ? 'Replace or remove this legacy remote image.'
                 : '',
           }
         })
         setVariants(variantRows)
-      } catch (err: any) {
-        setError(err.message)
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to load product')
       } finally {
         setInitialLoading(false)
       }
@@ -159,12 +177,13 @@ export default function EditProductPage() {
     loadData()
   }, [productId])
 
-  function handleAttributeChange(key: string, value: any) {
+  function handleAttributeChange(key: string, value: ProductAttributeValue) {
     setAttributes((prev) => ({ ...prev, [key]: value }))
   }
 
   function renderField(field: ProductField) {
     const value = attributes[field.key] ?? ''
+    const inputValue = typeof value === 'boolean' ? '' : value
 
     switch (field.type) {
       case 'TEXT':
@@ -174,7 +193,7 @@ export default function EditProductPage() {
         return (
           <input
             type={field.type === 'NUMBER' || field.type === 'CURRENCY' ? 'number' : 'text'}
-            value={value}
+            value={inputValue}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
             required={field.required}
             className={`w-full ${inputClass}`}
@@ -195,7 +214,7 @@ export default function EditProductPage() {
         return (
           <input
             type="date"
-            value={value}
+            value={inputValue}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
             required={field.required}
             className={`w-full ${inputClass}`}
@@ -205,7 +224,7 @@ export default function EditProductPage() {
       case 'DROPDOWN':
         return (
           <select
-            value={value}
+            value={inputValue}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
             required={field.required}
             className={`w-full ${inputClass}`}
@@ -240,7 +259,7 @@ export default function EditProductPage() {
         return (
           <input
             type="color"
-            value={value || '#000000'}
+            value={inputValue || '#000000'}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
             className="h-10 w-20 cursor-pointer rounded-md border border-border"
           />
@@ -250,7 +269,7 @@ export default function EditProductPage() {
         return (
           <input
             type="text"
-            value={value}
+            value={inputValue}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
             placeholder="Comma separated tags"
             className={`w-full ${inputClass}`}
@@ -261,7 +280,7 @@ export default function EditProductPage() {
         return (
           <input
             type="text"
-            value={value}
+            value={inputValue}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
             className={`w-full ${inputClass}`}
           />
@@ -404,8 +423,8 @@ export default function EditProductPage() {
 
       router.push('/admin/products')
       router.refresh()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to save product')
     } finally {
       setLoading(false)
     }

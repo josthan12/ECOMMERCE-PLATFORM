@@ -3,6 +3,25 @@ import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 import { isCatalogImagePath } from '@/lib/catalogImages'
 import { revalidateStorefront } from '@/lib/revalidateStorefront'
+import { Prisma } from '@/app/generated/prisma/client'
+
+type ProductVariantInput = {
+  id?: string
+  combination: Prisma.InputJsonObject
+  price: string | number
+  stock: string | number
+  sku?: string | null
+  imageUrl?: string | null
+}
+
+type ProductInput = {
+  name?: string
+  description?: string | null
+  imageUrl?: string | null
+  attributes?: Prisma.InputJsonObject
+  variantOptions?: Prisma.InputJsonObject
+  variants: ProductVariantInput[]
+}
 
 async function requireAdmin() {
   const { userId } = await auth()
@@ -41,7 +60,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (authResult.error) return authResult.error
 
   const { id } = await params
-  const { name, description, imageUrl, attributes, variantOptions, variants } = await req.json()
+  const { name, description, imageUrl, attributes, variantOptions, variants } = (
+    await req.json()
+  ) as ProductInput
 
   if (!name) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -78,13 +99,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   // productTypeId and slug are intentionally NOT accepted here — see decisions
   // above. Only fields explicitly destructured below can change.
 
-  const submittedIds = variants.filter((v: any) => v.id).map((v: any) => v.id)
+  const submittedIds = variants.flatMap((variant) => (variant.id ? [variant.id] : []))
   const idsToDelete = existing.variants
     .map((v) => v.id)
     .filter((existingId) => !submittedIds.includes(existingId))
 
-  const toUpdate = variants.filter((v: any) => v.id)
-  const toCreate = variants.filter((v: any) => !v.id)
+  const toUpdate = variants.filter(
+    (variant): variant is ProductVariantInput & { id: string } => Boolean(variant.id)
+  )
+  const toCreate = variants.filter((variant) => !variant.id)
 
   const product = await prisma.product.update({
     where: { id },
@@ -96,22 +119,22 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       variantOptions: variantOptions || {},
       variants: {
         deleteMany: { id: { in: idsToDelete } },
-        update: toUpdate.map((v: any) => ({
-          where: { id: v.id },
+        update: toUpdate.map((variant) => ({
+          where: { id: variant.id },
           data: {
-            combination: v.combination,
-            price: parseFloat(v.price),
-            stock: parseInt(v.stock, 10),
-            sku: v.sku || null,
-            imageUrl: v.imageUrl || null,
+            combination: variant.combination,
+            price: Number.parseFloat(String(variant.price)),
+            stock: Number.parseInt(String(variant.stock), 10),
+            sku: variant.sku || null,
+            imageUrl: variant.imageUrl || null,
           },
         })),
-        create: toCreate.map((v: any) => ({
-          combination: v.combination,
-          price: parseFloat(v.price),
-          stock: parseInt(v.stock, 10),
-          sku: v.sku || null,
-          imageUrl: v.imageUrl || null,
+        create: toCreate.map((variant) => ({
+          combination: variant.combination,
+          price: Number.parseFloat(String(variant.price)),
+          stock: Number.parseInt(String(variant.stock), 10),
+          sku: variant.sku || null,
+          imageUrl: variant.imageUrl || null,
         })),
       },
     },

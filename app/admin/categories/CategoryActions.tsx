@@ -30,8 +30,8 @@ export default function CategoryActions({
         throw new Error(data.error || 'Failed to delete category')
       }
       router.refresh()
-    } catch (err: any) {
-      alert(err.message)
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to delete category')
     } finally {
       setLoading(false)
     }

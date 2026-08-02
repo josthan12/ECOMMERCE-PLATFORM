@@ -10,7 +10,7 @@ export default function PaymentFailedEmail({ orderId, total }: PaymentFailedProp
   return (
     <Html>
       <Head />
-      <Preview>Your {BRAND.storeName} payment didn't go through</Preview>
+      <Preview>{`Your ${BRAND.storeName} payment didn't go through`}</Preview>
       <Body style={{ backgroundColor: BRAND.background, fontFamily: 'Helvetica, Arial, sans-serif', margin: 0, padding: '24px 0' }}>
         <Container style={{ backgroundColor: '#FFFFFF', borderRadius: 8, overflow: 'hidden', maxWidth: 560 }}>
           <Section style={{ backgroundColor: BRAND.navy, padding: '24px 32px' }}>
@@ -24,12 +24,12 @@ export default function PaymentFailedEmail({ orderId, total }: PaymentFailedProp
               Payment unsuccessful
             </Heading>
             <Text style={{ color: BRAND.text, fontSize: 14, margin: '0 0 16px' }}>
-              We weren't able to confirm payment for your order (Order ID: {orderId}, total ${total.toFixed(2)}).
-              This can happen if a payment expired or wasn't completed in time. No charge was made,
+              {`We weren't able to confirm payment for your order (Order ID: ${orderId}, total $${total.toFixed(2)}). `}
+              {`This can happen if a payment expired or wasn't completed in time. No charge was made, `}
               and the items have been released back into stock.
             </Text>
             <Text style={{ color: BRAND.text, fontSize: 14, margin: '0 0 24px' }}>
-              You're welcome to try again whenever you're ready.
+              {`You're welcome to try again whenever you're ready.`}
             </Text>
 
             <Section style={{ textAlign: 'center', margin: '8px 0' }}>

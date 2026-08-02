@@ -20,6 +20,10 @@ type Field = {
   options: string
 }
 
+type FieldResponse = Omit<Field, 'options'> & {
+  options: string[] | null
+}
+
 export default function EditProductTypePage() {
   const router = useRouter()
   const params = useParams<{ id: string }>()
@@ -38,12 +42,16 @@ export default function EditProductTypePage() {
       try {
         const res = await fetch(`/api/admin/product-types/${typeId}`)
         if (!res.ok) throw new Error('Product type not found')
-        const data = await res.json()
+        const data = (await res.json()) as {
+          name: string
+          description: string | null
+          fields: FieldResponse[]
+        }
 
         setName(data.name)
         setDescription(data.description || '')
         setFields(
-          data.fields.map((f: any) => ({
+          data.fields.map((f) => ({
             id: f.id,
             label: f.label,
             key: f.key,
@@ -52,8 +60,8 @@ export default function EditProductTypePage() {
             options: Array.isArray(f.options) ? f.options.join(', ') : '',
           }))
         )
-      } catch (err: any) {
-        setError(err.message)
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to load product type')
       } finally {
         setInitialLoading(false)
       }
@@ -97,8 +105,8 @@ export default function EditProductTypePage() {
 
       router.push('/admin/product-types')
       router.refresh()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to save product type')
     } finally {
       setLoading(false)
     }

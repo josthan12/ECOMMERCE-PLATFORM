@@ -175,13 +175,20 @@ support safe retry without intentionally resending successful deliveries.
         images, themes, populated cart, checkout rates/totals, and browser CSP
         monitoring passed on 2026-08-02. Repeat the auth/CSP check when the owner
         replaces the Clerk development instance with production credentials.
-      - [ ] Batch 4: the approved WCAG AA contrast remediation is deployed.
-        The original light-surface failures, complete dark-theme route scan,
-        and theme-aware admin chart colors/legends passed live. Verification
-        found four gold labels on navy/ink backgrounds at `3.38:1`; the approved
-        three-file correction now uses the existing light-gold token and passes
-        `10.62:1`/`12.03:1`, targeted lint, TypeScript, and the 43-page build
-        locally. Follow-up deployment and a final live scan remain.
+      - [x] Batch 4: the approved WCAG AA contrast remediation is deployed and
+        verified. The final computed production scan passed on homepage,
+        catalogue, product detail, cart, checkout, account/orders, and admin in
+        both themes. Ink-section labels pass at `10.62:1`/`12.03:1`, the two
+        automated out-of-stock badge flags were confirmed as `oklab()` parsing
+        false positives with `12.01:1` worst-case composited contrast, and the
+        theme-aware admin chart axes, series, and legends pass.
+      - [ ] Batch 5: independent technical cleanup is implemented locally.
+        Added the metadata `/robots.txt`, corrected the empty-cart `h1`,
+        redacted raw HitPay failure logging, set the explicit Turbopack root,
+        and resolved all 43 ESLint findings without suppressions. ESLint,
+        TypeScript, Prisma generation, and the 44-route build pass. Dependency
+        remediation and admin audit-log designs are documented without package
+        or schema changes. Deployment and live verification remain.
 
 Legal wording, legal policies, and PDPA coverage are permanently outside the
 engineering roadmap unless the owner explicitly changes direction. They are

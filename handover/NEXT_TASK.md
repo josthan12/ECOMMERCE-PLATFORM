@@ -1,8 +1,8 @@
-# Immediate Next Task: Deploy the Gold-on-Ink Contrast Follow-up
+# Immediate Next Task: Deploy the Independent Technical Cleanup
 
-Payment Batch 2 and Browser Security Batch 3 are complete. The initial Contrast
-Batch 4 deployment fixed the audited surface/theme failures but exposed four
-accent labels on ink backgrounds that need the approved local follow-up.
+Payment Batch 2, Browser Security Batch 3, and Contrast Batch 4 are complete.
+The independent cleanup batch now passes locally and needs deployment/live
+verification before the owner-present Clerk migration.
 
 ## Completed Security-Header Verification
 
@@ -65,27 +65,52 @@ parses as XML with 26 URLs, the unauthenticated cron route returns the expected
   reached `PAYMENT_FAILED`, restored Silver Tempest stock from 2 to 3, and sent
   exactly one failure email on attempt 1.
 
-## Live and Local Contrast Status
+## Completed Contrast Verification
 
-The deployed light-theme semantic tokens and all settled dark-theme routes now
-pass. Recharts axes, series, and inner legend labels resolve correctly in both
-themes. The live scan found the announcement divider, footer accent copy/link
-hover, and category-card count still used the darker surface accent against
-navy/ink, producing `3.38:1`. The local three-file correction changes these to
-the existing light-gold token, yielding `10.62:1` in light mode and `12.03:1`
-in dark mode. Targeted lint, TypeScript, and the 43-page Next.js 16.2.11 build
-pass.
+The deployed follow-up resolves the announcement divider, footer accent copy
+and link hover, and category-card product count to the existing light-gold
+token. The final computed production scan passed on homepage, catalogue,
+product detail, cart, checkout, account/orders, and admin in both themes.
+Recharts axes, series, and inner legend labels resolve correctly. Two
+out-of-stock badge flags were scanner `oklab()` parsing false positives; direct
+inspection gives `12.01:1` worst-case composited contrast. The only console
+messages were the separately tracked Clerk development-key warnings.
+
+## Independent Cleanup Ready
+
+- `app/robots.ts` generates a static crawl policy and production sitemap link.
+- The empty-cart title is an `h1`.
+- HitPay payment-request failure logs contain only order ID and HTTP status.
+- `next.config.ts` sets the documented Turbopack root; its warning is gone.
+- Whole-project ESLint is clean: 42 errors and one warning were resolved without
+  suppressions.
+- `handover/DEPENDENCY_REMEDIATION.md` records supported versus unsafe upgrade
+  paths; no package changed.
+- `handover/ADMIN_AUDIT_LOG_PLAN.md` records the proposed append-only schema and
+  route coverage; no schema or database changed.
+
+Full ESLint, TypeScript, Prisma generation, and the Next.js 16.2.11 production
+build pass. The build generates 44 routes including static `/robots.txt`.
 
 ## Deployment Verification
 
-Commit and deploy `Header.tsx`, `Footer.tsx`, and `CategoryCard.tsx`. Then rerun
-the light-theme computed scan across homepage, catalogue, product, cart,
-checkout, account, and admin pages, followed by a dark-theme spot check, before
-marking Batch 4 complete.
+Commit and deploy this batch. Then confirm `/robots.txt` returns 200 with the
+custom-domain sitemap, the empty cart exposes one page `h1`, public and admin
+pages still render, and production has no new application/CSP errors. Do not
+create an order solely to exercise the redacted error log.
 
-Production Clerk rotation and error/uptime monitoring remain separate
-owner-present batches. Repeat the auth/sign-up/CSP smoke test after Clerk
-rotation.
+## Next Owner-Present Batch
+
+The owner creates or activates the Clerk production instance and enters its
+publishable key, secret key, and webhook signing secret in Vercel without
+sharing their values. Before any environment or external-service change, agree
+on a focused migration and rollback plan.
+
+After redeployment, verify production sign-up and sign-in, customer account
+access, customer denial from admin routes, admin authorization, database user
+synchronization through the Clerk webhook, and CSP compatibility with the final
+Clerk origins. Error tracking and uptime monitoring remain a separate
+owner-present batch.
 
 Do not wipe data during Phase 2. Do not start or stop the development server
 unless the admin explicitly asks.

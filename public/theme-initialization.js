@@ -9,5 +9,5 @@
           : 'light'
     document.documentElement.dataset.theme = theme
     document.documentElement.style.colorScheme = theme
-  } catch (error) {}
+  } catch {}
 })()

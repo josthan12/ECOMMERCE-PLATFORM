@@ -3,6 +3,25 @@ import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 import { isCatalogImagePath } from '@/lib/catalogImages'
 import { revalidateStorefront } from '@/lib/revalidateStorefront'
+import { Prisma } from '@/app/generated/prisma/client'
+
+type ProductVariantInput = {
+  combination: Prisma.InputJsonObject
+  price: string | number
+  stock: string | number
+  sku?: string | null
+  imageUrl?: string | null
+}
+
+type ProductInput = {
+  name?: string
+  description?: string | null
+  imageUrl?: string | null
+  productTypeId?: string
+  attributes?: Prisma.InputJsonObject
+  variantOptions?: Prisma.InputJsonObject
+  variants: ProductVariantInput[]
+}
 
 export async function GET() {
   const { userId } = await auth()
@@ -30,7 +49,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { name, description, imageUrl, productTypeId, attributes, variantOptions, variants } = await req.json() 
+  const {
+    name,
+    description,
+    imageUrl,
+    productTypeId,
+    attributes,
+    variantOptions,
+    variants,
+  } = (await req.json()) as ProductInput
 
   if (!name || !productTypeId) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -71,12 +98,12 @@ export async function POST(req: Request) {
       attributes: attributes || {},
       variantOptions: variantOptions || {},
       variants: {
-        create: variants.map((v: any) => ({
-          combination: v.combination,
-          price: parseFloat(v.price),
-          stock: parseInt(v.stock, 10),
-          sku: v.sku || null,
-          imageUrl: v.imageUrl || null,
+        create: variants.map((variant) => ({
+          combination: variant.combination,
+          price: Number.parseFloat(String(variant.price)),
+          stock: Number.parseInt(String(variant.stock), 10),
+          sku: variant.sku || null,
+          imageUrl: variant.imageUrl || null,
         })),
       },
     },

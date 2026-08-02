@@ -2,6 +2,22 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { revalidateStorefront } from '@/lib/revalidateStorefront'
 import { NextResponse } from 'next/server'
+import type { FieldType } from '@/app/generated/prisma/enums'
+import { Prisma } from '@/app/generated/prisma/client'
+
+type ProductFieldInput = {
+  label: string
+  key: string
+  type: FieldType
+  required: boolean
+  options?: string
+}
+
+type ProductTypeInput = {
+  name?: string
+  description?: string
+  fields?: ProductFieldInput[]
+}
 
 export async function GET() {
   const { userId } = await auth()
@@ -29,10 +45,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { name, description, fields } = await req.json()
+  const { name, description, fields } = (await req.json()) as ProductTypeInput
 
   if (!name) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+  }
+  if (!Array.isArray(fields)) {
+    return NextResponse.json({ error: 'Fields must be an array' }, { status: 400 })
   }
 
   const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
@@ -43,14 +62,14 @@ export async function POST(req: Request) {
       slug,
       description,
       fields: {
-        create: fields.map((f: any, index: number) => ({
+        create: fields.map((f, index) => ({
           label: f.label,
           key: f.key,
           type: f.type,
           required: f.required,
           options: f.options
             ? f.options.split(',').map((o: string) => o.trim())
-            : null,
+            : Prisma.JsonNull,
           order: index,
         })),
       },

@@ -2744,3 +2744,107 @@ follow-up for any remaining failures.
 ### Next Step
 Deploy the three-file follow-up and rerun the final production light-theme scan
 plus a dark-theme spot check before marking Contrast Batch 4 complete.
+
+---
+
+## Session 40
+
+Date: 2026-08-02
+
+### Objective
+Complete final production verification after deployment of the approved
+gold-on-ink contrast follow-up.
+
+### Production Verification
+- Confirmed the deployed header announcement divider, footer accent content,
+  and category-card product count now resolve to `accent-light`.
+- Ran the computed contrast scan on homepage, catalogue, Silver Tempest product
+  detail, cart, checkout, account/orders, and admin in both light and dark
+  themes. All audited combinations pass.
+- Directly inspected the two out-of-stock badge results that the scanner could
+  not parse because their background uses modern `oklab()` alpha syntax. Their
+  worst-case 90%-opaque ink composite over white contrasts with the badge text
+  at `12.01:1`, so both reports were false positives.
+- Confirmed the theme-aware admin chart axes, data series, and inner legend
+  labels remain accessible in both themes.
+- No application or CSP console errors appeared. The only console messages were
+  the known Clerk development-key warnings.
+- Restored the storefront to light theme and closed the audit tab. No order,
+  payment, database row, environment value, deployment setting, server, or
+  external-service setting was created or changed.
+
+### Result
+Contrast Batch 4 is complete. The technical launch decision remains NO-GO only
+while the production Clerk development instance and missing error/uptime
+monitoring remain High-severity blockers.
+
+### Next Step
+Prepare an owner-present migration plan for a Clerk production instance. The
+owner enters all keys and webhook secrets without sharing them; after deployment,
+verify sign-up/sign-in, customer/admin authorization, webhook synchronization,
+and CSP compatibility. Do not wipe data during Phase 2.
+
+---
+
+## Session 41
+
+Date: 2026-08-02
+
+### Objective
+Complete every remaining launch-readiness task that can be handled without
+owner access, secret changes, external-service configuration, or a schema
+change.
+
+### Implementation
+- Added `app/robots.ts` using the Next.js 16 metadata route. Public crawling is
+  allowed; account, admin, API, cart, checkout, search, and authentication paths
+  are excluded; the sitemap URL uses the existing environment-derived site URL.
+- Changed the empty-cart title from a paragraph to the page `h1` without visual
+  styling changes.
+- Removed raw HitPay response-body logging from checkout. Failure logs now
+  contain only an event label, internal order ID, and HTTP status.
+- Set the documented absolute Turbopack root in `next.config.ts`, removing the
+  workspace-root/multiple-lockfile build warning.
+- Resolved the complete ESLint baseline without suppressions: 42 errors and one
+  warning. Replaced explicit `any` with typed inputs/responses or `unknown`,
+  derived the selected product type instead of setting it synchronously in an
+  effect, typed the Clerk webhook event, corrected email literals, and removed
+  the unused theme-initializer catch binding.
+- Added request typing and the missing product-type fields-array validation
+  while preserving the existing API contracts and behavior.
+
+### Independent Reviews
+- Reviewed the current dependency tree against primary advisories. Recorded
+  supported patch candidates and the unsupported Next.js internal dependency
+  overrides in `handover/DEPENDENCY_REMEDIATION.md`. No dependency or lockfile
+  changed, and no forced audit fix was run.
+- Designed the append-only, data-minimized admin audit log in
+  `handover/ADMIN_AUDIT_LOG_PLAN.md`. No Prisma schema, migration, generated
+  client, or database change was made.
+- Production browser checks confirmed the search result's natural focus order,
+  Escape dismissal, accessible names/live status, and named native checkout
+  controls. The automation driver still cannot reliably synthesize native
+  Tab/Space default actions, so the later human keyboard/screen-reader check
+  remains required. A temporary Silver Tempest cart item was removed; no order
+  was created.
+
+### Verification
+- Whole-project ESLint: PASS with zero findings.
+- `tsc --noEmit`: PASS.
+- Prisma client generation: PASS.
+- Next.js 16.2.11 production build: PASS, 44 routes including static
+  `/robots.txt`.
+- Generated robots body contains the intended allow/disallow rules and sitemap
+  directive. Production custom-domain output remains to be checked after
+  deployment.
+- The Turbopack root warning is gone. The PostgreSQL future-`sslmode` warning
+  remains owner-controlled and is deferred to secret rotation.
+- The first sandboxed build attempt could not spawn a Turbopack worker; the
+  approved unsandboxed rerun passed. No development server was started or
+  stopped.
+
+### Next Step
+Commit and deploy the independent cleanup batch, then verify live robots,
+empty-cart semantics, public/admin smoke paths, and logs. After it passes,
+proceed to the owner-present Clerk production-instance migration. Do not wipe
+data during Phase 2.

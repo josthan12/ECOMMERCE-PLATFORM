@@ -33,16 +33,24 @@ $5 confirmation row remains failed at its five-attempt cap as intentional test
 history. The additive `OrderEmailDelivery` migration is applied to Neon and
 matching application commit `3f810bc` is Ready in Vercel production.
 The current technical decision remains NO-GO: production uses a Clerk
-development instance, monitoring is missing, and the WCAG AA contrast
-remediation still requires one follow-up deployment plus live verification.
-The initial Contrast Batch 4 deployment fixed all audited light-surface and
-dark-theme failures, including both chart palettes, but the live scan exposed
-four gold-on-ink labels at `3.38:1`. The approved three-file correction uses the
-existing light-gold token and passes `10.62:1`/`12.03:1`, targeted lint,
-TypeScript, and the 43-page production build locally. Browser Security Batch 3 is
-deployed and verified: all five
+development instance and error/uptime monitoring is missing. Contrast Batch 4
+is deployed and complete. Its final computed production scan passed on the
+homepage, catalogue, product detail, cart, checkout, account/orders, and admin
+routes in both themes. The deployed light-gold ink-section labels measure
+`10.62:1`/`12.03:1`; the scanner's two out-of-stock badge reports were modern
+`oklab()` parsing false positives, and their worst-case composited contrast is
+`12.01:1`. Theme-aware admin chart axes, series, and legends also pass. Browser
+Security Batch 3 is deployed and verified: all five
 headers are present on the custom domain, ISR remains active, and public,
 customer, checkout, and admin smoke tests produced no CSP violations.
+An independent technical-cleanup batch is implemented locally: `/robots.txt`,
+the empty-cart `h1`, redacted HitPay request-failure logging, an explicit
+Turbopack root, and the complete 43-finding ESLint cleanup. ESLint, TypeScript,
+Prisma generation, and the 44-route production build pass; deployment and live
+verification remain. The Turbopack workspace warning is resolved. The remaining
+PostgreSQL `sslmode` warning requires the owner to update the connection string
+during secret rotation. Dependency and admin audit-log implementation plans are
+recorded without changing packages or the database schema.
 Checkout-success owner/non-owner isolation passed in production on 2026-08-02.
 The Next.js 16.2.11
 production deployment, catalogue refresh, cart, sitemap, route protection,
@@ -342,10 +350,12 @@ reset remains paused until a later, separate explicit confirmation.
   that area is touched.
 * **AI Shopping Assistant — still fully deferred, untouched since Session
   10.**
-* **Whole-project lint baseline:** 42 errors and one warning remain in
-  unrelated admin forms/actions, product-type/product APIs, the Clerk webhook,
-  the payment-failed email template, and theme initializer. Milestone 4 files
-  pass targeted lint.
+* [x] **Whole-project lint cleanup (Session 41).** All 42 errors and one
+      warning were resolved without suppressing rules. Explicit `any` values
+      were replaced with request/response/domain types or `unknown`; the new
+      product form now derives its selected type instead of synchronously
+      setting state in an effect; email literals and the theme initializer are
+      lint-clean. Full ESLint and TypeScript pass.
 * **Homepage is still a hardcoded composition** in `app/page.tsx` — no
   Homepage Builder and no admin-configurable sections. Its visual composition
   was substantially upgraded in Milestone 1, but configurability remains
@@ -375,9 +385,10 @@ reset remains paused until a later, separate explicit confirmation.
   unchanged, still deliberately deferred per Session 10's DECISIONS.md
   entries.
 * Remaining launch work is tracked in `handover/LAUNCH_AUDIT.md`. It includes
-  production Clerk credentials, deploying and smoke-testing the browser
-  security headers, contrast fixes, error tracking, uptime monitoring, formal
-  assistive-technology checks, and admin audit logging. Local product and
+  production Clerk credentials, error tracking, uptime monitoring, formal
+  assistive-technology checks, deployment of the independent cleanup batch,
+  dependency updates waiting on supported upstream releases, and implementation
+  of the separately planned admin audit log. Local product and
   category paths render through
   `next/image`; the remote compatibility branch remains only for disposable
   test database records.
@@ -386,13 +397,14 @@ reset remains paused until a later, separate explicit confirmation.
 
 ## Immediate Next Task
 
-Commit and deploy the three-file gold-on-ink contrast follow-up. Then rerun the
-computed light-theme scan across public, customer, checkout, and admin surfaces
-and spot-check the already-passing dark theme before marking Batch 4 complete.
-Production Clerk credentials and monitoring remain separate
-owner-present batches. Do not wipe data during Phase 2. The final reset still
-requires a later, separate explicit confirmation and must preserve only the
-confirmed admin account.
+Commit and deploy the independent technical-cleanup batch, then verify the live
+`/robots.txt`, empty-cart heading, public/admin smoke paths, and production
+logs. After that, move production from the Clerk development instance to an
+owner-created Clerk production instance. The owner must enter the new keys and
+webhook secret in Vercel without sharing their values. Monitoring remains a
+separate owner-present batch. Do not wipe data during Phase 2. The final reset
+still requires a later, separate explicit confirmation and must preserve only
+the confirmed admin account.
 
 ---
 

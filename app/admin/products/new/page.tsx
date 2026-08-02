@@ -26,6 +26,7 @@ type ProductType = {
 
 type VariantOption = { name: string; values: string }
 type ImageVerificationStatus = 'idle' | 'checking' | 'verified' | 'error'
+type ProductAttributeValue = string | number | boolean
 type VariantRow = {
   combination: Record<string, string>
   price: string
@@ -76,11 +77,10 @@ export default function NewProductPage() {
 
   const [productTypes, setProductTypes] = useState<ProductType[]>([])
   const [selectedTypeId, setSelectedTypeId] = useState('')
-  const [selectedType, setSelectedType] = useState<ProductType | null>(null)
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [attributes, setAttributes] = useState<Record<string, any>>({})
+  const [attributes, setAttributes] = useState<Record<string, ProductAttributeValue>>({})
 
   const [variantOptions, setVariantOptions] = useState<VariantOption[]>([])
   const [imageFilename, setImageFilename] = useState('')
@@ -98,23 +98,15 @@ export default function NewProductPage() {
       .then((data) => setProductTypes(data))
   }, [])
 
-  useEffect(() => {
-    if (!selectedTypeId) {
-      setSelectedType(null)
-      setAttributes({})
-      return
-    }
-    const found = productTypes.find((t) => t.id === selectedTypeId)
-    setSelectedType(found || null)
-    setAttributes({})
-  }, [selectedTypeId, productTypes])
+  const selectedType = productTypes.find((type) => type.id === selectedTypeId) ?? null
 
-  function handleAttributeChange(key: string, value: any) {
+  function handleAttributeChange(key: string, value: ProductAttributeValue) {
     setAttributes((prev) => ({ ...prev, [key]: value }))
   }
 
   function renderField(field: ProductField) {
     const value = attributes[field.key] ?? ''
+    const inputValue = typeof value === 'boolean' ? '' : value
 
     switch (field.type) {
       case 'TEXT':
@@ -124,7 +116,7 @@ export default function NewProductPage() {
         return (
           <input
             type={field.type === 'NUMBER' || field.type === 'CURRENCY' ? 'number' : 'text'}
-            value={value}
+            value={inputValue}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
             required={field.required}
             className={`w-full ${inputClass}`}
@@ -145,7 +137,7 @@ export default function NewProductPage() {
         return (
           <input
             type="date"
-            value={value}
+            value={inputValue}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
             required={field.required}
             className={`w-full ${inputClass}`}
@@ -155,7 +147,7 @@ export default function NewProductPage() {
       case 'DROPDOWN':
         return (
           <select
-            value={value}
+            value={inputValue}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
             required={field.required}
             className={`w-full ${inputClass}`}
@@ -190,7 +182,7 @@ export default function NewProductPage() {
         return (
           <input
             type="color"
-            value={value || '#000000'}
+            value={inputValue || '#000000'}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
             className="h-10 w-20 cursor-pointer rounded-md border border-border"
           />
@@ -200,7 +192,7 @@ export default function NewProductPage() {
         return (
           <input
             type="text"
-            value={value}
+            value={inputValue}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
             placeholder="Comma separated tags"
             className={`w-full ${inputClass}`}
@@ -211,7 +203,7 @@ export default function NewProductPage() {
         return (
           <input
             type="text"
-            value={value}
+            value={inputValue}
             onChange={(e) => handleAttributeChange(field.key, e.target.value)}
             className={`w-full ${inputClass}`}
           />
@@ -339,8 +331,8 @@ export default function NewProductPage() {
 
       router.push('/admin/products')
       router.refresh()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create product')
     } finally {
       setLoading(false)
     }
@@ -369,7 +361,10 @@ export default function NewProductPage() {
           <h2 className="font-display text-lg font-semibold text-primary">Product Type</h2>
           <select
             value={selectedTypeId}
-            onChange={(e) => setSelectedTypeId(e.target.value)}
+            onChange={(e) => {
+              setSelectedTypeId(e.target.value)
+              setAttributes({})
+            }}
             required
             className={`w-full ${inputClass}`}
           >

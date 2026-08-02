@@ -1,6 +1,7 @@
 import { Webhook } from 'svix'
 import { headers } from 'next/headers'
 import { prisma } from '@/lib/prisma'
+import type { WebhookEvent } from '@clerk/nextjs/server'
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET
@@ -21,13 +22,13 @@ export async function POST(req: Request) {
   const payload = await req.text()
   const wh = new Webhook(WEBHOOK_SECRET)
 
-  let evt: any
+  let evt: WebhookEvent
   try {
     evt = wh.verify(payload, {
       'svix-id': svix_id,
       'svix-timestamp': svix_timestamp,
       'svix-signature': svix_signature,
-    })
+    }) as WebhookEvent
   } catch (err) {
     console.error('Webhook signature verification failed:', err)
     return new Response('Invalid signature', { status: 400 })

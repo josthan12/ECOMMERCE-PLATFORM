@@ -30,8 +30,8 @@ export default function PromoCodeActions({
         throw new Error(data.error || 'Failed to update promo code')
       }
       router.refresh()
-    } catch (err: any) {
-      alert(err.message)
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to update promo code')
     } finally {
       setLoading(false)
     }
@@ -47,8 +47,8 @@ export default function PromoCodeActions({
         throw new Error(data.error || 'Failed to reactivate promo code')
       }
       router.refresh()
-    } catch (err: any) {
-      alert(err.message)
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to reactivate promo code')
     } finally {
       setLoading(false)
     }
@@ -65,8 +65,8 @@ export default function PromoCodeActions({
         throw new Error(data.error || 'Failed to delete promo code')
       }
       router.refresh()
-    } catch (err: any) {
-      alert(err.message)
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to delete promo code')
     } finally {
       setLoading(false)
     }

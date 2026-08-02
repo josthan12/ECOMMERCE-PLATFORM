@@ -34,8 +34,8 @@ export default function ProductActions({
         throw new Error(data.error || 'Failed to update product')
       }
       router.refresh()
-    } catch (err: any) {
-      alert(err.message)
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to update product')
     } finally {
       setLoading(false)
     }

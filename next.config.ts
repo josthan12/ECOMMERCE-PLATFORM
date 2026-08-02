@@ -46,6 +46,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ['cornfield-urgency-caboose.ngrok-free.dev'],
+  turbopack: {
+    root: process.cwd(),
+  },
   async headers() {
     return [
       {

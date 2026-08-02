@@ -2,6 +2,23 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { revalidateStorefront } from '@/lib/revalidateStorefront'
 import { NextResponse } from 'next/server'
+import type { FieldType } from '@/app/generated/prisma/enums'
+import { Prisma } from '@/app/generated/prisma/client'
+
+type ProductFieldInput = {
+  id?: string
+  label: string
+  key: string
+  type: FieldType
+  required: boolean
+  options?: string
+}
+
+type ProductTypeInput = {
+  name?: string
+  description?: string
+  fields?: ProductFieldInput[]
+}
 
 async function requireAdmin() {
   const { userId } = await auth()
@@ -37,7 +54,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (authResult.error) return authResult.error
 
   const { id } = await params
-  const { name, description, fields } = await req.json()
+  const { name, description, fields } = (await req.json()) as ProductTypeInput
 
   if (!name) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -56,7 +73,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   const existingFieldsById = new Map(existingType.fields.map((f) => [f.id, f]))
 
-  const submittedIds = fields.filter((f: any) => f.id).map((f: any) => f.id)
+  const submittedIds = fields.flatMap((field) => (field.id ? [field.id] : []))
   const idsToDelete = existingType.fields
     .map((f) => f.id)
     .filter((existingId) => !submittedIds.includes(existingId))
@@ -75,7 +92,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     for (const fieldId of idsToDelete) {
       const field = existingFieldsById.get(fieldId)!
       const inUseCount = products.filter((p) => {
-        const val = (p.attributes as Record<string, any> | null)?.[field.key]
+        const val = (p.attributes as Record<string, unknown> | null)?.[field.key]
         return val !== undefined && val !== null && val !== ''
       }).length
       if (inUseCount > 0) {
@@ -91,15 +108,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
   }
 
-  const toUpdate = fields.filter((f: any) => f.id)
-  const toCreate = fields.filter((f: any) => !f.id)
+  const toUpdate = fields.filter((field): field is ProductFieldInput & { id: string } => Boolean(field.id))
+  const toCreate = fields.filter((field) => !field.id)
 
   // Duplicate-key guard across the final field set (existing kept fields +
   // any newly added ones) — two fields sharing a key would silently collide
   // in the attributes JSON.
   const finalKeys = [
-    ...toUpdate.map((f: any) => existingFieldsById.get(f.id)!.key),
-    ...toCreate.map((f: any) => f.key),
+    ...toUpdate.map((field) => existingFieldsById.get(field.id)!.key),
+    ...toCreate.map((field) => field.key),
   ]
   const duplicates = finalKeys.filter((k, i) => finalKeys.indexOf(k) !== i)
   if (duplicates.length > 0) {
@@ -123,7 +140,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       const f = fields[i]
       const options = f.options
         ? f.options.split(',').map((o: string) => o.trim())
-        : null
+        : Prisma.JsonNull
 
       if (f.id) {
         // key and type are intentionally NOT taken from the client here —

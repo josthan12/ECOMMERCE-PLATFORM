@@ -180,8 +180,10 @@ export async function POST(req: Request) {
     })
 
     if (!hitpayRes.ok) {
-      const errorBody = await hitpayRes.text()
-      console.error('HitPay API error:', hitpayRes.status, errorBody)
+      console.error('HitPay payment request failed', {
+        orderId: order.id,
+        status: hitpayRes.status,
+      })
       throw new Error('HITPAY_REQUEST_FAILED')
     }
 

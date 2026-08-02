@@ -78,8 +78,8 @@ export default function EditCategoryPage() {
         setSeoTitle(categoryData.seoTitle || '')
         setSeoDescription(categoryData.seoDescription || '')
         setSelectedProductIds(categoryData.productIds)
-      } catch (err: any) {
-        setError(err.message)
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to load category')
       } finally {
         setInitialLoading(false)
       }
@@ -142,8 +142,8 @@ export default function EditCategoryPage() {
 
       router.push('/admin/categories')
       router.refresh()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to save category')
     } finally {
       setLoading(false)
     }
