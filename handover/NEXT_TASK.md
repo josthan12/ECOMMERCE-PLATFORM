@@ -1,13 +1,11 @@
-# Immediate Next Task: Deploy and Verify Browser Security Headers
+# Immediate Next Task: Deploy and Verify the WCAG Contrast Remediation
 
-Payment Batch 2 is complete with the owner-accepted HitPay limitation: an
-online declined attempt remains retryable/unpaid, and the customer starts a
-fresh checkout. The next approved remediation adds static browser security
-headers without disabling the storefront's 60-second ISR/CDN behavior.
+Payment Batch 2 and Browser Security Batch 3 are complete. Contrast Batch 4 is
+implemented locally and awaits deployment plus production verification.
 
-## Local Security-Header Status
+## Completed Security-Header Verification
 
-`next.config.ts` now applies these headers to all routes:
+Production returns these headers on all routes:
 
 - Enforcing `Content-Security-Policy`
 - `X-Frame-Options: DENY`
@@ -15,13 +13,11 @@ headers without disabling the storefront's 60-second ISR/CDN behavior.
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - Restrictive `Permissions-Policy`
 
-The CSP retains the App Router and Clerk requirements for inline scripts/styles,
-allows only the documented Clerk/Cloudflare executable, connection, and frame
-origins, supports current secure remote catalogue images, blocks plugins and
-framing, and excludes development-only `unsafe-eval` in production. Targeted
-lint, TypeScript, Prisma generation, the Next.js 16.2.11 43-page production
-build, and generated route-manifest inspection pass. Whole-project ESLint
-remains at the documented pre-existing baseline.
+The live response remained a Vercel ISR cache hit. Homepage, product images,
+theme switching, signed-in account/orders, non-admin denial, admin dashboard,
+populated cart, checkout rates/totals, and cleanup passed. No CSP console error
+was observed; the only warning was the separately tracked Clerk development-key
+warning. The temporary cart item was removed and no order was created.
 
 ## Deployment Status
 
@@ -68,13 +64,26 @@ parses as XML with 26 URLs, the unauthenticated cron route returns the expected
   reached `PAYMENT_FAILED`, restored Silver Tempest stock from 2 to 3, and sent
   exactly one failure email on attempt 1.
 
-## Deployment and User-Present Verification
+## Local Contrast Status
 
-Commit and deploy the local changes. Confirm all five headers on the custom
-domain, then smoke-test sign-in/sign-up, the account and admin areas, product
-images, theme switching, cart, and checkout while checking for browser CSP
-violations. Production Clerk key/domain rotation remains a separate owner-led
-step and requires repeating the auth/CSP smoke test.
+The light-theme accent, muted, subtle, success, and warning tokens now meet at
+least `4.5:1` against their intended solid surfaces. Primary/accent hover
+pairs, selected-format secondary text, the dark admin wordmark, and Recharts
+axes, data colors, tooltips, and legends were corrected without adding state or
+dependencies. Direct pair checks range from `4.58:1` to `9.14:1`. Targeted
+lint, TypeScript, Prisma generation, and the 43-page Next.js 16.2.11 production
+build pass.
+
+## Deployment Verification
+
+Commit and deploy the local batch. Then rerun the computed contrast scan and
+visual/interaction smoke checks across homepage, catalogue, product, cart,
+checkout, account, and admin pages in light and dark themes. Verify chart SVG
+colors and legends in both themes before marking Batch 4 complete.
+
+Production Clerk rotation and error/uptime monitoring remain separate
+owner-present batches. Repeat the auth/sign-up/CSP smoke test after Clerk
+rotation.
 
 Do not wipe data during Phase 2. Do not start or stop the development server
 unless the admin explicitly asks.

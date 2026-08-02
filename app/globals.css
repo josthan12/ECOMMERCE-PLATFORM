@@ -8,9 +8,9 @@
   --color-primary-hover: #1D2E55;
  
   --color-secondary: #6E2439;
-  --color-accent: #C6A15B;
+  --color-accent: #906719;
   --color-accent-light: #E2C98F;
-  --color-accent-foreground: #14213D;
+  --color-accent-foreground: #FFFFFF;
   --color-ink: #101B31;
   --color-ink-muted: #192843;
   --color-on-ink: #FAF7F0;
@@ -24,8 +24,8 @@
 
   /* Text */
   --color-text: #1F2937;
-  --color-text-muted:#6B7280;
-  --color-text-light: #9CA3AF;
+  --color-text-muted: #626A78;
+  --color-text-light: #606B7B;
   --color-text-inverse: #FFFFFF;
 
   /* Border */
@@ -34,10 +34,17 @@
   --color-border-strong: #D2C8B8;
 
   /* Semantic */
-  --color-success: #059669;
-  --color-warning: #D97706;
+  --color-success: #047857;
+  --color-warning: #A64B00;
   --color-error: #B91C1C;
   --color-info: #14213D;
+
+  /* Charts */
+  --color-chart-primary: #14213D;
+  --color-chart-accent: #906719;
+  --color-chart-secondary: #6E2439;
+  --color-chart-grid: #D2C8B8;
+  --color-chart-tick: #626A78;
 
   /* Radius */
   --radius-sm: 8px;
@@ -89,6 +96,12 @@
   --color-warning: #FBBF24;
   --color-error: #F87171;
   --color-info: #93C5FD;
+
+  --color-chart-primary: #93C5FD;
+  --color-chart-accent: #D2AF67;
+  --color-chart-secondary: #E17C9C;
+  --color-chart-grid: #40516D;
+  --color-chart-tick: #B8BDC7;
 
   --shadow-input: 0 2px 6px rgba(0, 0, 0, 0.22);
   --shadow-card: 0 8px 20px rgba(0, 0, 0, 0.28);

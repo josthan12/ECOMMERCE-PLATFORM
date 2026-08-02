@@ -168,10 +168,20 @@ support safe retry without intentionally resending successful deliveries.
         webhook, and the dashboard exposes no replay control. The owner accepted
         this PayNow-only limitation: show payment failure and require a fresh
         checkout. PayNow expiry already exercises the shared failure branch.
-      - [ ] Batch 3: static browser security headers are implemented locally in
-        `next.config.ts`. Targeted lint, TypeScript, Prisma generation, the
-        43-page production build, and generated route-manifest inspection pass.
-        Deployment and authenticated production CSP/header smoke testing remain.
+      - [x] Batch 3: static browser security headers are deployed and verified.
+        Targeted lint, TypeScript, Prisma generation, the 43-page production
+        build, generated route-manifest inspection, all five live response
+        headers, retained ISR caching, customer/admin authorization, product
+        images, themes, populated cart, checkout rates/totals, and browser CSP
+        monitoring passed on 2026-08-02. Repeat the auth/CSP check when the owner
+        replaces the Clerk development instance with production credentials.
+      - [ ] Batch 4: the approved WCAG AA contrast remediation is implemented
+        locally. Light semantic tokens, interactive hover/selection states,
+        admin branding, and theme-aware chart colors were corrected. Exact
+        pair checks, targeted lint, TypeScript, Prisma generation, and the
+        43-page production build pass. Deployment and live computed/visual
+        checks across public, customer, checkout, and admin surfaces in both
+        themes remain.
 
 Legal wording, legal policies, and PDPA coverage are permanently outside the
 engineering roadmap unless the owner explicitly changes direction. They are

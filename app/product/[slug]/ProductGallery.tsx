@@ -356,7 +356,7 @@ export default function ProductGallery({
                           className={cn(
                             'mt-1 block text-xs',
                             isSelected
-                              ? 'text-accent-foreground/75'
+                              ? 'text-accent-foreground'
                               : 'text-text-muted'
                           )}
                         >

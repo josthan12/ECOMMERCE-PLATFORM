@@ -20,11 +20,11 @@ const sizeStyles: Record<ButtonSize, string> = {
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "accent" | "inverse";
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: "bg-primary text-text-inverse hover:bg-accent hover:text-primary",
+  primary: "bg-primary text-text-inverse hover:bg-accent hover:text-accent-foreground",
   secondary: "bg-transparent text-primary border border-primary hover:bg-surface-muted",
   ghost: "bg-transparent text-primary hover:bg-surface-muted",
   danger: "bg-error text-text-inverse hover:opacity-90",
-  accent: "bg-accent text-accent-foreground hover:bg-accent-light",
+  accent: "bg-accent text-accent-foreground hover:bg-primary-hover hover:text-text-inverse",
   inverse: "bg-text-inverse text-primary hover:bg-surface-muted",
 };
 

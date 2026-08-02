@@ -27,7 +27,7 @@ export default async function AdminLayout({
       <aside className="flex w-64 flex-col bg-primary text-text-inverse">
         <div className="border-b border-white/10 p-6">
           <h1 className="font-display text-xl font-semibold">
-            Admin<span className="text-accent">Panel</span>
+            Admin<span className="text-text-inverse">Panel</span>
           </h1>
         </div>
         <AdminNav />

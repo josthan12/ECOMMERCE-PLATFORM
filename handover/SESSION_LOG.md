@@ -2624,3 +2624,82 @@ Commit and deploy the security-header batch. Verify all headers on the custom
 domain and perform authenticated Clerk/account/admin/cart/checkout smoke tests
 with browser-console CSP monitoring. Repeat auth/CSP verification when the
 owner later switches to production Clerk credentials and its final domain.
+
+---
+
+## Session 37
+
+Date: 2026-08-02
+
+### Objective
+Verify Browser Security Batch 3 after the owner deployed it to production.
+
+### Verification
+- The custom-domain homepage returned `200` with the enforcing CSP,
+  `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: strict-origin-when-cross-origin`, and the restrictive
+  `Permissions-Policy`.
+- Vercel reported an ISR cache hit and the response retained the Next.js
+  prerender header, confirming the static CSP did not disable ISR.
+- Homepage rendering, secure remote product images, Silver Tempest product
+  detail, and switching from light to dark and back to light passed.
+- The signed-in customer account/orders page rendered normally. The same
+  non-admin session was redirected away from `/admin`, confirming the denial
+  path still worked under the CSP.
+- A temporary Silver Tempest item was added to the browser cart. The populated
+  cart rendered, checkout loaded delivery at $5.50 and self collection as free,
+  and calculated the $10.50 total. No checkout submission or order creation
+  occurred, and the item was removed so the cart returned to empty.
+- After the owner switched to the admin account, `/admin` rendered the full
+  dashboard and navigation with no broken images.
+- Browser monitoring across the tested routes found no CSP or application
+  error. The only warning was the existing Clerk development-key warning,
+  which remains a separate High-severity launch blocker.
+- No application code, database record, environment value, server, payment, or
+  external-service setting was changed. The development server was not started
+  or stopped.
+
+### Next Step
+Prepare the focused semantic-token/file plan for the audited WCAG AA
+color-contrast remediation and obtain owner approval before editing code.
+
+---
+
+## Session 38
+
+Date: 2026-08-02
+
+### Objective
+Implement the owner-approved WCAG AA color-contrast remediation without
+starting or stopping the development server.
+
+### Implementation
+- Darkened the light-theme accent and changed its foreground to white so brand
+  text, focus indicators, selected controls, badges, and accent hover states
+  retain accessible foreground/background pairs.
+- Darkened light-theme muted, subtle, success, and warning semantic tokens.
+- Corrected shared primary/accent button hover pairs and removed the reduced
+  opacity from secondary text inside selected product-format buttons.
+- Changed the admin wordmark to inherit the foreground appropriate to the
+  theme's primary sidebar instead of using the same gold in dark mode.
+- Replaced DashboardCharts' light-only hardcoded palette with CSS custom
+  properties for both themes. Axes, data series, tooltip text, and legend labels
+  now resolve against the current `data-theme` without extra React state or a
+  new dependency.
+
+### Verification
+- Exact light and dark token-pair checks: PASS. Tested ratios range from
+  `4.58:1` to `9.14:1`, including accent, muted/subtle text, success, warning,
+  admin wordmark, and chart data/tick colors.
+- Targeted ESLint for the four changed TypeScript/TSX files: PASS.
+- `tsc --noEmit`: PASS.
+- Prisma client generation: PASS.
+- Next.js 16.2.11 production build: PASS, 43 pages generated. The existing
+  multiple-lockfile/Turbopack-root and PostgreSQL SSL warnings remain unchanged.
+- No dependency, environment, database, API, server, or external-service change
+  was made. The development server was not started or stopped.
+
+### Next Step
+Commit and deploy Contrast Batch 4, then rerun production computed contrast and
+visual/interaction checks across public, customer, checkout, and admin surfaces
+in both themes before marking it complete.
