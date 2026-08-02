@@ -19,13 +19,26 @@ improvements, above-the-fold image loading, self-hosted Geist, and the Next 16
 Proxy convention.
 
 ## Current Objective
-Review and deploy the locally implemented payment-idempotency batch. Its
-additive `OrderEmailDelivery` migration is already applied to Neon, so the
-matching application code is now the remaining deployment half.
+Continue the approved launch-audit remediation sequence. Payment Batch 2 is
+complete with the owner-accepted HitPay limitation: declined online attempts
+remain retryable/unpaid, so the customer is shown failure and starts checkout
+again. The deployed payment-idempotency batch passed completed, real HitPay
+expiry, and a two-call
+concurrent reconciliation race on 2026-08-02. Each tested order reached one
+terminal state, stock moved exactly once, and exactly one durable payment-email
+row was created. The corrected production order sender delivered the new paid
+order confirmation and both payment-failed emails; the newsletter sender also
+completed a one-recipient test broadcast with a Resend provider ID. The old
+$5 confirmation row remains failed at its five-attempt cap as intentional test
+history. The additive `OrderEmailDelivery` migration is applied to Neon and
+matching application commit `3f810bc` is Ready in Vercel production.
 The current technical decision remains NO-GO: production uses a Clerk
-development instance; the payment batch still needs deployment and HitPay
-sandbox verification; browser security headers and monitoring are
-missing; and live color contrast has WCAG AA failures. The Next.js 16.2.11
+development instance; monitoring is missing; and live color contrast has WCAG
+AA failures. The browser-security-header batch is implemented locally and
+passes lint, TypeScript, production build, and generated-manifest verification,
+but still requires deployment plus authenticated production smoke testing.
+Checkout-success owner/non-owner isolation passed in production on 2026-08-02.
+The Next.js 16.2.11
 production deployment, catalogue refresh, cart, sitemap, route protection,
 canonical/structured data, build, and TypeScript checks passed. The database
 reset remains paused until a later, separate explicit confirmation.
@@ -356,9 +369,8 @@ reset remains paused until a later, separate explicit confirmation.
   unchanged, still deliberately deferred per Session 10's DECISIONS.md
   entries.
 * Remaining launch work is tracked in `handover/LAUNCH_AUDIT.md`. It includes
-  production Clerk credentials, deploying and sandbox-testing the locally
-  implemented payment-idempotency batch, security headers, contrast fixes,
-  sandbox failure/expiry coverage, error tracking, uptime monitoring, formal
+  production Clerk credentials, deploying and smoke-testing the browser
+  security headers, contrast fixes, error tracking, uptime monitoring, formal
   assistive-technology checks, and admin audit logging. Local product and
   category paths render through
   `next/image`; the remote compatibility branch remains only for disposable
@@ -368,11 +380,12 @@ reset remains paused until a later, separate explicit confirmation.
 
 ## Immediate Next Task
 
-Commit and deploy the local payment-idempotency patch; its additive Neon
-migration is already applied. Then exercise HitPay sandbox completed, failed,
-and expired paths plus duplicate/concurrent delivery. Do not wipe data during
-Phase 2. The final reset still requires a later, separate explicit confirmation
-and must preserve only the confirmed admin account.
+Commit and deploy the local browser-security-header batch. Then verify the live
+headers and perform authenticated sign-in, account, admin, cart, and checkout
+smoke tests to catch any Clerk/CSP incompatibility before considering the batch
+complete. Do not wipe data during Phase 2. The final reset still requires a
+later, separate explicit confirmation and must preserve only the confirmed
+admin account.
 
 ---
 

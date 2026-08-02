@@ -2459,5 +2459,168 @@ checkout-success reconciliation.
   post-check reports the database schema up to date.
 - No orders, payments, or catalogue rows were created or deleted, no database
   wipe occurred, and the development server was not started or stopped.
-  Deployment and HitPay sandbox duplicate/concurrent verification remain the
-  next checkpoint.
+- Verified Vercel Production commit `3f810bc` (`feat: make payment atomic`) is
+  Ready after a 1m 2s build.
+- Production smoke checks passed: homepage `200`, sitemap `200 application/xml`
+  and parsed successfully with 26 URLs, and the unauthenticated reconciliation
+  cron returned the expected `401 application/json`.
+- The 33 currently visible recent Vercel log rows contained no 5xx response;
+  the observed cron 401 was the intentional unauthenticated smoke request.
+- HitPay sandbox duplicate/concurrent verification remains the next checkpoint.
+
+---
+
+## Session 34
+
+Date: 2026-08-02
+
+### Objective
+Verify deployed Batch 2 payments and corrected production order/newsletter
+email senders end to end, including a real concurrent reconciliation race.
+
+### Verification
+- The authenticated account page showed sandbox order
+  `cmsb73cf1000004juqzit9kz8` as Paid after the owner completed payment.
+- A read-only Neon check confirmed status `PAID`, one Silver Tempest item at
+  quantity 1, and current variant stock 3 after starting at 4. The order had no
+  discount, so zero system promotion expenses is the expected result.
+- Exactly one durable `CONFIRMATION` delivery row exists, confirming the unique
+  payment-email outbox behavior for this completed transition.
+- Actual email delivery failed after four attempts because Resend rejected the
+  production sender value as invalid `from` syntax. No Resend email ID or
+  `sentAt` timestamp was recorded.
+- Vercel production logs showed the same sanitized sender error during cron
+  retries and no different payment-processing failure for the tested order.
+- The owner corrected both Vercel Resend sender variables and redeployed.
+  New paid order `cmsb97nri000004l8gs3ji9qq` created exactly one confirmation
+  row; it reached `SENT` on attempt 2 with a Resend ID, and the owner confirmed
+  inbox receipt.
+- Real-expiry order `cmsb9j9ur000304l83998i5wz` stayed pending while HitPay was
+  pending, then changed to `PAYMENT_FAILED` only after HitPay reported
+  `expired`. Stock restored once from 2 to 3 and one payment-failed email sent
+  on attempt 1.
+- A second fresh expired order, `cmsba022h000604l8t2coj5ys`, was deliberately
+  selected by two concurrent authenticated production reconciliation calls.
+  Both returned 200, but the atomic transition produced one terminal state,
+  one stock restoration from 2 to 3, and one `SENT` failure-email delivery on
+  attempt 1 with a Resend ID.
+- Two attempted locally signed `failed` webhook probes were correctly rejected
+  with 401 because the local and production webhook salts differ. No secret was
+  requested or exposed and the order remained unchanged before the real expiry
+  race.
+- Created and broadcast clearly labelled newsletter test
+  `cmsbajgb1000004l810gl3dgn` to the sole subscribed customer. The database and
+  admin UI report one recipient, one `SENT` delivery, zero failures, and a
+  Resend ID.
+- The recent Vercel log sweep showed 200s for reconciliation and newsletter
+  broadcast and no 5xx. The eight error-level entries were six known PostgreSQL
+  SSL-mode warnings and the two intentional invalid-signature probes.
+- Checkout-success ownership isolation passed against production paid order
+  `cmsb97nri000004l8gs3ji9qq`. The admin/non-owner account received the
+  not-found page; after switching accounts, the disposable customer owner saw
+  the complete confirmed order. Read-only Neon checks before and after both
+  requests showed identical `PAID` status, `updatedAt`, reference, and one
+  email-delivery row, so neither request introduced a reconciliation or email
+  side effect. The owner request appeared as 200 in Vercel and the surrounding
+  production log review showed no 5xx response.
+- The owner confirmed inbox receipt of both payment-failed messages and the
+  newsletter test, completing the human delivery check for all email paths
+  exercised in this session.
+- Disposable test orders and the test newsletter were created as authorized.
+  No application code was changed, the database was not wiped, and the
+  development server was not started or stopped.
+
+### Next Step
+If HitPay supports authentic webhook replay, capture the exact provider-emitted
+`failed` event variant. The real expiry and concurrent shared failure
+transition are already verified.
+
+---
+
+## Session 35
+
+Date: 2026-08-02
+
+### Objective
+Attempt to capture an authentic HitPay `payment_request.failed` event without
+changing the application's PayNow-only checkout configuration.
+
+### Verification
+- The sandbox dashboard confirmed that the deployed webhook endpoint subscribes
+  to both `payment_request.completed` and `payment_request.failed`, but it has no
+  event replay control.
+- Created disposable self-collection order `cmsbgvg6a000004jv73e8unk9` for one
+  $5 Silver Tempest item. Its normal application payment request offered only
+  PayNow, matching `app/api/checkout/route.ts`.
+- Created a clearly labelled $5 sandbox payment link with the disposable order
+  reference and selected the dashboard's available card method. HitPay's
+  official declined test card displayed “Your card was declined.”
+- The declined request remained `Unpaid`, Vercel recorded zero requests to
+  `/api/webhooks/hitpay` for the attempt, and the store order remained
+  `PENDING_PAYMENT`. It therefore did not provide authentic failed-webhook
+  coverage and is not recorded as a pass.
+- The original PayNow request then reported expired. Authenticated owner
+  reconciliation changed the disposable order to `PAYMENT_FAILED`; a read-only
+  Neon query confirmed Silver Tempest stock restored from 2 to 3 and exactly
+  one `PAYMENT_FAILED` email delivery reached `SENT` on attempt 1 with a Resend
+  ID.
+- No application code, environment value, webhook endpoint, or credential was
+  changed. No database wipe occurred and the development server was not started
+  or stopped. The disposable HitPay payment link remains as test evidence.
+
+### Next Step
+The owner chooses whether to accept the missing terminal online `failed` event
+as a documented HitPay limitation for the PayNow-only launch configuration or
+contacts HitPay support for a supported simulator/replay path. The real expiry
+and concurrent shared failure transition are already verified.
+
+---
+
+## Session 36
+
+Date: 2026-08-02
+
+### Objective
+Close Payment Batch 2 with the owner-accepted HitPay limitation and implement
+the approved production browser-security-header remediation.
+
+### Implementation
+- Recorded the owner's accepted PayNow-only behavior: an online declined
+  attempt remains retryable/unpaid, the storefront displays failure, and the
+  customer starts a fresh checkout. Payment Batch 2 is complete with this
+  provider limitation documented accurately.
+- Added a static all-route header policy in `next.config.ts`: enforcing CSP,
+  `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: strict-origin-when-cross-origin`, and a restrictive
+  `Permissions-Policy`.
+- Chose static Next config headers instead of nonce CSP because the installed
+  Next.js 16 guidance states that per-request nonces force dynamic rendering
+  and disable ISR/CDN caching. The current 60-second storefront ISR is retained.
+- The CSP permits the App Router/JSON-LD/theme initializer and the documented
+  Clerk/Cloudflare script, connection, image, worker, and frame requirements;
+  current secure remote catalogue images remain supported. It blocks plugins,
+  framing, non-self form targets, and development-only `unsafe-eval` in the
+  production build.
+
+### Verification
+- Targeted ESLint for `next.config.ts`: PASS.
+- `tsc --noEmit`: PASS.
+- Prisma client generation: PASS.
+- Next.js 16.2.11 production build: PASS, 43 pages generated. The existing
+  multiple-lockfile/Turbopack-root and PostgreSQL SSL warnings remain unchanged.
+- Generated `.next/routes-manifest.json` contains the expected CSP and four
+  companion headers on `/(.*)`; the production CSP includes
+  `upgrade-insecure-requests` and excludes `unsafe-eval`.
+- The initial verification command selected the wrong package-manager wrapper
+  and began moving direct dependencies. It was stopped; every moved dependency
+  was restored to its original `node_modules` location, the temporary package
+  store was removed, and Git status confirms no lockfile or dependency-source
+  change.
+- No dependency, environment, database, API, server, or external-service change
+  was made.
+
+### Next Step
+Commit and deploy the security-header batch. Verify all headers on the custom
+domain and perform authenticated Clerk/account/admin/cart/checkout smoke tests
+with browser-console CSP monitoring. Repeat auth/CSP verification when the
+owner later switches to production Clerk credentials and its final domain.

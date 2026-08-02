@@ -152,12 +152,26 @@ support safe retry without intentionally resending successful deliveries.
         16.2.11; Prisma generation, TypeScript, unchanged lint baseline,
         production build, advisory delta, Vercel deployment, and production
         storefront verification completed on 2026-08-02.
-      - [ ] Batch 2: atomic/idempotent terminal payment transitions, durable
-        confirmation/failure email delivery, cron retry, and pre-reconciliation
-        ownership validation are implemented locally. Prisma validation,
+      - [x] Batch 2: atomic/idempotent terminal payment transitions, durable
+        confirmation/failure email delivery, cron retry, and
+        pre-reconciliation ownership validation are deployed. Prisma validation,
         TypeScript, targeted lint, and production build pass. The additive Neon
-        migration was applied successfully on 2026-08-02; application
-        deployment and HitPay sandbox concurrency verification remain open.
+        migration was applied successfully and production commit `3f810bc` is
+        Ready. Completed payment, real HitPay expiry, order confirmation/failure
+        email delivery, newsletter delivery, and a two-request production
+        reconciliation race passed on 2026-08-02 with exactly-once stock and
+        email side effects. Checkout-success isolation also passed with a
+        non-owner not-found response, normal owner rendering, and no order or
+        email-delivery mutation. The owner confirmed inbox receipt of both
+        failure emails and the newsletter test. HitPay's official declined
+        sandbox card left its online payment request `Unpaid` and emitted no
+        webhook, and the dashboard exposes no replay control. The owner accepted
+        this PayNow-only limitation: show payment failure and require a fresh
+        checkout. PayNow expiry already exercises the shared failure branch.
+      - [ ] Batch 3: static browser security headers are implemented locally in
+        `next.config.ts`. Targeted lint, TypeScript, Prisma generation, the
+        43-page production build, and generated route-manifest inspection pass.
+        Deployment and authenticated production CSP/header smoke testing remain.
 
 Legal wording, legal policies, and PDPA coverage are permanently outside the
 engineering roadmap unless the owner explicitly changes direction. They are
