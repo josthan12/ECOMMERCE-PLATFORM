@@ -1,7 +1,8 @@
-# Immediate Next Task: Deploy and Verify the WCAG Contrast Remediation
+# Immediate Next Task: Deploy the Gold-on-Ink Contrast Follow-up
 
-Payment Batch 2 and Browser Security Batch 3 are complete. Contrast Batch 4 is
-implemented locally and awaits deployment plus production verification.
+Payment Batch 2 and Browser Security Batch 3 are complete. The initial Contrast
+Batch 4 deployment fixed the audited surface/theme failures but exposed four
+accent labels on ink backgrounds that need the approved local follow-up.
 
 ## Completed Security-Header Verification
 
@@ -64,22 +65,23 @@ parses as XML with 26 URLs, the unauthenticated cron route returns the expected
   reached `PAYMENT_FAILED`, restored Silver Tempest stock from 2 to 3, and sent
   exactly one failure email on attempt 1.
 
-## Local Contrast Status
+## Live and Local Contrast Status
 
-The light-theme accent, muted, subtle, success, and warning tokens now meet at
-least `4.5:1` against their intended solid surfaces. Primary/accent hover
-pairs, selected-format secondary text, the dark admin wordmark, and Recharts
-axes, data colors, tooltips, and legends were corrected without adding state or
-dependencies. Direct pair checks range from `4.58:1` to `9.14:1`. Targeted
-lint, TypeScript, Prisma generation, and the 43-page Next.js 16.2.11 production
-build pass.
+The deployed light-theme semantic tokens and all settled dark-theme routes now
+pass. Recharts axes, series, and inner legend labels resolve correctly in both
+themes. The live scan found the announcement divider, footer accent copy/link
+hover, and category-card count still used the darker surface accent against
+navy/ink, producing `3.38:1`. The local three-file correction changes these to
+the existing light-gold token, yielding `10.62:1` in light mode and `12.03:1`
+in dark mode. Targeted lint, TypeScript, and the 43-page Next.js 16.2.11 build
+pass.
 
 ## Deployment Verification
 
-Commit and deploy the local batch. Then rerun the computed contrast scan and
-visual/interaction smoke checks across homepage, catalogue, product, cart,
-checkout, account, and admin pages in light and dark themes. Verify chart SVG
-colors and legends in both themes before marking Batch 4 complete.
+Commit and deploy `Header.tsx`, `Footer.tsx`, and `CategoryCard.tsx`. Then rerun
+the light-theme computed scan across homepage, catalogue, product, cart,
+checkout, account, and admin pages, followed by a dark-theme spot check, before
+marking Batch 4 complete.
 
 Production Clerk rotation and error/uptime monitoring remain separate
 owner-present batches. Repeat the auth/sign-up/CSP smoke test after Clerk

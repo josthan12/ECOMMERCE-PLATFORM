@@ -175,13 +175,13 @@ support safe retry without intentionally resending successful deliveries.
         images, themes, populated cart, checkout rates/totals, and browser CSP
         monitoring passed on 2026-08-02. Repeat the auth/CSP check when the owner
         replaces the Clerk development instance with production credentials.
-      - [ ] Batch 4: the approved WCAG AA contrast remediation is implemented
-        locally. Light semantic tokens, interactive hover/selection states,
-        admin branding, and theme-aware chart colors were corrected. Exact
-        pair checks, targeted lint, TypeScript, Prisma generation, and the
-        43-page production build pass. Deployment and live computed/visual
-        checks across public, customer, checkout, and admin surfaces in both
-        themes remain.
+      - [ ] Batch 4: the approved WCAG AA contrast remediation is deployed.
+        The original light-surface failures, complete dark-theme route scan,
+        and theme-aware admin chart colors/legends passed live. Verification
+        found four gold labels on navy/ink backgrounds at `3.38:1`; the approved
+        three-file correction now uses the existing light-gold token and passes
+        `10.62:1`/`12.03:1`, targeted lint, TypeScript, and the 43-page build
+        locally. Follow-up deployment and a final live scan remain.
 
 Legal wording, legal policies, and PDPA coverage are permanently outside the
 engineering roadmap unless the owner explicitly changes direction. They are

@@ -47,14 +47,14 @@ export default function Footer() {
                 />
               </span>
               <span className="font-display text-xl font-semibold tracking-[0.02em]">
-                PokeSunshine<span className="text-accent">TCG</span>
+                PokeSunshine<span className="text-accent-light">TCG</span>
               </span>
             </Link>
             <p className="mt-5 text-sm leading-6 text-on-ink-muted">
               Authentic trading cards and sealed products, selected and presented for
               collectors who care about the details.
             </p>
-            <p className="mt-5 text-xs font-semibold tracking-[0.14em] text-accent uppercase">
+            <p className="mt-5 text-xs font-semibold tracking-[0.14em] text-accent-light uppercase">
               Based in Singapore
             </p>
           </div>
@@ -69,7 +69,7 @@ export default function Footer() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="text-sm text-on-ink-muted transition-colors hover:text-accent"
+                    className="text-sm text-on-ink-muted transition-colors hover:text-accent-light"
                   >
                     {link.label}
                   </Link>

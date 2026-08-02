@@ -33,10 +33,13 @@ $5 confirmation row remains failed at its five-attempt cap as intentional test
 history. The additive `OrderEmailDelivery` migration is applied to Neon and
 matching application commit `3f810bc` is Ready in Vercel production.
 The current technical decision remains NO-GO: production uses a Clerk
-development instance, monitoring is missing, and the local WCAG AA contrast
-remediation still requires deployment plus live verification. Contrast Batch 4
-now passes exact token-ratio checks, targeted lint, TypeScript, Prisma
-generation, and the 43-page production build. Browser Security Batch 3 is
+development instance, monitoring is missing, and the WCAG AA contrast
+remediation still requires one follow-up deployment plus live verification.
+The initial Contrast Batch 4 deployment fixed all audited light-surface and
+dark-theme failures, including both chart palettes, but the live scan exposed
+four gold-on-ink labels at `3.38:1`. The approved three-file correction uses the
+existing light-gold token and passes `10.62:1`/`12.03:1`, targeted lint,
+TypeScript, and the 43-page production build locally. Browser Security Batch 3 is
 deployed and verified: all five
 headers are present on the custom domain, ISR remains active, and public,
 customer, checkout, and admin smoke tests produced no CSP violations.
@@ -383,10 +386,10 @@ reset remains paused until a later, separate explicit confirmation.
 
 ## Immediate Next Task
 
-Commit and deploy the local WCAG AA contrast-remediation batch. Then rerun the
-computed contrast scan and visual/interaction smoke checks across public,
-customer, checkout, and admin surfaces in both themes before marking Batch 4
-complete. Production Clerk credentials and monitoring remain separate
+Commit and deploy the three-file gold-on-ink contrast follow-up. Then rerun the
+computed light-theme scan across public, customer, checkout, and admin surfaces
+and spot-check the already-passing dark theme before marking Batch 4 complete.
+Production Clerk credentials and monitoring remain separate
 owner-present batches. Do not wipe data during Phase 2. The final reset still
 requires a later, separate explicit confirmation and must preserve only the
 confirmed admin account.

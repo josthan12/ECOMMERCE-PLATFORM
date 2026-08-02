@@ -2703,3 +2703,44 @@ starting or stopping the development server.
 Commit and deploy Contrast Batch 4, then rerun production computed contrast and
 visual/interaction checks across public, customer, checkout, and admin surfaces
 in both themes before marking it complete.
+
+---
+
+## Session 39
+
+Date: 2026-08-02
+
+### Objective
+Verify the deployed Contrast Batch 4 and implement the owner-approved focused
+follow-up for any remaining failures.
+
+### Production Verification
+- Confirmed the deployed light semantic and chart token values match the local
+  implementation.
+- The complete settled dark-theme computed scan passed on homepage, products,
+  Silver Tempest detail, empty cart, checkout, account/orders, and admin.
+- Admin Recharts SVG axes, data series, and inner legend labels resolved to the
+  intended accessible light/dark palette. The only console messages were the
+  existing Clerk development-key warnings.
+- The original light-surface failures were fixed. The scan exposed four accent
+  usages on navy/ink sections at `3.38:1`: the header announcement divider,
+  footer brand/location/link hover, and category-card product count.
+
+### Follow-up Implementation
+- Changed only those ink-section accents in `Header.tsx`, `Footer.tsx`, and
+  `CategoryCard.tsx` to the existing `accent-light` token. Surface accent usage
+  and the global palette remain unchanged.
+
+### Verification
+- Light-gold on light ink: `10.62:1`; on dark ink: `12.03:1`.
+- Targeted ESLint for the three changed components: PASS.
+- `tsc --noEmit`: PASS.
+- Next.js 16.2.11 production build: PASS, 43 pages generated. Existing
+  multiple-lockfile/Turbopack-root and PostgreSQL SSL warnings are unchanged.
+- No dependency, environment, database, API, server, payment, or
+  external-service setting changed. The development server was not started or
+  stopped.
+
+### Next Step
+Deploy the three-file follow-up and rerun the final production light-theme scan
+plus a dark-theme spot check before marking Contrast Batch 4 complete.

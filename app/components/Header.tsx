@@ -54,7 +54,7 @@ export default function Header() {
       <div className="bg-ink text-on-ink">
         <div className="mx-auto flex min-h-8 max-w-[1440px] items-center justify-center px-4 text-center text-[11px] font-medium tracking-[0.12em] text-on-ink-muted uppercase md:px-8">
           Authentic TCG stock
-          <span className="mx-2 text-accent" aria-hidden="true">
+          <span className="mx-2 text-accent-light" aria-hidden="true">
             /
           </span>
           Singapore delivery and free self-collection

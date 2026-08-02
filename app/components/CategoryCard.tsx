@@ -47,7 +47,7 @@ export default function CategoryCard({
       <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">
         <div className="flex items-end justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold tracking-[0.16em] text-accent uppercase">
+            <p className="text-[10px] font-semibold tracking-[0.16em] text-accent-light uppercase">
               {productCount} {productCount === 1 ? 'product' : 'products'}
             </p>
             <Heading className="mt-2 font-display text-2xl font-semibold tracking-[-0.02em] text-white">
