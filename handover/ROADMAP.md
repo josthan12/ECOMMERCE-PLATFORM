@@ -173,8 +173,8 @@ support safe retry without intentionally resending successful deliveries.
         build, generated route-manifest inspection, all five live response
         headers, retained ISR caching, customer/admin authorization, product
         images, themes, populated cart, checkout rates/totals, and browser CSP
-        monitoring passed on 2026-08-02. Repeat the auth/CSP check when the owner
-        replaces the Clerk development instance with production credentials.
+        monitoring passed on 2026-08-02. The production-Clerk follow-up passed
+        on 2026-08-03 without a CSP error or development-instance warning.
       - [x] Batch 4: the approved WCAG AA contrast remediation is deployed and
         verified. The final computed production scan passed on homepage,
         catalogue, product detail, cart, checkout, account/orders, and admin in
@@ -182,13 +182,24 @@ support safe retry without intentionally resending successful deliveries.
         automated out-of-stock badge flags were confirmed as `oklab()` parsing
         false positives with `12.01:1` worst-case composited contrast, and the
         theme-aware admin chart axes, series, and legends pass.
-      - [ ] Batch 5: independent technical cleanup is implemented locally.
+      - [x] Batch 5: independent technical cleanup is deployed and verified.
         Added the metadata `/robots.txt`, corrected the empty-cart `h1`,
         redacted raw HitPay failure logging, set the explicit Turbopack root,
         and resolved all 43 ESLint findings without suppressions. ESLint,
         TypeScript, Prisma generation, and the 44-route build pass. Dependency
         remediation and admin audit-log designs are documented without package
-        or schema changes. Deployment and live verification remain.
+        or schema changes. Production `/robots.txt` and sitemap responses,
+        homepage, catalogue, product detail, empty-cart semantics, and signed-in
+        admin access passed on 2026-08-02 without a Next.js error overlay.
+      - [x] Batch 6: the owner-present Clerk production migration completed on
+        2026-08-03. Custom-domain DNS and certificates, production Vercel keys,
+        the `user.created` webhook, and custom Google OAuth are active; Google
+        is published to production. The existing admin row was rebound to the
+        production Clerk identity, a fresh `CUSTOMER` synchronized through the
+        webhook, customer/admin authorization passed, and the final storefront
+        check had no CSP error, Clerk warning, or browser error. No application
+        code, schema, package, local environment, server, order, payment, or
+        data wipe was involved.
 
 Legal wording, legal policies, and PDPA coverage are permanently outside the
 engineering roadmap unless the owner explicitly changes direction. They are

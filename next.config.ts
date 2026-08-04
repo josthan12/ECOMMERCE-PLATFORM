@@ -1,11 +1,32 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const isDevelopment = process.env.NODE_ENV === "development";
+
+function getSentryIngestOrigin() {
+  const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+
+  if (!dsn) {
+    return null;
+  }
+
+  try {
+    const origin = new URL(dsn).origin;
+    return origin.startsWith("https://") ? origin : null;
+  } catch {
+    return null;
+  }
+}
+
+const sentryIngestOrigin = getSentryIngestOrigin();
+const sentryConnectSource = sentryIngestOrigin
+  ? ` ${sentryIngestOrigin}`
+  : "";
 
 const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} https://*.clerk.accounts.dev https://*.clerk.com https://*.biggyballs69.gay https://challenges.cloudflare.com https://*.protect.clerk.com`,
-  `connect-src 'self'${isDevelopment ? " ws: wss:" : ""} https://*.clerk.accounts.dev https://*.clerk.com https://clerk-telemetry.com https://*.clerk-telemetry.com https://api.stripe.com https://maps.googleapis.com https://img.clerk.com https://images.clerkstage.dev https://*.protect.clerk.com https://*.biggyballs69.gay`,
+  `connect-src 'self'${isDevelopment ? " ws: wss:" : ""}${sentryConnectSource} https://*.clerk.accounts.dev https://*.clerk.com https://clerk-telemetry.com https://*.clerk-telemetry.com https://api.stripe.com https://maps.googleapis.com https://img.clerk.com https://images.clerkstage.dev https://*.protect.clerk.com https://*.biggyballs69.gay`,
   "img-src 'self' blob: data: https:",
   "font-src 'self' data:",
   "style-src 'self' 'unsafe-inline'",
@@ -59,4 +80,19 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: true,
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+    deleteSourcemapsAfterUpload: true,
+  },
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+      removeTracing: true,
+    },
+  },
+});

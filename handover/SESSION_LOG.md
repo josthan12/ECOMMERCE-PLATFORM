@@ -2848,3 +2848,92 @@ Commit and deploy the independent cleanup batch, then verify live robots,
 empty-cart semantics, public/admin smoke paths, and logs. After it passes,
 proceed to the owner-present Clerk production-instance migration. Do not wipe
 data during Phase 2.
+
+---
+
+## Session 42
+
+Date: 2026-08-02
+
+### Objective
+Verify the production deployment of Independent Cleanup Batch 5 and advance the
+launch sequence to the first owner-present blocker.
+
+### Production Verification
+- Confirmed `/robots.txt` returns `200` as `text/plain` with the intended public
+  allow rule, private-route exclusions, and
+  `Sitemap: https://biggyballs69.gay/sitemap.xml`.
+- Confirmed `/sitemap.xml` returns `200` as `application/xml`, uses the
+  production domain, and renders escaped `&amp;` entities rather than the prior
+  XML entity error.
+- Confirmed the homepage, all-products catalogue, Silver Tempest product page,
+  empty cart, and signed-in admin dashboard render without a Next.js error
+  overlay.
+- Confirmed the empty cart now exposes “Your binder is empty.” as its single
+  page `h1`.
+- Did not create a checkout failure solely to exercise the redacted HitPay log;
+  deployment, source, TypeScript, lint, and production-build verification cover
+  that change until the next organic provider failure.
+- No order, payment, database row, environment value, deployment setting,
+  server, or external-service setting changed.
+
+### Result
+Independent Cleanup Batch 5 is complete. The technical launch decision remains
+NO-GO because production still uses a Clerk development instance and verified
+error/uptime monitoring remains missing.
+
+### Next Step
+With the owner present, agree on the Clerk production-instance migration and
+rollback plan before changing Clerk or Vercel settings. The owner enters all
+secret values without sharing them. Do not wipe data during Phase 2.
+
+---
+
+## Session 43
+
+Date: 2026-08-03
+
+### Objective
+Move the production storefront from Clerk's development instance to an
+owner-created production instance while preserving the confirmed local admin
+and retaining a focused rollback.
+
+### Owner-Present Migration
+- Agreed on a minimal cutover and rollback before any external change. The
+  existing local `.env` and development instance remained unchanged.
+- Created the Clerk production instance on `biggyballs69.gay`, disabled paid
+  SMS MFA to retain the free plan, added all five required Cloudflare CNAMEs as
+  DNS-only records, and verified Clerk DNS and TLS certificates.
+- Created the production owner before enabling the webhook, then configured
+  `user.created` at the production webhook URL. The owner entered the
+  production publishable key, secret key, and webhook signing secret directly
+  into Vercel Production without sharing their values and redeployed the
+  existing application commit.
+- Configured custom Google OAuth credentials with the exact Clerk redirect URI
+  and only Clerk's default identity scopes. Google linked successfully to the
+  existing owner and the OAuth audience was published to production.
+- Guardedly changed exactly one existing local `ADMIN` row from its development
+  Clerk ID to the owner's production Clerk ID. Its local user ID, role, and
+  relations were preserved. The old mapping remains available for rollback.
+
+### Verification
+- Production Clerk sign-in and Google social sign-in passed.
+- The owner loaded `/admin`; a fresh separately authenticated customer loaded
+  account/orders and was denied from `/admin`.
+- A read-only Neon check confirmed one mapped `ADMIN` and that the fresh webhook
+  signup created a new `CUSTOMER` record.
+- The final production storefront rendered normally with no CSP error, Clerk
+  development warning, or browser error.
+- No application code, schema, migration, package, local secret, order,
+  payment, newsletter broadcast, or data wipe changed. No development server
+  was started or stopped.
+
+### Result
+The Clerk development-instance launch blocker is closed. The technical launch
+decision remains NO-GO only because error tracking and uptime alerting are not
+configured and verified.
+
+### Next Step
+Plan the separate owner-present error-tracking and uptime-monitoring batch,
+including rollback and harmless alert-delivery verification, before changing
+application or external-service settings.

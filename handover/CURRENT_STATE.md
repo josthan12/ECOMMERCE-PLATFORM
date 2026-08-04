@@ -32,9 +32,16 @@ completed a one-recipient test broadcast with a Resend provider ID. The old
 $5 confirmation row remains failed at its five-attempt cap as intentional test
 history. The additive `OrderEmailDelivery` migration is applied to Neon and
 matching application commit `3f810bc` is Ready in Vercel production.
-The current technical decision remains NO-GO: production uses a Clerk
-development instance and error/uptime monitoring is missing. Contrast Batch 4
-is deployed and complete. Its final computed production scan passed on the
+The owner-present Clerk migration completed on 2026-08-03. Production now uses
+a Clerk production instance on the custom domain with production-scoped Vercel
+keys, a production `user.created` webhook, and a Google OAuth application in
+production. The existing database admin row was guardedly rebound to the
+owner's production Clerk ID without changing its local ID, role, or relations;
+a fresh signup created a `CUSTOMER`, customer denial from `/admin` passed, and
+the final storefront check produced no CSP errors, Clerk warnings, or browser
+errors. The current technical decision remains NO-GO only because verified
+error/uptime monitoring is missing. Contrast Batch 4 is deployed and complete.
+Its final computed production scan passed on the
 homepage, catalogue, product detail, cart, checkout, account/orders, and admin
 routes in both themes. The deployed light-gold ink-section labels measure
 `10.62:1`/`12.03:1`; the scanner's two out-of-stock badge reports were modern
@@ -43,11 +50,13 @@ routes in both themes. The deployed light-gold ink-section labels measure
 Security Batch 3 is deployed and verified: all five
 headers are present on the custom domain, ISR remains active, and public,
 customer, checkout, and admin smoke tests produced no CSP violations.
-An independent technical-cleanup batch is implemented locally: `/robots.txt`,
-the empty-cart `h1`, redacted HitPay request-failure logging, an explicit
-Turbopack root, and the complete 43-finding ESLint cleanup. ESLint, TypeScript,
-Prisma generation, and the 44-route production build pass; deployment and live
-verification remain. The Turbopack workspace warning is resolved. The remaining
+The independent technical-cleanup batch is deployed and verified:
+`/robots.txt`, the empty-cart `h1`, redacted HitPay request-failure logging, an
+explicit Turbopack root, and the complete 43-finding ESLint cleanup. ESLint,
+TypeScript, Prisma generation, and the 44-route production build pass. Live
+robots, sitemap, homepage, catalogue, product detail, empty cart, and signed-in
+admin smoke checks pass without a Next.js error overlay. The Turbopack workspace
+warning is resolved. The remaining
 PostgreSQL `sslmode` warning requires the owner to update the connection string
 during secret rotation. Dependency and admin audit-log implementation plans are
 recorded without changing packages or the database schema.
@@ -385,8 +394,7 @@ reset remains paused until a later, separate explicit confirmation.
   unchanged, still deliberately deferred per Session 10's DECISIONS.md
   entries.
 * Remaining launch work is tracked in `handover/LAUNCH_AUDIT.md`. It includes
-  production Clerk credentials, error tracking, uptime monitoring, formal
-  assistive-technology checks, deployment of the independent cleanup batch,
+  error tracking, uptime monitoring, formal assistive-technology checks,
   dependency updates waiting on supported upstream releases, and implementation
   of the separately planned admin audit log. Local product and
   category paths render through
@@ -397,14 +405,12 @@ reset remains paused until a later, separate explicit confirmation.
 
 ## Immediate Next Task
 
-Commit and deploy the independent technical-cleanup batch, then verify the live
-`/robots.txt`, empty-cart heading, public/admin smoke paths, and production
-logs. After that, move production from the Clerk development instance to an
-owner-created Clerk production instance. The owner must enter the new keys and
-webhook secret in Vercel without sharing their values. Monitoring remains a
-separate owner-present batch. Do not wipe data during Phase 2. The final reset
-still requires a later, separate explicit confirmation and must preserve only
-the confirmed admin account.
+Plan the separate owner-present monitoring batch before changing application or
+external-service settings. Select an approved error-tracking service and uptime
+monitor, define the smallest production integration and rollback, then verify a
+harmless application event and alert delivery to the owner. Do not wipe data
+during Phase 2. The final reset still requires a later, separate explicit
+confirmation and must preserve only the confirmed admin account.
 
 ---
 
