@@ -4,6 +4,25 @@ All API routes live under `app/api/`. All admin routes require the caller to be 
 
 ---
 
+## Health
+
+### GET /api/health
+Public, read-only production health probe used by Sentry Uptime.
+
+**Auth:** None.
+
+**Behavior:** Executes `SELECT 1` through Prisma. Responses are explicitly
+`Cache-Control: no-store, max-age=0` and never include exception or database
+details.
+
+**Response:**
+- `200 OK` — `{ "status": "ok" }`
+- `503 Service Unavailable` — `{ "status": "unavailable" }`
+
+**File:** `app/api/health/route.ts`
+
+---
+
 ## Webhooks
 
 ### POST /api/webhooks/clerk

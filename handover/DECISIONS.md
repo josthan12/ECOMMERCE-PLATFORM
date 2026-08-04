@@ -604,6 +604,30 @@ Date:
 ---
 
 Decision:
+Use Sentry for production-only application error tracking and uptime monitoring,
+with a permanent read-only database health probe and explicit data-minimization
+hooks. Do not enable tracing, Session Replay, logs, automatic PII, or broad CSP
+wildcards. Upload source maps during the production build and delete them from
+the deployment output afterward.
+
+Reason:
+The launch audit required actionable production failures and owner-visible
+downtime alerts without expanding customer-data collection. A single service
+keeps the operational surface small, while client/Node/Edge instrumentation and
+readable source maps provide sufficient diagnosis. The shared privacy options
+remove user identity, cookies, headers, bodies, query data, breadcrumb data, and
+other high-risk fields before transport. The exact DSN origin keeps the existing
+CSP narrow. A no-store `SELECT 1` health route verifies both application and
+database availability without exposing internals. The temporary authenticated
+event route and flag existed only for deployment verification and were removed
+immediately afterward.
+
+Date:
+2026-08-04
+
+---
+
+Decision:
 Use one atomic compare-and-set payment-transition service plus a durable
 `OrderEmailDelivery` outbox for completed, failed, canceled, and expired
 payment outcomes.

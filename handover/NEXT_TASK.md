@@ -1,37 +1,33 @@
-# Immediate Next Task: Configure Error and Uptime Monitoring
+# Immediate Next Task: Final Technical Launch Re-Audit
 
 Payment Batch 2, Browser Security Batch 3, Contrast Batch 4, Independent
-Cleanup Batch 5, and the owner-present Clerk production migration are deployed
-and verified. The Clerk launch blocker is closed. The technical launch decision
-remains NO-GO only because verified error tracking and uptime alerting are not
-configured.
+Cleanup Batch 5, the production Clerk migration, and Monitoring Batch 7 are
+implemented and production-verified. No recorded High-severity engineering
+launch blocker remains open.
 
-## Completed Clerk Production Migration
+## Completed Monitoring Batch
 
-- Production uses the owner-created Clerk production instance on the custom
-  domain; local and preview development credentials remain separate.
-- Cloudflare DNS-only records and Clerk certificates are verified.
-- The owner entered production Vercel keys and the production webhook signing
-  secret without sharing their values.
-- The existing database admin row is linked to the production Clerk owner while
-  preserving its local identity, role, and relations.
-- Google OAuth uses custom production credentials and is published to an
-  external production audience with Clerk's default identity scopes only.
-- Owner sign-in and `/admin`, fresh customer signup/account access, customer
-  denial from `/admin`, webhook synchronization, and final CSP/browser checks
-  passed.
+- Production-only Sentry covers browser, Node.js, Edge, request, and global
+  errors with strict data-minimization hooks.
+- Release `6afb773` and readable source maps were verified using one harmless,
+  admin-authenticated synthetic event.
+- `/api/health` performs a no-store, read-only database probe and returns only
+  `ok` or `unavailable`.
+- Sentry Uptime checks the health endpoint every minute, opens after three
+  failures, and resolves after one success.
+- A controlled 404 opened the downtime issue and triggered the connected email
+  alert; the owner confirmed receipt. Restoring the real endpoint produced a
+  `200` check and automatic recovery.
+- The temporary test route is removed from source and its Vercel flag is
+  deleted. The remaining Sentry variables are Production-only.
 
-## Next Owner-Present Batch
+## Next Focused Batch
 
-Before changing source, deployment settings, or external services, select an
-approved error-tracking service and uptime monitor and agree on a focused
-implementation and rollback plan. Then connect both services, generate a
-harmless application test event and uptime alert, and confirm delivery to the
-owner.
-
-Secret rotation, the human screen-reader check, the minimal live payment, and
-the final database reset remain separately controlled Phase 3 actions. The
-admin audit log and dependency updates each require their own approved batch.
+After the owner deploys the monitoring cleanup and the removed test route is
+confirmed as `404`, re-run the non-destructive technical launch audit and issue
+the updated engineering go/no-go report. Keep the human keyboard/screen-reader
+pass, minimal live payment, secret rotation, catalogue approval, and database
+reset as separately controlled owner actions.
 
 Do not wipe data during Phase 2. Do not start or stop the development server
 unless the owner explicitly asks.

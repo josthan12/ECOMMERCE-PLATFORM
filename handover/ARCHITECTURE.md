@@ -32,6 +32,32 @@ Next.js App Router
 
 ---
 
+## Production Monitoring (added 2026-08-04)
+
+Production errors are sent to Sentry from `instrumentation-client.ts`,
+`instrumentation.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, and
+the App Router `app/global-error.tsx` boundary. `next.config.ts` wraps the build
+with Sentry only for release/source-map processing, deletes uploaded source maps
+from the deployment output, removes debug/tracing code, and adds only the exact
+DSN ingest origin to `connect-src`.
+
+`lib/monitoring/sentryPrivacy.ts` disables logs, user identity, cookies,
+request/response headers, bodies, query parameters, GraphQL variables/documents,
+GenAI input/output, database query data, and stack-frame variables. It also
+strips query strings/fragments and breadcrumb data before transmission. Tracing,
+Session Replay, and automatic PII collection are not enabled.
+
+The public `GET /api/health` route performs a read-only `SELECT 1` through the
+existing Prisma singleton. It returns a no-store `200 {"status":"ok"}` or a
+data-minimized `503 {"status":"unavailable"}`. Sentry Uptime checks this route
+every minute and connects downtime issues to the project's email alert.
+
+`NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, and
+`SENTRY_AUTH_TOKEN` are scoped to Vercel Production. Secret values are never
+stored in source or handover documentation.
+
+---
+
 ## Design System (added 2026-07-22)
 
 The entire storefront and admin panel were re-skinned this session against

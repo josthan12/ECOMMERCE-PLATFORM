@@ -7,8 +7,10 @@ Category -> Product/Set -> Variant/Format. The proposed hierarchical catalogue
 migration was cancelled in favour of this simpler existing model. Phase 8 now
 has canonical metadata, social metadata, a dynamic sitemap, structured-data
 alignment, and a focused accessibility/performance pass. A non-destructive
-technical launch audit is complete; its High-severity remediation and formal
-assistive-technology/operational verification remain open.
+technical launch audit is complete, and every recorded High-severity engineering
+blocker has been remediated and production-retested. The final technical
+re-audit and formal assistive-technology/owner-controlled verification remain
+open.
 
 ## Current Feature
 Milestone 4 aligned cart, checkout, checkout status, search, and customer order
@@ -39,8 +41,16 @@ production. The existing database admin row was guardedly rebound to the
 owner's production Clerk ID without changing its local ID, role, or relations;
 a fresh signup created a `CUSTOMER`, customer denial from `/admin` passed, and
 the final storefront check produced no CSP errors, Clerk warnings, or browser
-errors. The current technical decision remains NO-GO only because verified
-error/uptime monitoring is missing. Contrast Batch 4 is deployed and complete.
+errors. Monitoring Batch 7 completed on 2026-08-04. Production-only Sentry
+error tracking now covers browser, Node.js, Edge, request, and global-error
+failures with data-minimized event hooks; release `6afb773` and readable source
+maps were verified against a harmless admin-authenticated event. The permanent
+`/api/health` database probe is monitored every minute by Sentry Uptime. A
+controlled 404 created a High-priority downtime issue and email alert, the owner
+confirmed delivery, and the restored endpoint returned `200` and automatically
+resolved the issue. The prior High-severity monitoring blocker is closed; the
+formal technical launch decision now awaits the final re-audit. Contrast Batch
+4 is deployed and complete.
 Its final computed production scan passed on the
 homepage, catalogue, product detail, cart, checkout, account/orders, and admin
 routes in both themes. The deployed light-gold ink-section labels measure
@@ -394,9 +404,9 @@ reset remains paused until a later, separate explicit confirmation.
   unchanged, still deliberately deferred per Session 10's DECISIONS.md
   entries.
 * Remaining launch work is tracked in `handover/LAUNCH_AUDIT.md`. It includes
-  error tracking, uptime monitoring, formal assistive-technology checks,
-  dependency updates waiting on supported upstream releases, and implementation
-  of the separately planned admin audit log. Local product and
+  the final technical re-audit, formal assistive-technology checks, dependency
+  updates waiting on supported upstream releases, and implementation of the
+  separately planned admin audit log. Local product and
   category paths render through
   `next/image`; the remote compatibility branch remains only for disposable
   test database records.
@@ -405,10 +415,9 @@ reset remains paused until a later, separate explicit confirmation.
 
 ## Immediate Next Task
 
-Plan the separate owner-present monitoring batch before changing application or
-external-service settings. Select an approved error-tracking service and uptime
-monitor, define the smallest production integration and rollback, then verify a
-harmless application event and alert delivery to the owner. Do not wipe data
+Deploy and verify the monitoring cleanup so the temporary authenticated test
+route returns `404`, then perform the final non-destructive technical launch
+re-audit and issue the updated engineering go/no-go report. Do not wipe data
 during Phase 2. The final reset still requires a later, separate explicit
 confirmation and must preserve only the confirmed admin account.
 
@@ -440,8 +449,9 @@ confirmation and must preserve only the confirmed admin account.
   `next/font/local`, and used for both `font-display` and `font-sans` tokens
   (no separate serif). This keeps the deliberate visual choice while removing
   the Google Fonts build-time network dependency.
-- **New npm dependencies added this session, with explicit admin
-  confirmation each time**: `lucide-react`, `recharts`. No others.
+- **Owner-approved npm dependencies added during the current launch track:**
+  `lucide-react`, `recharts`, and production monitoring dependency
+  `@sentry/nextjs@10.69.0`.
 - **GST is now conditional** — see Completed Features above. Any new
   surface that displays order totals must check `GST_ENABLED` before
   rendering a GST line, the same way archived-product filtering must be

@@ -2937,3 +2937,70 @@ configured and verified.
 Plan the separate owner-present error-tracking and uptime-monitoring batch,
 including rollback and harmless alert-delivery verification, before changing
 application or external-service settings.
+
+---
+
+## Session 44
+
+Date: 2026-08-04
+
+### Objective
+Implement and production-verify the owner-approved error-tracking and uptime
+monitoring batch without exposing secrets or starting/stopping the development
+server.
+
+### Plan and Rollback
+- Agreed before changes to use Sentry for both production error tracking and
+  uptime, with logs, tracing, Session Replay, automatic PII, and broad CSP
+  sources disabled.
+- Defined rollback as reverting the application commit or restoring the prior
+  Vercel deployment, removing the four persistent Sentry variables plus the
+  temporary test flag, disabling the Sentry monitor, and revoking the upload
+  token. No database rollback is required.
+- The owner created the Sentry project and entered the replacement upload token
+  directly into Vercel without sharing it. All monitoring variables were scoped
+  to Production only.
+
+### Implementation
+- Added `@sentry/nextjs@10.69.0` and wired browser, Node.js, Edge, request-error,
+  and global-error capture using the Next.js 16 instrumentation conventions.
+- Added shared privacy options that disable logs/user identity/cookies/headers/
+  bodies/query parameters/GraphQL variables/GenAI data/database query data/
+  stack variables and strip request query strings and breadcrumb data.
+- Added release/source-map upload with post-upload deletion, debug/tracing
+  treeshaking, and the exact Sentry ingest origin in the production CSP.
+- Added public `GET /api/health` with a no-store read-only `SELECT 1`, returning
+  only `ok` or `unavailable`.
+- Added a temporary environment-gated, admin-authenticated monitoring event
+  route for one production verification event, then removed it from source and
+  deleted `MONITORING_TEST_ENABLED` from Vercel after the test.
+
+### Verification
+- Whole-project ESLint, `tsc --noEmit`, Prisma generation, and the Next.js
+  16.2.11 production build passed. The first sandboxed build was unable to spawn
+  a Turbopack worker; the approved elevated rerun passed. No development server
+  was started or stopped.
+- Vercel deployed commit `6afb773` from `main` as Ready. The custom-domain
+  health probe returned `200`, `{"status":"ok"}`, `no-store`, and the expected
+  security headers with only the exact Sentry ingest origin added to CSP.
+- Sentry created release `6afb773010a5...`. The synthetic High-priority issue
+  `POKESUNSHINETCG-PRODUCTION-2` mapped to
+  `app/api/admin/monitoring-test/route.ts:17` with readable source context,
+  release/environment/test tags, and no user identity, cookies, headers, body,
+  or query data. The project email alert recorded the trigger.
+- Sentry Uptime monitor `7983784` recorded healthy `200` checks. For the
+  controlled test its URL was temporarily changed to a guaranteed 404 path and
+  its failure threshold to one. It created issue
+  `POKESUNSHINETCG-PRODUCTION-1` and triggered the email rule; the owner confirmed
+  delivery. The monitor was restored to `/api/health`, three failures, and one
+  recovery success. A later `200` check automatically cleared the ongoing issue.
+- `npm audit` reported 11 advisories (5 moderate, 6 high, no critical). Review
+  found no new uniquely Sentry-owned vulnerable package; supported dependency
+  remediation remains a separate approved batch and no audit fix was run.
+
+### Next Step
+The owner deploys the cleanup commit and verifies the removed temporary route
+returns `404`. Then run the final non-destructive technical launch re-audit and
+issue the updated engineering go/no-go report. Secret rotation, the human
+assistive-technology pass, minimal live payment, catalogue approval, and the
+database reset remain separately controlled owner actions.

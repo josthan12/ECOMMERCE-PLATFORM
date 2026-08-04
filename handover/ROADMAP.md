@@ -145,9 +145,10 @@ support safe retry without intentionally resending successful deliveries.
       2026-08-01 technical audit.** The current integration creates a hosted
       HitPay PayNow request and contains no card-number/CVV/expiry fields.
 - [x] Non-destructive technical launch audit — **complete 2026-08-01.** See
-      `handover/LAUNCH_AUDIT.md`; current decision is NO-GO pending the listed
-      High-severity remediations and Phase 2 interactive checks.
-- [ ] Remediate and retest the approved technical launch-audit batches.
+      `handover/LAUNCH_AUDIT.md`; all recorded High-severity engineering
+      blockers are now remediated and production-retested, with the final
+      technical re-audit and remaining Phase 2 interactive checks still open.
+- [x] Remediate and retest the approved technical launch-audit batches.
       - [x] Batch 1: Next.js and `eslint-config-next` patched from 16.2.9 to
         16.2.11; Prisma generation, TypeScript, unchanged lint baseline,
         production build, advisory delta, Vercel deployment, and production
@@ -200,6 +201,14 @@ support safe retry without intentionally resending successful deliveries.
         check had no CSP error, Clerk warning, or browser error. No application
         code, schema, package, local environment, server, order, payment, or
         data wipe was involved.
+      - [x] Batch 7: production-only Sentry error tracking and Sentry Uptime
+        monitoring completed on 2026-08-04. Release `6afb773`, readable source
+        maps, the data-minimized synthetic error, the no-store database health
+        probe, a controlled downtime issue/email, owner receipt, restored `200`
+        recovery, and the normal three-failure/one-success monitor thresholds
+        were verified. The temporary authenticated test route and hosting flag
+        were removed after verification; the owner retains control of pushes
+        and deployments.
 
 Legal wording, legal policies, and PDPA coverage are permanently outside the
 engineering roadmap unless the owner explicitly changes direction. They are
