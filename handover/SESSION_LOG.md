@@ -3400,3 +3400,58 @@ state, commit, or push was changed.
 - The existing production presentation and rendered image dimensions were
   inspected before the fix. Post-fix deployed visual verification remains for
   the owner after the local changes are pushed and Vercel finishes deploying.
+
+---
+
+## Session 52
+
+Date: 2026-08-05
+
+### Objective and Boundaries
+Build a temporary customer-facing `Pokemon English` mock catalogue through the
+Mega Evolution series, using owner-supplied prices, random stock from 1 through
+10, official product imagery, and product contents as each format description.
+The development server was not started or stopped. Nothing was deployed,
+staged, committed, or pushed, and no schema or migration changed.
+
+### Catalogue Scope
+- Repriced all five existing Pitch Black formats: Pokémon Center ETB S$200/6,
+  ETB S$100/4, Booster Bundle S$46/9, Booster Display S$250/3, and Build &
+  Battle Box S$42/7.
+- Added six set products and 40 formats: 30th Celebration (14), Mega Evolution
+  (5), Phantasmal Flames (5), Ascended Heroes (6), Perfect Order (5), and
+  Chaos Rising (5).
+- All 45 formats have owner-approved prices, stock from 1 through 10, factual
+  contents, and a local image path. The seven sets are unarchived.
+- Stopped at Mega Evolution as requested; no Scarlet & Violet set was imported.
+
+### Official Assets and Import
+- Read the official Pokémon expansion pages and the official 30th Celebration
+  product showcase. No AI-generated product image was used.
+- Added 6 official set logos and 40 official sealed-product images. The 14
+  2000-by-1125 30th Celebration packshots were losslessly sourced, then encoded
+  as 1600-by-900 quality-90 WebP files to reduce their combined repository size
+  from roughly 32 MB to 3.5 MB without changing their artwork.
+- Added `scripts/import-mock-pokemon-catalogue.mjs`, a repeatable guarded import
+  that records the approved data and validates its database boundary.
+
+### Database Transaction and Verification
+- The serializable transaction took an advisory lock and guarded `neondb`,
+  schema `public`, the sole admin, 18 completed migrations with none incomplete,
+  the existing category/template product, exact Pitch Black variants, and the
+  absence of all six new slugs.
+- Updated only five Pitch Black variant price/stock pairs; inserted exactly six
+  products, six category links, and 40 variants; and deleted nothing.
+- Post-commit verification confirmed 1 admin, 0 customers, 0 orders, 0 order
+  items, 0 order-email deliveries, 18 complete migrations, 0 incomplete
+  migrations, 7 unarchived sets, and 45 variants. Every variant has a positive
+  price, stock from 1 through 10, contents, and an image path.
+- All 46 newly downloaded images passed file/dimension validation, and samples
+  covering set logos, PNG packshots, and optimized WebP packshots passed visual
+  inspection.
+
+### Next Step
+The new database rows are already unarchived, while their repository-owned
+images and category presentation changes remain local. The owner must push and
+wait for deployment before conducting final desktop/mobile storefront review;
+until then the newly referenced production image URLs are not deployed.

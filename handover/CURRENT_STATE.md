@@ -119,12 +119,17 @@ including 79 orders, 80 order items, 9 order-email records, and 4 customer
 users. The confirmed admin account and all 17 existing completed migrations
 were preserved. Migration
 `20260805000000_add_product_variant_description` was then applied, bringing the
-completed migration count to 18. The database now contains one
-`Pokemon English` / `Mega Evolution—Pitch Black` showcase with five official
-sealed-product formats. The owner supplied temporary review values on
-2026-08-05: Pokémon Center ETB S$300/3, ETB S$150/2, Booster Bundle S$60/10,
-Booster Display S$300/2, and Build & Battle Box S$40/3. The owner subsequently
-unarchived the product and confirmed that its public presentation looks good.
+completed migration count to 18. The database now contains seven unarchived
+`Pokemon English` set listings with 45 sealed-product formats: 30th
+Celebration, Mega Evolution, Phantasmal Flames, Ascended Heroes, Perfect Order,
+Chaos Rising, and Pitch Black. Prices were supplied by the owner, and mock
+stock values from 1 through 10 were assigned per format. Pitch Black was
+repriced to Pokémon Center ETB S$200/6, ETB S$100/4, Booster Bundle S$46/9,
+Booster Display S$250/3, and Build & Battle Box S$42/7. The six added sets and
+all 40 added formats use repository-owned official Pokémon imagery and factual
+product-content descriptions. Their database rows are public, but the new
+local image assets require the owner to push and deploy before those image URLs
+can resolve in production.
 The owner supplied a new 1024-by-1024 `Pokemon English` category artwork, which
 now replaces the former small official Pokémon TCG logo locally. The category
 card and category-detail hero use the new high-resolution artwork in a larger
