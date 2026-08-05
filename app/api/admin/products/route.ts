@@ -7,6 +7,7 @@ import { Prisma } from '@/app/generated/prisma/client'
 
 type ProductVariantInput = {
   combination: Prisma.InputJsonObject
+  description?: string | null
   price: string | number
   stock: string | number
   sku?: string | null
@@ -100,6 +101,7 @@ export async function POST(req: Request) {
       variants: {
         create: variants.map((variant) => ({
           combination: variant.combination,
+          description: variant.description?.trim() || null,
           price: Number.parseFloat(String(variant.price)),
           stock: Number.parseInt(String(variant.stock), 10),
           sku: variant.sku || null,

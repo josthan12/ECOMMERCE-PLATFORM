@@ -31,6 +31,7 @@ type ProductAttributeValue = string | number | boolean
 type VariantRow = {
   id?: string
   combination: Record<string, string>
+  description: string
   price: string
   stock: string
   sku: string
@@ -50,6 +51,7 @@ type ProductResponse = {
   variants: Array<{
     id: string
     combination: Record<string, string>
+    description: string | null
     price: number
     stock: number
     sku: string | null
@@ -79,6 +81,7 @@ function generateCombinations(options: VariantOption[]): VariantRow[] {
 
   return combos.map((combination) => ({
     combination,
+    description: '',
     price: '',
     stock: '',
     sku: '',
@@ -153,6 +156,7 @@ export default function EditProductPage() {
           return {
             id: variant.id,
             combination: variant.combination,
+            description: variant.description || '',
             price: variant.price.toString(),
             stock: variant.stock.toString(),
             sku: variant.sku || '',
@@ -307,7 +311,11 @@ export default function EditProductPage() {
     setVariants((prev) => [...prev, ...newRows])
   }
 
-  function updateVariantRow(index: number, field: 'price' | 'stock' | 'sku' | 'imageFilename', value: string) {
+  function updateVariantRow(
+    index: number,
+    field: 'description' | 'price' | 'stock' | 'sku' | 'imageFilename',
+    value: string
+  ) {
     setVariants((prev) => prev.map((row, i) => {
       if (i !== index) return row
       if (field === 'imageFilename') {
@@ -406,6 +414,7 @@ export default function EditProductPage() {
           variants: variants.map((variant) => ({
             id: variant.id,
             combination: variant.combination,
+            description: variant.description,
             price: variant.price,
             stock: variant.stock,
             sku: variant.sku,
@@ -622,6 +631,7 @@ export default function EditProductPage() {
                 <thead className="bg-surface-muted">
                   <tr className="text-left text-text-muted">
                     <th className="px-3 py-2 font-medium">Combination</th>
+                    <th className="px-3 py-2 font-medium">Contents / description</th>
                     <th className="px-3 py-2 font-medium">Price (SGD)</th>
                     <th className="px-3 py-2 font-medium">Stock</th>
                     <th className="px-3 py-2 font-medium">SKU (optional)</th>
@@ -634,6 +644,16 @@ export default function EditProductPage() {
                     <tr key={row.id ?? `new-${i}`} className="border-t border-border-light">
                       <td className="whitespace-nowrap px-3 py-2 text-text">
                         {Object.entries(row.combination).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                      </td>
+                      <td className="px-3 py-2">
+                        <textarea
+                          value={row.description}
+                          onChange={(e) => updateVariantRow(i, 'description', e.target.value)}
+                          rows={5}
+                          className={`w-72 resize-y ${cellInputClass}`}
+                          placeholder="One product-content item per line"
+                          aria-label={`Description for variant ${i + 1}`}
+                        />
                       </td>
                       <td className="px-3 py-2">
                         <input

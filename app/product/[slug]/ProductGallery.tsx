@@ -21,6 +21,7 @@ import PurchaseNotice from '@/lib/ProductNotice'
 type Variant = {
   id: string
   combination: unknown
+  description: string | null
   price: number
   stock: number
   sku: string | null
@@ -464,6 +465,26 @@ export default function ProductGallery({
               )}
             </div>
           </section>
+
+          {matchedVariant?.description && (
+            <section
+              className="mt-6 rounded-2xl border border-border-light bg-surface p-5 shadow-input sm:p-7"
+              aria-labelledby="variant-description-heading"
+            >
+              <p className="text-xs font-semibold tracking-[0.14em] text-accent uppercase">
+                Selected format
+              </p>
+              <h2
+                id="variant-description-heading"
+                className="mt-2 font-display text-xl font-semibold text-primary"
+              >
+                Product contents
+              </h2>
+              <p className="mt-4 whitespace-pre-line text-sm leading-6 text-text-muted">
+                {matchedVariant.description}
+              </p>
+            </section>
+          )}
         </div>
       </div>
 

@@ -192,6 +192,7 @@ A specific sellable combination of a product's options.
 | id | String (cuid) | Primary key |
 | productId | String | FK → Product.id (cascade delete) |
 | combination | Json | Specific option values e.g. `{"Size":"8","Color":"Red"}` |
+| description | String? | Optional format-specific description/content list shown for the selected variant |
 | price | Float | Price in SGD for this combination |
 | stock | Int | Stock count, default: 0 |
 | sku | String? | Optional unique identifier |
@@ -444,6 +445,7 @@ PromoCode  ← standalone, no relations (Order.promoCode is a plain string snaps
 | 20260722175234_add_newsletter_subscription | Added account newsletter preference and consent timestamps to `User` |
 | 20260728133000_add_newsletter_posts | Added `NewsletterPost`, `NewsletterDelivery`, and their status enums |
 | 20260802000000_add_order_email_deliveries | Added `OrderEmailDelivery`, `OrderEmailType`, and `OrderEmailDeliveryStatus` for durable idempotent payment emails. Applied to Neon on 2026-08-02. |
+| 20260805000000_add_product_variant_description | Added optional `ProductVariant.description` for format-specific product contents. Applied to Neon on 2026-08-05. |
 
 ---
 

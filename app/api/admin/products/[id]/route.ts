@@ -8,6 +8,7 @@ import { Prisma } from '@/app/generated/prisma/client'
 type ProductVariantInput = {
   id?: string
   combination: Prisma.InputJsonObject
+  description?: string | null
   price: string | number
   stock: string | number
   sku?: string | null
@@ -123,6 +124,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           where: { id: variant.id },
           data: {
             combination: variant.combination,
+            description: variant.description?.trim() || null,
             price: Number.parseFloat(String(variant.price)),
             stock: Number.parseInt(String(variant.stock), 10),
             sku: variant.sku || null,
@@ -131,6 +133,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         })),
         create: toCreate.map((variant) => ({
           combination: variant.combination,
+          description: variant.description?.trim() || null,
           price: Number.parseFloat(String(variant.price)),
           stock: Number.parseInt(String(variant.stock), 10),
           sku: variant.sku || null,

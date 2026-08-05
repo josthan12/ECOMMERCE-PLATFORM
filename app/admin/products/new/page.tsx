@@ -29,6 +29,7 @@ type ImageVerificationStatus = 'idle' | 'checking' | 'verified' | 'error'
 type ProductAttributeValue = string | number | boolean
 type VariantRow = {
   combination: Record<string, string>
+  description: string
   price: string
   stock: string
   sku: string
@@ -63,6 +64,7 @@ function generateCombinations(options: VariantOption[]): VariantRow[] {
 
   return combos.map((combination) => ({
     combination,
+    description: '',
     price: '',
     stock: '',
     sku: '',
@@ -227,7 +229,11 @@ export default function NewProductPage() {
     setVariants(generateCombinations(variantOptions))
   }
 
-  function updateVariantRow(index: number, field: 'price' | 'stock' | 'sku' | 'imageFilename', value: string) {
+  function updateVariantRow(
+    index: number,
+    field: 'description' | 'price' | 'stock' | 'sku' | 'imageFilename',
+    value: string
+  ) {
     setVariants((prev) => prev.map((row, i) => {
       if (i !== index) return row
       if (field === 'imageFilename') {
@@ -314,6 +320,7 @@ export default function NewProductPage() {
           variantOptions: variantOptionsJson,
           variants: variants.map((variant) => ({
             combination: variant.combination,
+            description: variant.description,
             price: variant.price,
             stock: variant.stock,
             sku: variant.sku,
@@ -539,6 +546,7 @@ export default function NewProductPage() {
                     <thead className="bg-surface-muted">
                       <tr className="text-left text-text-muted">
                         <th className="px-3 py-2 font-medium">Combination</th>
+                        <th className="px-3 py-2 font-medium">Contents / description</th>
                         <th className="px-3 py-2 font-medium">Price (SGD)</th>
                         <th className="px-3 py-2 font-medium">Stock</th>
                         <th className="px-3 py-2 font-medium">SKU (optional)</th>
@@ -551,6 +559,16 @@ export default function NewProductPage() {
                         <tr key={i} className="border-t border-border-light">
                           <td className="whitespace-nowrap px-3 py-2 text-text">
                             {Object.entries(row.combination).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                          </td>
+                          <td className="px-3 py-2">
+                            <textarea
+                              value={row.description}
+                              onChange={(e) => updateVariantRow(i, 'description', e.target.value)}
+                              rows={5}
+                              className={`w-72 resize-y ${cellInputClass}`}
+                              placeholder="One product-content item per line"
+                              aria-label={`Description for variant ${i + 1}`}
+                            />
                           </td>
                           <td className="px-3 py-2">
                             <input

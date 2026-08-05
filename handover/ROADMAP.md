@@ -80,6 +80,13 @@ support safe retry without intentionally resending successful deliveries.
 - [x] **Review Gate 2 — navigation and content model.** The admin confirmed
       Category -> Product/Set -> Variant/Format and confirmed that adding a
       format through the existing combination editor is sufficiently simple.
+- [x] **First real catalogue showcase (2026-08-05).** Completed the guarded
+      disposable-data reset, preserved the confirmed admin and migrations,
+      added variant-specific contents, and imported official Pokémon TCG
+      images/content for Pokemon English -> Mega Evolution—Pitch Black -> five
+      sealed formats. Temporary review prices and stock were added on
+      2026-08-05; the set remains archived until the code and images are
+      deployed and the owner is ready for the storefront review.
 - [x] **Milestone 3 — collection and product merchandising (2026-07-29).** Premium set
       landing pages, filters, result counts, product gallery/purchase-panel
       improvements, related products, and responsive/dark-mode polish are
@@ -219,9 +226,17 @@ or PDPA compliance certification.
 
 ## Phase 9 — Launch
 
-(Unchanged from Session 10's ROADMAP.md — custom domain connected ahead of
-schedule, genuine production credentials and the rest of this phase remain
-outstanding. No work done on this phase this session.)
+(Application implementation remains unchanged from the prior Phase 9 state;
+the custom domain is connected and the remaining production gates are still
+outstanding.)
+
+The payment direction is now an explicit unresolved launch gate. The owner's
+chosen sequence is: separately authorize and complete the disposable-data
+reset, define and complete a storefront professionalism pass, and only then
+choose between sole-proprietorship/provider onboarding or the documented
+manual personal-PayNow alternative. See
+`handover/PAYMENT_DIRECTION_OPTIONS.md`. No manual PayNow implementation is
+approved at this stage.
 
 ### Final pre-live gate — explicit admin requirement
 
@@ -230,6 +245,9 @@ outstanding. No work done on this phase this session.)
       Resend, Neon/PostgreSQL, cron/webhook secrets, and every other populated
       deployment secret; update local and hosting environments without
       recording secret values in source control.
+- [ ] After the reset and professionalism pass, explicitly select and validate
+      the production payment direction. Do not treat the manual PayNow proposal
+      as approved merely because it is documented.
 - [ ] After a separate explicit confirmation, wipe the disposable Prisma
       catalogue, account/order, newsletter, promotion, and operational test
       data immediately before the real catalogue and live store are opened.

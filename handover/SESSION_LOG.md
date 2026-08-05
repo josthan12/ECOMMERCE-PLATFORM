@@ -3004,3 +3004,358 @@ returns `404`. Then run the final non-destructive technical launch re-audit and
 issue the updated engineering go/no-go report. Secret rotation, the human
 assistive-technology pass, minimal live payment, catalogue approval, and the
 database reset remain separately controlled owner actions.
+
+---
+
+## Session 45
+
+Date: 2026-08-04
+
+### Objective and Boundaries
+Complete the final technical launch re-audit and issue the engineering go/no-go
+without changing application/data/external state, starting or stopping the
+development server, or pushing changes. Rollback was limited to removing only
+this session's handover-document edits; pre-existing worktree changes would
+have been preserved. The initial worktree was clean.
+
+### Source and Framework Re-Audit
+- Reviewed the bundled Next.js 16.2.11 production, Route Handler, header,
+  authentication/authorization, data-security, and Proxy guidance relevant to
+  the audit.
+- Reconfirmed Clerk authentication plus database `ADMIN` checks across all 19
+  admin API route files and the admin layout.
+- Reconfirmed checkout-success ownership before reconciliation, raw-body
+  HitPay HMAC verification, Svix verification for Clerk, compare-and-set
+  payment transitions, unique durable payment-email rows, redacted provider
+  failure logging, health no-store behavior, and Sentry data minimization.
+- Confirmed the monitoring cleanup commit removed the temporary test route and
+  that no secret/environment/private-key file is tracked or matched the
+  focused source scan.
+
+### Verification
+- Whole-project ESLint: PASS with zero findings.
+- `tsc --noEmit`: PASS.
+- Prisma schema validation and client generation: PASS; generation left the
+  tracked worktree unchanged.
+- Next.js 16.2.11 production build: PASS, including all 44 static pages. The
+  restricted first attempt could not spawn a Turbopack worker; the approved
+  identical rerun passed. The only build warning is the already
+  owner-controlled PostgreSQL future-`sslmode` warning.
+- Production: monitoring test route `404`; health `200 {"status":"ok"}` and
+  no-store; homepage/categories/cart/robots/sitemap/category/product/search
+  passed; HTTP redirects to HTTPS; signed-out account/admin/checkout redirect
+  to sign-in; sitemap parses as 26 valid URLs; canonical/JSON-LD remain present.
+- All five configured browser-security headers plus HSTS remain deployed, and
+  the homepage returned a Vercel cache hit.
+- The package lock is unchanged since the 11-advisory Sentry audit. Primary
+  upstream review reconfirmed the open Next.js 16.2.11 Sharp constraint and
+  Prisma 7.8.0 as current stable. The exact npm count was not refreshed because
+  the available runtime has no npm CLI; no alternate CLI was installed.
+
+### Findings and Decision
+- No new High-severity blocker was found. The formal result is **ENGINEERING GO
+  WITH RECORDED MEDIUM/LOW RISKS**.
+- Existing Medium findings remain: cron query-string authentication,
+  supported-upstream dependency remediation, and owner-approved admin audit-log
+  implementation.
+- Added a Medium checkout-abuse finding: authenticated checkout has no rate or
+  per-user pending-order control, allowing repeatable temporary inventory and
+  provider/database pressure.
+- Added a Low Clerk webhook retry finding: duplicate legitimate `user.created`
+  delivery can hit `prisma.user.create` uniqueness and return a retriable error.
+- The existing Low catalogue-description gap and owner-controlled PostgreSQL
+  `sslmode` change remain open.
+
+### Documentation Updated
+- `handover/LAUNCH_AUDIT.md`
+- `handover/CURRENT_STATE.md`
+- `handover/NEXT_TASK.md`
+- `handover/SESSION_LOG.md`
+
+### Next Step
+Proceed through owner-controlled secret rotation/`sslmode=verify-full`, focused
+post-rotation smoke checks, one minimal live payment, human keyboard/screen-
+reader verification, and real-catalogue approval. Any database reset still
+requires a separate explicit confirmation and must preserve only the confirmed
+admin account. Keep the Medium/Low engineering follow-ups separately scoped.
+
+---
+
+## Session 46
+
+Date: 2026-08-04
+
+### Objective and Boundaries
+Begin the owner-controlled production secret rotation without exposing secret
+values. No development server was started or stopped, no code or database
+schema was changed, and nothing was staged, committed, or pushed. External
+writes were limited to the owner-approved credential changes and the single
+controlled production newsletter; the agent did not invoke the mutating cron
+route.
+
+### Rotation Progress
+- The owner confirmed that the Clerk production credentials and Sentry upload
+  token were newly issued and never shared, so they were treated as current.
+- HitPay rotation was deferred until the owner can register and obtain a live
+  merchant account.
+- The owner replaced the Resend key in Vercel Production and redeployed.
+  Read-only production root, health, route-protection, and monitoring-route
+  checks passed. With explicit approval, newsletter
+  `cmsefshpp000004l831obsax9` was sent to exactly one subscriber; the admin UI
+  reported `Sent` and `1/1`, and the owner confirmed receipt. Revocation of the
+  previous Resend key remains unconfirmed.
+- Tracked documentation and Git history confirmed that cron-job.org was
+  configured to call the reconciliation endpoint every five minutes from
+  2026-07-15, but did not record the generator used for the original secret.
+  The owner privately
+  generated a replacement, updated Vercel Production and cron-job.org, moved
+  the target to the custom domain, retained `?secret=` authentication, and ran
+  the controlled scheduler test. The owner reported `200`; separate read-only
+  root and `/api/health` checks also returned `200` with health remaining
+  no-store. The Medium query-string finding therefore remains open. Confirm the
+  five-minute job is enabled if it was paused for rotation.
+- The owner created a separate Neon Console role, replaced Vercel Production
+  `DATABASE_URL` with the new role's URL using `sslmode=verify-full`, and
+  redeployed without exposing either credential. The original database-owner
+  role remained active as the agreed rollback boundary.
+- Read-only post-cutover verification passed: `/api/health` returned
+  `200 {"status":"ok"}` with no-store; the homepage and categories returned
+  `200`; signed-out account/admin protection returned the expected redirects;
+  and authenticated account orders plus the admin analytics dashboard loaded
+  their database-backed content. The browser recorded no console errors.
+- Vercel showed the production redeployment as Ready and its last-30-minute log
+  counters at zero warnings, zero errors, and zero fatals. Sentry Uptime monitor
+  `7983784` showed no ongoing issue and ten consecutive one-minute `200` checks
+  across three regions. The cron-job.org dashboard could not be inspected
+  because that browser session was signed out; no credentials were requested
+  and the cron endpoint was not invoked.
+
+### Documentation Updated
+- `handover/CURRENT_STATE.md`
+- `handover/NEXT_TASK.md`
+- `handover/LAUNCH_AUDIT.md`
+- `handover/SESSION_LOG.md`
+
+### Next Step
+Confirm that the previous Resend key is revoked and that cron-job.org is
+enabled. Inventory every consumer of the original Neon owner credential,
+including Vercel Preview/Development, local environment files, administrative
+tools, and other applications. After migrating each consumer, reset—but do not
+delete—the owner role password, preserve database ownership, and recheck
+production health. HitPay remains deferred until the live merchant account
+exists.
+
+---
+
+## Session 47
+
+Date: 2026-08-04
+
+### Objective and Boundaries
+Document a potential manual PayNow replacement without implementing or
+selecting it. No application code, database schema/data, dependency,
+environment variable, deployment, external-service setting, development-server
+process, staging state, commit, or push changed.
+
+### Payment Direction Research
+- Live HitPay payment-request attempts had returned provider `403` responses.
+  The owner confirmed that completing live onboarding would require business
+  verification and sole-proprietorship documentation they have not decided to
+  obtain.
+- A PayNow QR can be generated with a fixed amount, transaction reference, and
+  expiry without using a payment gateway. QR generation alone cannot provide
+  authoritative settlement confirmation.
+- No documented OCBC personal-account payment-verification API was found.
+  Automatic confirmation remains a provider/corporate-banking capability with
+  the associated onboarding.
+- The alternative design uses the current `Order.id` as both order and PayNow
+  reference, subject to a controlled OCBC test proving the full value appears
+  in incoming transaction details.
+- The proposed five-minute flow has **I have paid** and **I did not pay**
+  actions. Customer-declared payment enters manual review; explicit nonpayment
+  or timeout becomes `PAYMENT_FAILED`, restores stock, and uses the normal
+  failure path.
+- The owner accepted the paid-but-failed timeout risk. A verified late payment
+  could be recovered through an admin action only if every required quantity
+  can be re-reserved; otherwise recovery is blocked and the owner must refund
+  or resolve inventory.
+
+### Direction and Sequencing
+- No payment option was selected. Both sole-proprietorship/provider onboarding
+  and manual personal PayNow remain available.
+- The owner will first separately authorize and complete the disposable-data
+  reset, then define and complete a storefront professionalism pass, and only
+  afterward make the payment decision.
+- The full comparison, manual workflow, risks, validation gates, and rollback
+  boundaries are recorded in `handover/PAYMENT_DIRECTION_OPTIONS.md`.
+
+### Documentation Updated
+- `handover/PAYMENT_DIRECTION_OPTIONS.md` (new)
+- `handover/CURRENT_STATE.md`
+- `handover/NEXT_TASK.md`
+- `handover/ROADMAP.md`
+- `handover/SESSION_LOG.md`
+
+### Next Step
+Do not implement manual PayNow or continue HitPay onboarding yet. Await the
+owner's separate database-reset authorization, then scope the requested
+storefront professionalism pass. Revisit the payment options only after those
+steps.
+
+---
+
+## Session 48
+
+Date: 2026-08-05
+
+### Objective and Boundaries
+Execute the separately authorized disposable-data reset while preserving only
+the confirmed admin account and required schema/migrations, then prepare a
+Pokemon English / Mega Evolution—Pitch Black showcase from official Pokémon
+TCG source content. The development server was not started or stopped. Nothing
+was deployed, staged, committed, or pushed.
+
+### Reset Result
+- The owner confirmed that all disposable application data was fake and
+  explicitly authorized deletion.
+- The guarded scope remained 270 application rows from the last successful
+  inventory: all categories, category links, expenses, newsletters/deliveries,
+  orders/items/email deliveries, products/types/fields/variants, promo codes,
+  and four customer users. The confirmed admin ID and all 17 completed Prisma
+  migrations remained the only preserved data target.
+- Four new read-only preflight attempts timed out before connecting on all
+  resolved Neon port-5432 endpoints. No transaction began and no database row
+  changed. The HTTPS Neon Console fallback loaded only the sign-in screen, so
+  no console query was attempted.
+- The reset, migration deployment, and showcase import therefore remain
+  pending a fresh successful read-only inventory. The planned rollback boundary
+  remains transaction rollback before commit and Neon restore/PITR after
+  commit.
+
+### Local Showcase Preparation
+- Added optional `ProductVariant.description` support to Prisma, the generated
+  client, both admin product APIs, create/edit forms, and the selected-format
+  contents section on the product page.
+- Added pending migration
+  `20260805000000_add_product_variant_description`.
+- Downloaded the original official Pokémon TCG category logo, Pitch Black set
+  logo, and five 2x product packshots directly from the official expansion
+  page. No AI-generated image is used.
+- Extracted the official contents for the Pokémon Center Elite Trainer Box,
+  Elite Trainer Box, Booster Bundle, Booster Display, and Build & Battle Box.
+  The shared set narrative remains Product-level copy; each format's contents
+  is Variant-level copy.
+- The intended import is one `Pokemon English` category, one archived
+  `Mega Evolution—Pitch Black` product, and five zero-price/zero-stock variants.
+  It stays non-sellable until the owner supplies Singapore prices and stock.
+
+### Verification
+- Prisma schema formatting and validation passed.
+- Prisma Client 7.8.0 generation passed.
+- TypeScript `--noEmit` passed.
+- Targeted ESLint passed for the modified admin product forms, admin product
+  APIs, and product gallery.
+- All seven downloaded PNGs were opened and visually verified.
+- A production build was not attempted because static generation can require
+  the configured database, which was unreachable, and no development server
+  process was touched.
+
+### Next Step
+Restore working Neon access (or sign in to the Neon Console), run a fresh
+read-only guarded inventory, then execute the authorized reset, deploy the
+pending additive migration, import the archived showcase, and verify exact
+post-reset counts before making any product sellable.
+
+---
+
+## Session 49
+
+Date: 2026-08-05
+
+### Objective and Boundaries
+Resume the authorized reset through the owner's signed-in Neon Console, apply
+the pending additive migration, and create the official Pitch Black showcase.
+The development server was not started or stopped. Nothing was deployed,
+staged, committed, or pushed.
+
+### Guarded Reset
+- A fresh read-only Console inventory confirmed `neondb`, schema `public`, role
+  `neondb_owner`, the confirmed admin ID with `ADMIN` role and newsletter opt-in,
+  and 17 complete migrations.
+- The live deletion scope was recalculated to 273 disposable rows: 79 orders,
+  80 order items, 9 order-email deliveries, 4 customer users, 16 products, 39
+  variants, 6 product types, 9 product fields, 4 categories, 15 category links,
+  4 newsletter posts, 4 newsletter deliveries, 2 expenses, and 2 promo codes.
+  Addresses were already empty.
+- The exact revised scope, dependency order, rollback boundaries, and
+  post-reset plan were shown before execution.
+- One locked transaction guarded the target, admin, counts, and migration
+  state; explicitly deleted child rows before parents; verified every
+  disposable table was empty; reverified the sole admin and all migrations;
+  and committed. Neon reported every expected delete count and successful
+  guard/commit statements.
+
+### Migration and Showcase Import
+- Applied `20260805000000_add_product_variant_description` in a guarded
+  transaction and recorded its exact SHA-256 checksum in Prisma's migration
+  ledger. Neon now has 18 complete migrations and zero incomplete/rolled-back
+  entries.
+- Imported one `Pokémon TCG Set` product type, one `Pokemon English` category,
+  one archived `Mega Evolution—Pitch Black` product, one category link, and
+  five variants: Pokémon Center Elite Trainer Box, Elite Trainer Box, Booster
+  Bundle, Booster Display, and Build & Battle Box.
+- The product uses the approved shared set description. Each variant uses only
+  its official contents as the variant description. Category, set, and variant
+  image paths point to the official repository-owned PNGs downloaded from the
+  Pokémon TCG expansion page.
+- Every variant intentionally has price `0`, stock `0`, and no SKU. The product
+  remains archived so the placeholder commercial data cannot reach customer
+  storefront, checkout, or sitemap surfaces.
+
+### Post-Reset Verification
+- Users: 1 admin, 0 customers.
+- Orders, order items, and order-email deliveries: 0 each.
+- Migrations: 18 complete, 0 incomplete.
+- Product types: 1; product fields: 0; categories: 1; category links: 1;
+  products: 1 archived; variants: 5 described, 5 zero-stock.
+- A joined record check confirmed the category/set slugs, archived flag, all
+  five format names, zero prices/stocks, and every local category/product/
+  variant image path.
+
+### Next Step
+The owner supplies Singapore price, stock, and optional SKU for each format.
+Update those five variants, review the set in both themes/responsive layouts,
+then unarchive only after explicit owner approval. The separately requested
+storefront professionalism pass remains the next broader scope before choosing
+the production payment direction.
+
+---
+
+## Session 50
+
+Date: 2026-08-05
+
+### Objective and Boundaries
+Add owner-supplied temporary review prices and stock to the five Pitch Black
+formats without deploying or making the not-yet-deployed image paths public.
+No source code, schema, migration, development-server process, deployment,
+staging state, commit, or push changed.
+
+### Database Update
+- A guarded transaction confirmed `neondb`/`public`, `neondb_owner`, the sole
+  confirmed admin, 18 complete migrations, the archived Pitch Black product,
+  exactly five expected formats, and the prior `0/0` placeholder values.
+- Updated Pokémon Center Elite Trainer Box to S$300 with stock 3.
+- Updated Elite Trainer Box to S$150 with stock 2.
+- Updated Booster Bundle to S$60 with stock 10.
+- Updated Booster Display to S$300 with stock 2.
+- Updated Build & Battle Box to S$40 with stock 3.
+- Post-update assertions matched every format and committed. The product
+  remains archived, so these positive-stock review values cannot reach the
+  storefront before the local code and official images are deployed.
+
+### Next Step
+The owner pushes the prepared code/migration/assets and waits for the Vercel
+deployment. Verify the deployed admin record and static image URLs, then
+unarchive the set only when the owner explicitly requests the public storefront
+review.

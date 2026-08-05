@@ -9,8 +9,9 @@ has canonical metadata, social metadata, a dynamic sitemap, structured-data
 alignment, and a focused accessibility/performance pass. A non-destructive
 technical launch audit is complete, and every recorded High-severity engineering
 blocker has been remediated and production-retested. The final technical
-re-audit and formal assistive-technology/owner-controlled verification remain
-open.
+re-audit completed on 2026-08-04 with an engineering GO and recorded
+Medium/Low risks. Formal assistive-technology and other owner-controlled
+verification remain open.
 
 ## Current Feature
 Milestone 4 aligned cart, checkout, checkout status, search, and customer order
@@ -21,7 +22,45 @@ improvements, above-the-fold image loading, self-hosted Geist, and the Next 16
 Proxy convention.
 
 ## Current Objective
-Continue the approved launch-audit remediation sequence. Payment Batch 2 is
+The final non-destructive technical launch re-audit completed on 2026-08-04.
+The removed monitoring test route returns `404`; health remains `200` and
+no-store; production public, protection, header, sitemap, canonical, and
+structured-data checks passed. ESLint, TypeScript, Prisma validation/client
+generation, and the 44-page Next.js 16.2.11 production build passed. No open
+High-severity engineering blocker remains, so the engineering decision is GO
+with recorded Medium/Low risks. Newly explicit follow-ups are checkout abuse
+control (Medium) and idempotent Clerk `user.created` retry handling (Low).
+This does not replace the owner's remaining launch gates or final approval.
+Owner-controlled secret rotation began on 2026-08-04 without exposing values.
+The existing Clerk production credentials and newly created Sentry upload token
+were confirmed as current. Resend was rotated in Vercel Production and
+redeployed; controlled newsletter `cmsefshpp000004l831obsax9` sent to the sole
+subscriber (`1/1`) and the owner confirmed receipt. Revocation of the previous
+Resend key remains unconfirmed. `CRON_SECRET` was regenerated and updated in
+Vercel Production and cron-job.org, whose target now uses the custom domain;
+the owner-run scheduler test returned `200`, and separate root/health checks
+also returned `200`. Query-parameter cron authentication was retained, so its
+Medium hardening finding remains open. HitPay rotation is deferred until the
+owner has a live merchant account. Neon production now uses a separately
+created Console role and a replacement `DATABASE_URL` with
+`sslmode=verify-full`. The redeployment is Ready; health, public catalogue,
+authenticated account orders, and authenticated admin analytics all passed
+against the new credential. Sentry showed ten consecutive minute-by-minute
+`200` health checks with no ongoing issue, and Vercel showed zero warning,
+error, or fatal logs in the observed 30-minute window. The original owner role
+remains active solely as rollback until every other consumer is inventoried;
+its password has not yet been reset.
+Subsequent live HitPay payment-request attempts returned provider `403`
+responses, and the owner confirmed that activating the required merchant
+account would involve business verification and sole-proprietorship
+documentation. The payment direction is now explicitly undecided. The owner
+will first complete a separately authorized disposable-data reset and a later,
+separately scoped storefront professionalism pass, then choose between
+registering for automated provider-backed payments and the documented manual
+personal-PayNow alternative in `handover/PAYMENT_DIRECTION_OPTIONS.md`. No
+manual PayNow code, schema, dependency, environment, or external-service change
+has been authorized.
+Payment Batch 2 is
 complete with the owner-accepted HitPay limitation: declined online attempts
 remain retryable/unpaid, so the customer is shown failure and starts checkout
 again. The deployed payment-idempotency batch passed completed, real HitPay
@@ -48,9 +87,9 @@ maps were verified against a harmless admin-authenticated event. The permanent
 `/api/health` database probe is monitored every minute by Sentry Uptime. A
 controlled 404 created a High-priority downtime issue and email alert, the owner
 confirmed delivery, and the restored endpoint returned `200` and automatically
-resolved the issue. The prior High-severity monitoring blocker is closed; the
-formal technical launch decision now awaits the final re-audit. Contrast Batch
-4 is deployed and complete.
+resolved the issue. The prior High-severity monitoring blocker is closed and
+the final technical re-audit reconfirmed the deployment. Contrast Batch 4 is
+deployed and complete.
 Its final computed production scan passed on the
 homepage, catalogue, product detail, cart, checkout, account/orders, and admin
 routes in both themes. The deployed light-gold ink-section labels measure
@@ -73,8 +112,20 @@ recorded without changing packages or the database schema.
 Checkout-success owner/non-owner isolation passed in production on 2026-08-02.
 The Next.js 16.2.11
 production deployment, catalogue refresh, cart, sitemap, route protection,
-canonical/structured data, build, and TypeScript checks passed. The database
-reset remains paused until a later, separate explicit confirmation.
+canonical/structured data, build, and TypeScript checks passed. The separately
+authorized disposable-data reset completed through the signed-in Neon Console
+on 2026-08-05 after a fresh guarded inventory. It deleted 273 disposable rows,
+including 79 orders, 80 order items, 9 order-email records, and 4 customer
+users. The confirmed admin account and all 17 existing completed migrations
+were preserved. Migration
+`20260805000000_add_product_variant_description` was then applied, bringing the
+completed migration count to 18. The database now contains one archived
+`Pokemon English` / `Mega Evolution—Pitch Black` showcase with five official
+sealed-product formats. The owner supplied temporary review values on
+2026-08-05: Pokémon Center ETB S$300/3, ETB S$150/2, Booster Bundle S$60/10,
+Booster Display S$300/2, and Build & Battle Box S$40/3. The product remains
+archived until the new code and image assets are deployed and reviewed. All
+order/customer-history tables are empty.
 
 ---
 
@@ -169,7 +220,8 @@ reset remains paused until a later, separate explicit confirmation.
       workbook. `NA` and zero-stock entries were omitted, `Ascended Heros`
       was corrected to `Ascended Heroes`, and existing placeholder images
       were reused. The import added 54 units of stock and was verified on the
-      live category and Prismatic Evolution product pages. No application
+      live category and Prismatic Evolution product pages. This disposable
+      preview data was removed by the authorized Session 49 reset. No application
       source, schema, migration, or dependency changed. The records remain
       disposable and are included in the later explicitly approved reset.
 * [x] **Storefront catalogue cache refresh (Session 30).** Added a shared
@@ -404,9 +456,10 @@ reset remains paused until a later, separate explicit confirmation.
   unchanged, still deliberately deferred per Session 10's DECISIONS.md
   entries.
 * Remaining launch work is tracked in `handover/LAUNCH_AUDIT.md`. It includes
-  the final technical re-audit, formal assistive-technology checks, dependency
-  updates waiting on supported upstream releases, and implementation of the
-  separately planned admin audit log. Local product and
+  formal assistive-technology checks, dependency updates waiting on supported
+  upstream releases, checkout abuse control, idempotent Clerk webhook retry
+  handling, and implementation of the separately planned admin audit log.
+  Local product and
   category paths render through
   `next/image`; the remote compatibility branch remains only for disposable
   test database records.
@@ -415,11 +468,22 @@ reset remains paused until a later, separate explicit confirmation.
 
 ## Immediate Next Task
 
-Deploy and verify the monitoring cleanup so the temporary authenticated test
-route returns `404`, then perform the final non-destructive technical launch
-re-audit and issue the updated engineering go/no-go report. Do not wipe data
-during Phase 2. The final reset still requires a later, separate explicit
-confirmation and must preserve only the confirmed admin account.
+Inventory every remaining consumer of the original Neon owner credential,
+including Vercel Preview/Development, local environment files, administrative
+tools, and other applications. Once each consumer is migrated or deliberately
+retained, reset—but do not delete—the original owner role password and recheck
+production health. Also confirm that the previous Resend key has been revoked
+and that cron-job.org is enabled; its dashboard could not be checked because
+the available browser session was signed out.
+
+Next, and only after a separate explicit confirmation, recalculate and execute
+the disposable-data reset while preserving only the confirmed admin account.
+After the reset, separately scope and complete the owner-requested storefront
+professionalism pass. Only then review `handover/PAYMENT_DIRECTION_OPTIONS.md`
+and explicitly choose the production payment direction. Do not perform a live
+payment test or implement manual PayNow before that decision. Medium/Low
+hardening items remain separately scoped and are not authorization to change
+code here.
 
 ---
 

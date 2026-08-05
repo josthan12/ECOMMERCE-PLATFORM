@@ -223,8 +223,8 @@ Creates a new product with its variants in a single nested Prisma create. Requir
   "attributes": { "brand": "Nike", "material": "Leather" },
   "variantOptions": { "Size": ["7", "8", "9"], "Color": ["Red", "Blue"] },
   "variants": [
-    { "combination": { "Size": "7", "Color": "Red" }, "price": "120.00", "stock": "5", "sku": "AF1-7-RED", "imageUrl": "/images/variants/af1-7-red.webp" },
-    { "combination": { "Size": "7", "Color": "Blue" }, "price": "120.00", "stock": "3", "sku": "AF1-7-BLU", "imageUrl": "" }
+    { "combination": { "Size": "7", "Color": "Red" }, "description": "Optional variant-specific contents", "price": "120.00", "stock": "5", "sku": "AF1-7-RED", "imageUrl": "/images/variants/af1-7-red.webp" },
+    { "combination": { "Size": "7", "Color": "Blue" }, "description": "", "price": "120.00", "stock": "3", "sku": "AF1-7-BLU", "imageUrl": "" }
   ]
 }
 ```
@@ -234,6 +234,9 @@ Creates a new product with its variants in a single nested Prisma create. Requir
 - `price` and `stock` do not exist on `Product` — each `ProductVariant` has its own
 - `attributes` stores type-specific describing fields as JSON
 - `variantOptions` stores the option definitions (what options exist and their possible values)
+- `description` on each variant is optional. The admin editor labels it
+  "Contents / description" and preserves line breaks for the selected-format
+  contents section on the product page.
 - `imageUrl` on a newly created product is required and must match
   `/images/products/<valid-image-filename>`; the admin form accepts only the
   filename and verifies the deployed static file before enabling creation
@@ -277,14 +280,16 @@ Updates a product's name/description/image/attributes/variantOptions and its var
   "attributes": { "brand": "Nike", "material": "Leather" },
   "variantOptions": { "Size": ["7", "8", "9"], "Color": ["Red", "Blue"] },
   "variants": [
-    { "id": "existing-variant-cuid", "combination": { "Size": "7", "Color": "Red" }, "price": "125.00", "stock": "4", "sku": "AF1-7-RED", "imageUrl": "/images/variants/af1-7-red.webp" },
-    { "combination": { "Size": "9", "Color": "Blue" }, "price": "120.00", "stock": "6", "sku": "", "imageUrl": "" }
+    { "id": "existing-variant-cuid", "combination": { "Size": "7", "Color": "Red" }, "description": "Updated variant contents", "price": "125.00", "stock": "4", "sku": "AF1-7-RED", "imageUrl": "/images/variants/af1-7-red.webp" },
+    { "combination": { "Size": "9", "Color": "Blue" }, "description": "", "price": "120.00", "stock": "6", "sku": "", "imageUrl": "" }
   ]
 }
 ```
 
 **Behavior:**
 - Variants with an `id` are updated in place; variants without one are created new; any existing variant whose `id` is missing from the submitted array is deleted.
+- Optional variant `description` values are trimmed and stored as `null` when
+  blank; line breaks are retained for storefront display.
 - The main product image is required and must match
   `/images/products/<valid-image-filename>`. Optional variant images must
   match `/images/variants/<valid-image-filename>`.

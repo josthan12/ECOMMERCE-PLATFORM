@@ -1015,3 +1015,22 @@ indefinitely.
 
 Date:
 2026-07-22
+
+---
+
+Decision:
+Store shared set copy on `Product.description` and store each sealed format's
+official contents on optional `ProductVariant.description`.
+
+Reason:
+The catalogue deliberately models a Pokémon expansion as one Product/Set and
+its sealed formats as variants. Repeating the same expansion narrative on
+every format would create duplicated content, while placing all format
+contents on the Product would make the description inaccurate when a customer
+selects another format. A nullable per-variant field keeps the existing flat
+catalogue model and lets the product page show the correct contents for the
+selected format. Blank values remain valid for ordinary products that do not
+need format-specific copy.
+
+Date:
+2026-08-05

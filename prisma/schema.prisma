@@ -108,6 +108,7 @@ model ProductVariant {
   productId   String
   product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   combination Json
+  description String?
   price       Float
   stock       Int      @default(0)
   sku         String?
