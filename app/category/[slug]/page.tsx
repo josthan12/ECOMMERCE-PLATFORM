@@ -130,8 +130,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         <BackButton />
 
         <section className="relative mt-4 overflow-hidden rounded-2xl border border-border-light bg-linear-to-br from-[#12345f] via-[#0a1c35] to-[#060c17] shadow-card md:mt-6">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_28%,rgba(93,169,255,0.22),transparent_32%)]" />
-          <div className="relative grid lg:grid-cols-[minmax(0,1fr)_280px] lg:items-center">
+          <div className="relative grid lg:grid-cols-[minmax(0,1fr)_360px]">
             <div className="max-w-3xl px-6 py-12 sm:px-9 md:py-16 lg:px-12">
               <p className="text-xs font-semibold tracking-[0.18em] text-accent uppercase">
                 TCG catalogue
@@ -161,14 +160,13 @@ export default async function CategoryPage({ params, searchParams }: Props) {
               </dl>
             </div>
             {category.bannerImageUrl && (
-              <div className="relative mx-auto mb-12 h-[84px] w-[165px] lg:mb-0 lg:mr-14">
+              <div className="relative min-h-[300px] overflow-hidden border-t border-white/10 lg:min-h-0 lg:border-t-0 lg:border-l">
                 <CatalogImage
                   src={category.bannerImageUrl}
                   alt=""
-                  sizes="165px"
-                  fit="contain"
+                  sizes="(max-width: 1023px) 100vw, 360px"
+                  fit="cover"
                   eager
-                  className="drop-shadow-[0_12px_28px_rgba(0,0,0,0.4)]"
                 />
               </div>
             )}

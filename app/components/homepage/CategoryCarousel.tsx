@@ -92,7 +92,6 @@ export default function CategoryCarousel({
               category={category}
               productCount={category.productCount}
               headingLevel="h3"
-              imageSizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
             />
           </div>
         ))}

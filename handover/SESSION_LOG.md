@@ -3380,6 +3380,17 @@ state, commit, or push was changed.
   logo on a crisp CSS gradient in the shared category card.
 - Reworked the category-detail hero so the logo occupies its own contained
   artwork area instead of being enlarged behind the heading and description.
+- Removed upward category-card hover translation because the horizontal
+  homepage carousel can clip content that crosses its top edge. The gold border
+  and elevated shadow remain as the hover affordance.
+- Standardized the category logo's responsive image hint to its actual
+  165-pixel rendered width. Recommended future category artwork is a 1200-by-630
+  PNG or WebP with the logo centred and generous transparent/quiet padding.
+- The owner then supplied a 1024-by-1024 full category artwork. Replaced
+  `pokemon-english.png` with that image and changed both category surfaces from
+  a small contained-logo layout to a larger, responsive `object-cover` artwork
+  treatment. The high-resolution square source keeps the centred wordmark clear
+  across the 4:3 card and the dedicated category-hero image panel.
 - Product/set and variant imagery, catalogue data, prices, and stock were not
   changed.
 
