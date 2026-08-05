@@ -3359,3 +3359,33 @@ The owner pushes the prepared code/migration/assets and waits for the Vercel
 deployment. Verify the deployed admin record and static image URLs, then
 unarchive the set only when the owner explicitly requests the public storefront
 review.
+
+---
+
+## Session 51
+
+Date: 2026-08-05
+
+### Objective and Boundaries
+Correct the cramped, blurred `Pokemon English` category presentation after the
+owner manually unarchived and reviewed the Pitch Black showcase. No database,
+schema, migration, dependency, development-server process, deployment, staging
+state, commit, or push was changed.
+
+### Storefront Fix
+- Measured the deployed category card and confirmed that the small official
+  Pokémon TCG logo was being stretched with `object-cover` across an
+  approximately 386-by-289-pixel card, cropping and blurring its lettering.
+- Replaced the full-bleed category image treatment with a restrained contained
+  logo on a crisp CSS gradient in the shared category card.
+- Reworked the category-detail hero so the logo occupies its own contained
+  artwork area instead of being enlarged behind the heading and description.
+- Product/set and variant imagery, catalogue data, prices, and stock were not
+  changed.
+
+### Verification
+- Targeted ESLint passed for the category card and category page.
+- TypeScript `--noEmit` passed.
+- The existing production presentation and rendered image dimensions were
+  inspected before the fix. Post-fix deployed visual verification remains for
+  the owner after the local changes are pushed and Vercel finishes deploying.

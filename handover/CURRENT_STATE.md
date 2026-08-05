@@ -119,13 +119,16 @@ including 79 orders, 80 order items, 9 order-email records, and 4 customer
 users. The confirmed admin account and all 17 existing completed migrations
 were preserved. Migration
 `20260805000000_add_product_variant_description` was then applied, bringing the
-completed migration count to 18. The database now contains one archived
+completed migration count to 18. The database now contains one
 `Pokemon English` / `Mega Evolution—Pitch Black` showcase with five official
 sealed-product formats. The owner supplied temporary review values on
 2026-08-05: Pokémon Center ETB S$300/3, ETB S$150/2, Booster Bundle S$60/10,
-Booster Display S$300/2, and Build & Battle Box S$40/3. The product remains
-archived until the new code and image assets are deployed and reviewed. All
-order/customer-history tables are empty.
+Booster Display S$300/2, and Build & Battle Box S$40/3. The owner subsequently
+unarchived the product and confirmed that its public presentation looks good.
+The category card and category-detail hero have a local, not-yet-deployed fix
+that renders the small official Pokémon TCG logo at a restrained contained size
+on a CSS background instead of enlarging and cropping it as a full-bleed image.
+All order/customer-history tables are empty.
 
 ---
 

@@ -129,46 +129,49 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       <div className="mx-auto max-w-[1440px] px-4 py-8 md:px-8 md:py-12">
         <BackButton />
 
-        <section className="relative mt-4 overflow-hidden rounded-2xl border border-border-light bg-ink shadow-card md:mt-6">
-          {category.bannerImageUrl && (
-            <div className="absolute inset-0 opacity-45">
-              <CatalogImage
-                src={category.bannerImageUrl}
-                alt=""
-                sizes="(max-width: 1439px) 100vw, 1400px"
-                fit="cover"
-                eager
-              />
-            </div>
-          )}
-          <div className="absolute inset-0 bg-linear-to-r from-[#070d18] via-[#070d18]/88 to-[#070d18]/35" />
-          <div className="relative max-w-3xl px-6 py-12 sm:px-9 md:py-16 lg:px-12">
-            <p className="text-xs font-semibold tracking-[0.18em] text-accent uppercase">
-              TCG catalogue
-            </p>
-            <h1 className="mt-3 font-display text-4xl font-semibold tracking-[-0.03em] text-on-ink md:text-6xl">
-              {category.name}
-            </h1>
-            {category.description && (
-              <p className="mt-4 max-w-2xl text-base leading-7 text-on-ink-muted">
-                {category.description}
+        <section className="relative mt-4 overflow-hidden rounded-2xl border border-border-light bg-linear-to-br from-[#12345f] via-[#0a1c35] to-[#060c17] shadow-card md:mt-6">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_28%,rgba(93,169,255,0.22),transparent_32%)]" />
+          <div className="relative grid lg:grid-cols-[minmax(0,1fr)_280px] lg:items-center">
+            <div className="max-w-3xl px-6 py-12 sm:px-9 md:py-16 lg:px-12">
+              <p className="text-xs font-semibold tracking-[0.18em] text-accent uppercase">
+                TCG catalogue
               </p>
-            )}
+              <h1 className="mt-3 font-display text-4xl font-semibold tracking-[-0.03em] text-on-ink md:text-6xl">
+                {category.name}
+              </h1>
+              {category.description && (
+                <p className="mt-4 max-w-2xl text-base leading-7 text-on-ink-muted">
+                  {category.description}
+                </p>
+              )}
 
-            <dl className="mt-9 grid max-w-xl grid-cols-3 divide-x divide-white/15 border-y border-white/15 py-4">
-              <div className="pr-4">
-                <dt className="text-xs text-on-ink-muted">Sets</dt>
-                <dd className="mt-1 font-display text-2xl font-semibold text-on-ink">{category.products.length}</dd>
+              <dl className="mt-9 grid max-w-xl grid-cols-3 divide-x divide-white/15 border-y border-white/15 py-4">
+                <div className="pr-4">
+                  <dt className="text-xs text-on-ink-muted">Sets</dt>
+                  <dd className="mt-1 font-display text-2xl font-semibold text-on-ink">{category.products.length}</dd>
+                </div>
+                <div className="px-4">
+                  <dt className="text-xs text-on-ink-muted">Formats</dt>
+                  <dd className="mt-1 font-display text-2xl font-semibold text-on-ink">{totalFormats}</dd>
+                </div>
+                <div className="pl-4">
+                  <dt className="text-xs text-on-ink-muted">Available</dt>
+                  <dd className="mt-1 font-display text-2xl font-semibold text-on-ink">{availableProducts}</dd>
+                </div>
+              </dl>
+            </div>
+            {category.bannerImageUrl && (
+              <div className="relative mx-auto mb-12 h-[84px] w-[165px] lg:mb-0 lg:mr-14">
+                <CatalogImage
+                  src={category.bannerImageUrl}
+                  alt=""
+                  sizes="165px"
+                  fit="contain"
+                  eager
+                  className="drop-shadow-[0_12px_28px_rgba(0,0,0,0.4)]"
+                />
               </div>
-              <div className="px-4">
-                <dt className="text-xs text-on-ink-muted">Formats</dt>
-                <dd className="mt-1 font-display text-2xl font-semibold text-on-ink">{totalFormats}</dd>
-              </div>
-              <div className="pl-4">
-                <dt className="text-xs text-on-ink-muted">Available</dt>
-                <dd className="mt-1 font-display text-2xl font-semibold text-on-ink">{availableProducts}</dd>
-              </div>
-            </dl>
+            )}
           </div>
         </section>
 
