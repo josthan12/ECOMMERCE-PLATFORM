@@ -30,7 +30,7 @@ export default async function SearchPage({ searchParams }: Props) {
       <BackButton />
 
       <p className="mt-3 text-xs font-semibold tracking-[0.16em] text-accent uppercase">
-        Catalogue search
+        Product search
       </p>
       <h1 className="mt-3 font-display text-4xl font-semibold tracking-[-0.03em] text-primary md:text-5xl">
         {query ? `Search results for "${query}"` : 'Search'}

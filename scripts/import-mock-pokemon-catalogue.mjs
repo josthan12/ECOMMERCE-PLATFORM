@@ -508,7 +508,7 @@ async function main() {
           set.slug,
           set.description,
           JSON.stringify(template.attributes ?? {}),
-          JSON.stringify(template.variantOptions ?? {}),
+          JSON.stringify({ Format: set.variants.map((variant) => variant.name) }),
           set.imageUrl,
         ]
       )
@@ -537,12 +537,13 @@ async function main() {
     }
 
     const verification = await client.query(
-      'SELECT p.slug, p.archived, COUNT(v.id)::int AS variants, MIN(v.price) AS min_price, MAX(v.price) AS max_price, MIN(v.stock)::int AS min_stock, MAX(v.stock)::int AS max_stock, COUNT(*) FILTER (WHERE v.description IS NULL OR btrim(v.description) = \'\')::int AS missing_descriptions, COUNT(*) FILTER (WHERE v."imageUrl" IS NULL OR btrim(v."imageUrl") = \'\')::int AS missing_images FROM "Product" p JOIN "CategoryProduct" cp ON cp."productId" = p.id JOIN "Category" c ON c.id = cp."categoryId" JOIN "ProductVariant" v ON v."productId" = p.id WHERE c.slug = $1 GROUP BY p.id, p.slug, p.archived ORDER BY p.slug',
+      'SELECT p.slug, p.archived, jsonb_array_length(p."variantOptions"->\'Format\')::int AS options, COUNT(v.id)::int AS variants, MIN(v.price) AS min_price, MAX(v.price) AS max_price, MIN(v.stock)::int AS min_stock, MAX(v.stock)::int AS max_stock, COUNT(*) FILTER (WHERE v.description IS NULL OR btrim(v.description) = \'\')::int AS missing_descriptions, COUNT(*) FILTER (WHERE v."imageUrl" IS NULL OR btrim(v."imageUrl") = \'\')::int AS missing_images FROM "Product" p JOIN "CategoryProduct" cp ON cp."productId" = p.id JOIN "Category" c ON c.id = cp."categoryId" JOIN "ProductVariant" v ON v."productId" = p.id WHERE c.slug = $1 GROUP BY p.id, p.slug, p.archived ORDER BY p.slug',
       ['pokemon-english']
     )
 
     assert(verification.rowCount === 7, 'Expected seven Pokemon English sets after import')
     assert(verification.rows.every((row) => row.archived === false), 'Expected every imported set to be unarchived')
+    assert(verification.rows.every((row) => row.options === row.variants), 'Every product option must map to a variant')
     assert(verification.rows.every((row) => row.min_stock >= 1 && row.max_stock <= 10), 'Expected stock values from 1 through 10')
     assert(verification.rows.every((row) => row.missing_descriptions === 0), 'Every variant must have product contents')
     assert(verification.rows.every((row) => row.missing_images === 0), 'Every variant must have an image')

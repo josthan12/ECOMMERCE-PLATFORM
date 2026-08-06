@@ -73,12 +73,13 @@
   --color-accent: #D2AF67;
   --color-accent-light: #E2C98F;
   --color-accent-foreground: #111827;
-  --color-ink: #070D18;
-  --color-ink-muted: #111C2F;
+  --color-ink: #070D18; /* Deepest color, for headers/footers */
+  --color-ink: #070D18; /* Deepest color, for headers/footers */
+  --color-ink-muted: #0C1424; /* A step lighter than ink */
   --color-on-ink: #FAF7F0;
   --color-on-ink-muted: #B8C0CD;
 
-  --color-background: #0C1424;
+  --color-background: #111C2F; /* Main page background, now lighter for contrast */
   --color-surface: #141F33;
   --color-surface-muted: #1A2942;
   --color-surface-hover: #22314B;
