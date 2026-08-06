@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { formatPrice } from '@/app/components/ProductCard'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -10,36 +9,40 @@ export async function GET(req: Request) {
     return NextResponse.json({ results: [] })
   }
 
-  const products = await prisma.product.findMany({
+  const variants = await prisma.productVariant.findMany({
     where: {
-      archived: false,
-      OR: [
-        { name: { contains: q, mode: 'insensitive' } },
-        { description: { contains: q, mode: 'insensitive' } },
-      ],
-    },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      imageUrl: true,
-      variants: { select: { price: true, stock: true } },
-      categoryProducts: {
-        select: { category: { select: { name: true } } },
-        take: 1,
+      product: {
+        archived: false,
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { description: { contains: q, mode: 'insensitive' } },
+        ],
       },
     },
-    orderBy: { createdAt: 'desc' },
+    include: {
+      product: {
+        select: {
+          name: true,
+          slug: true,
+          imageUrl: true,
+          categoryProducts: {
+            select: { category: { select: { name: true } } },
+            take: 1,
+          },
+        },
+      },
+    },
+    orderBy: { product: { createdAt: 'desc' } },
     take: 6,
   })
 
-  const results = products.map((p) => ({
-    id: p.id,
-    name: p.name,
-    slug: p.slug,
-    imageUrl: p.imageUrl,
-    price: formatPrice(p.variants),
-    category: p.categoryProducts[0]?.category.name ?? null,
+  const results = variants.map((v) => ({
+    id: v.id,
+    name: `${v.product.name} - ${(v.combination as { Format?: string })?.Format ?? ''}`,
+    slug: v.product.slug,
+    imageUrl: v.imageUrl ?? v.product.imageUrl,
+    price: `$${v.price.toFixed(2)}`,
+    category: v.product.categoryProducts[0]?.category.name ?? null,
   }))
 
   return NextResponse.json({ results })

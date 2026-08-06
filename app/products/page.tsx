@@ -5,13 +5,12 @@ import {
   firstSearchParam,
   parseCatalogSort,
   parsePositivePage,
-  sortCatalogProducts,
 } from '@/lib/catalog'
 import { absoluteUrl, serializeJsonLd } from '@/lib/structuredData'
 import BackButton from '../components/BackButton'
 import CatalogFilters from '../components/CatalogFilters'
 import CatalogPagination from '../components/CatalogPagination'
-import ProductCard from '../components/ProductCard'
+import VariantCard from '../components/VariantCard'
 import ScrollReveal from '../components/ScrollReveal'
 
 const PRODUCTS_PER_PAGE = 24
@@ -40,39 +39,64 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const search = firstSearchParam(query.q)?.trim() ?? ''
   const requestedPage = parsePositivePage(query.page)
 
-  const [categories, matchingProducts] = await Promise.all([
+  const [categories, matchingVariants] = await Promise.all([
     prisma.category.findMany({
       select: { slug: true, name: true },
       orderBy: { name: 'asc' },
     }),
-    prisma.product.findMany({
+    prisma.productVariant.findMany({
       where: {
-        archived: false,
-        ...(search
-          ? {
-              OR: [
-                { name: { contains: search, mode: 'insensitive' as const } },
-                { description: { contains: search, mode: 'insensitive' as const } },
-              ],
-            }
-          : {}),
-        ...(selectedCategory
-          ? {
-              categoryProducts: {
-                some: { category: { slug: selectedCategory } },
-              },
-            }
-          : {}),
-        ...(inStock ? { variants: { some: { stock: { gt: 0 } } } } : {}),
+        product: {
+          archived: false,
+          ...(search
+            ? {
+                OR: [
+                  { name: { contains: search, mode: 'insensitive' as const } },
+                  { description: { contains: search, mode: 'insensitive' as const } },
+                ],
+              }
+            : {}),
+          ...(selectedCategory
+            ? {
+                categoryProducts: {
+                  some: { category: { slug: selectedCategory } },
+                },
+              }
+            : {}),
+        },
+        ...(inStock ? { stock: { gt: 0 } } : {}),
       },
-      include: { variants: true },
+      include: {
+        product: {
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            imageUrl: true,
+            createdAt: true,
+          },
+        },
+      },
     }),
   ])
 
-  const products = sortCatalogProducts(matchingProducts, sort)
-  const totalPages = Math.max(1, Math.ceil(products.length / PRODUCTS_PER_PAGE))
+  const variants = [...matchingVariants].sort((a, b) => {
+    switch (sort) {
+      case 'price-asc':
+        return a.price - b.price
+      case 'price-desc':
+        return b.price - a.price
+      case 'name':
+        return a.product.name.localeCompare(b.product.name)
+      case 'newest':
+      default:
+        return b.product.createdAt.getTime() - a.product.createdAt.getTime()
+    }
+  })
+
+  const totalPages = Math.max(1, Math.ceil(variants.length / PRODUCTS_PER_PAGE))
   const currentPage = Math.min(requestedPage, totalPages)
-  const pageProducts = products.slice(
+  const pageVariants = variants.slice(
     (currentPage - 1) * PRODUCTS_PER_PAGE,
     currentPage * PRODUCTS_PER_PAGE
   )
@@ -132,13 +156,13 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
       <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-text-muted" aria-live="polite">
-          {products.length} {products.length === 1 ? 'product' : 'products'}
+          {variants.length} {variants.length === 1 ? 'product' : 'products'}
           {selectedCategoryName ? ` in ${selectedCategoryName}` : ''}
           {search ? ` matching “${search}”` : ''}
         </p>
       </div>
 
-      {pageProducts.length === 0 ? (
+      {pageVariants.length === 0 ? (
         <div className="mt-8 flex flex-col items-center rounded-xl border border-border-light bg-surface py-16 text-center">
           <PackageSearch className="h-8 w-8 text-text-light" aria-hidden="true" />
           <p className="mt-3 font-display text-lg text-primary">
@@ -148,9 +172,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         </div>
       ) : (
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:gap-6 lg:grid-cols-4">
-          {pageProducts.map((product, index) => (
-            <ScrollReveal key={product.id} delayMs={Math.min(index * 35, 210)}>
-              <ProductCard product={product} headingLevel="h2" />
+          {pageVariants.map((variant, index) => (
+            <ScrollReveal key={variant.id} delayMs={Math.min(index * 35, 210)}>
+              <VariantCard variant={variant} headingLevel="h2" />
             </ScrollReveal>
           ))}
         </div>

@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { PackageSearch } from 'lucide-react'
 import BackButton from '../components/BackButton'
-import ProductCard from '../components/ProductCard'
+import VariantCard from '../components/VariantCard'
 
 type Props = {
   searchParams: Promise<{ q?: string }>
@@ -11,17 +11,23 @@ export default async function SearchPage({ searchParams }: Props) {
   const { q = '' } = await searchParams
   const query = q.trim()
 
-  const products = query
-    ? await prisma.product.findMany({
+  const variants = query
+    ? await prisma.productVariant.findMany({
         where: {
-          archived: false,
-          OR: [
-            { name: { contains: query, mode: 'insensitive' } },
-            { description: { contains: query, mode: 'insensitive' } },
-          ],
+          product: {
+            archived: false,
+            OR: [
+              { name: { contains: query, mode: 'insensitive' } },
+              { description: { contains: query, mode: 'insensitive' } },
+            ],
+          },
         },
-        include: { variants: true },
-        orderBy: { createdAt: 'desc' },
+        include: {
+          product: {
+            select: { id: true, slug: true, name: true, imageUrl: true },
+          },
+        },
+        orderBy: { product: { createdAt: 'desc' } },
       })
     : []
 
@@ -46,7 +52,7 @@ export default async function SearchPage({ searchParams }: Props) {
             Use the search field in the header to find cards, sets, or TCG products.
           </p>
         </div>
-      ) : products.length === 0 ? (
+      ) : variants.length === 0 ? (
         <div className="mt-10 flex flex-col items-center rounded-xl border border-border-light bg-surface p-10 text-center shadow-input">
           <PackageSearch className="h-8 w-8 text-text-light" aria-hidden="true" />
           <p className="mt-3 font-display text-lg font-semibold text-primary">
@@ -59,11 +65,11 @@ export default async function SearchPage({ searchParams }: Props) {
       ) : (
         <>
           <p className="mt-3 text-sm text-text-muted" role="status">
-            {products.length} result{products.length === 1 ? '' : 's'}
+            {variants.length} result{variants.length === 1 ? '' : 's'}
           </p>
           <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 md:gap-6 lg:grid-cols-4">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} headingLevel="h2" />
+            {variants.map((variant) => (
+              <VariantCard key={variant.id} variant={variant} headingLevel="h2" />
             ))}
           </div>
         </>
