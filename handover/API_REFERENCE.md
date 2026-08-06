@@ -532,15 +532,21 @@ Live-typing autocomplete dropdown backing `SearchBar.tsx` in the header. Added 2
 **Query params:** `?q=<search text>`
 
 **Behavior:**
-- Same match logic as `/search` (case-insensitive `contains` on name/description, `archived: false`), capped to the 6 most recent matches (`take: 6`, `orderBy: createdAt desc`)
-- Returns a lighter-weight shape than the full search page: `id`, `name`, `slug`, `imageUrl`, a formatted `price` string (via the shared `formatPrice` helper from `ProductCard.tsx`), and `category` (the first assigned category's name, or `null` — a product can belong to multiple categories, but only one is shown here to keep the row compact)
+- Searches `ProductVariant`s, not `Product`s. Case-insensitive `contains`
+  match against product name, product description, and the variant's `Format`
+  name within the `combination` JSON field.
+- Capped to the 6 most recent matches (`take: 6`, `orderBy: product.createdAt desc`).
+- Returns a variant-specific shape: `id` (of the variant), `name` (product
+  name + format), `slug` (of the parent product), `imageUrl` (variant-specific,
+  falling back to product), a specific `price` string (e.g., `$46.00`), and
+  `category` (the parent product's first assigned category name).
 - Empty/missing `q` returns `{ "results": [] }` immediately, no DB query
 
 **Response:**
 ```json
 {
   "results": [
-    { "id": "cuid", "name": "Nike Air Force 1", "slug": "nike-air-force-1", "imageUrl": "https://...", "price": "$120.00", "category": "Sneakers" }
+    { "id": "cuid", "name": "Mega Evolution—Pitch Black - Booster Bundle", "slug": "mega-evolution-pitch-black", "imageUrl": "/images/variants/...", "price": "$46.00", "category": "Pokemon English" }
   ]
 }
 ```

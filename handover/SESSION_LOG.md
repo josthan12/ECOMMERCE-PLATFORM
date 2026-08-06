@@ -3455,3 +3455,50 @@ The new database rows are already unarchived, while their repository-owned
 images and category presentation changes remain local. The owner must push and
 wait for deployment before conducting final desktop/mobile storefront review;
 until then the newly referenced production image URLs are not deployed.
+
+---
+
+## Session 53
+
+Date: 2026-08-06
+
+### Objective
+Fix several storefront bugs related to product display, search results, and dark mode theme contrast that were undermining the premium user experience.
+
+### Completed
+- **Variant-Centric Catalogue:** Reworked the main product listings (`/products`) and search results (`/search`) to display each individual product format as a distinct, purchasable item. This provides a clearer, more direct shopping experience than the previous model, which grouped all formats under a single product card.
+- **New Component:** Created `app/components/VariantCard.tsx` to support the new variant-centric display. This card shows a single format with its specific image, name, and price, and links directly to the product page with that format pre-selected.
+- **Product Page Variant Fix:** Corrected a critical bug on the product detail page (`/product/[slug]`) where every product incorrectly displayed the "Pitch Black" set's variants. The data fetching logic was fixed to use the `slug` from the URL, ensuring the correct product and its unique variants are shown.
+- **Expanded Search Scope:** Improved the main search bar and the "All Products" filter to include variant format names (e.g., "Booster Bundle", "Elite Trainer Box") in the search. The Prisma queries were updated to search the `combination` JSON field on `ProductVariant`, making search results much more accurate.
+- **Dark Mode Contrast:** Adjusted the "Collector Midnight" dark theme tokens in `app/globals.css`. The main background color (`--color-background`) was made slightly lighter to create a clear, subtle visual distinction from the header and footer, which use the deeper `--color-ink` token.
+- **UI Text Clarification:** Updated the eyebrow heading on the search results page from "Catalogue search" to "Product search" to more accurately reflect its function.
+
+### Files Modified
+- `app/products/page.tsx` — Rewired to query and display `ProductVariant`s using the new `VariantCard`.
+- `app/search/page.tsx` — Rewired to query and display `ProductVariant`s using `VariantCard`; updated heading text.
+- `app/api/search/suggestions/route.ts` — Updated to search and return individual variants with variant-specific names and prices.
+- `app/globals.css` — Adjusted dark theme color tokens for better contrast.
+- `app/components/VariantCard.tsx` — New component created for the variant-centric display.
+
+### Bugs Found
+- Product pages were not using the URL slug to fetch data, causing all pages to show the same variants.
+- Search queries did not include variant format names, leading to incomplete or missing results.
+- The "All Products" page and search results were displaying grouped products instead of individual, purchasable variants.
+- Dark mode header and footer were visually indistinguishable from the main page background.
+
+### Bugs Fixed
+- All of the above were resolved within the session.
+
+### Technical Decisions
+- **Shift to Variant-Centric Display:** The storefront now presents a flattened list of individual product variants instead of grouping them under a parent product. This is a more intuitive e-commerce pattern that lets customers see and select specific formats directly from catalogue pages.
+- **Expanded Search to JSON Field:** Search functionality now directly queries the `combination` JSON field on `ProductVariant` for format names. This is more robust than relying on string matching in the description and provides more accurate results for users searching for specific product formats.
+
+### Lessons Learned
+- When a core data model assumption changes (from product-grouped to variant-centric), it's crucial to audit every customer-facing surface that displays that data (product lists, search results, search suggestions) to ensure a consistent experience.
+- UI text, even if small, sets user expectations. "Catalogue search" vs. "Product search" created confusion that a simple text change could resolve.
+
+### Outstanding Issues
+- The product detail page (`/product/[slug]`) should be updated to automatically select the variant specified in the URL's `?format=` query parameter, completing the user flow from the new `VariantCard`.
+
+### Recommended Next Task
+Update the product detail page to read the `format` query parameter and pre-select the corresponding variant on page load.

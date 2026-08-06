@@ -1034,3 +1034,39 @@ need format-specific copy.
 
 Date:
 2026-08-05
+
+---
+
+Decision:
+Shift the entire storefront from a product-centric to a variant-centric
+display model. All product listing pages (`/products`, `/search`,
+`/category/[slug]`) now display a card for each individual `ProductVariant`
+instead of a single card for a grouped `Product`.
+
+Reason:
+The previous model, which grouped all formats under a single product card, was
+causing confusion. Customers could not see the price or availability of
+specific formats (like "Booster Bundle") without clicking through to the
+product page. The new model provides a flatter, more direct shopping experience
+that is more aligned with standard e-commerce conventions, allowing customers
+to see and select specific formats directly from catalogue pages. This was
+supported by creating a new `VariantCard.tsx` component.
+
+Date:
+2026-08-06
+
+---
+
+Decision:
+Expand product search to include variant format names stored in the `combination`
+JSON field on the `ProductVariant` model.
+
+Reason:
+Users searching for specific formats like "Elite Trainer Box" were not getting
+accurate results because the search only looked at the product's name and
+description. By querying the `combination` JSON field directly, the search can
+now match against the specific format names of each variant, significantly
+improving the accuracy and usefulness of the search feature.
+
+Date:
+2026-08-06

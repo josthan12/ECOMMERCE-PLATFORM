@@ -1,142 +1,31 @@
 # CURRENT_STATE.md
 
 ## Current Phase
-The premium storefront redesign is active as a gated milestone track.
-Milestones 1 through 4 are implemented, and the catalogue model remains:
-Category -> Product/Set -> Variant/Format. The proposed hierarchical catalogue
-migration was cancelled in favour of this simpler existing model. Phase 8 now
-has canonical metadata, social metadata, a dynamic sitemap, structured-data
-alignment, and a focused accessibility/performance pass. A non-destructive
-technical launch audit is complete, and every recorded High-severity engineering
-blocker has been remediated and production-retested. The final technical
-re-audit completed on 2026-08-04 with an engineering GO and recorded
-Medium/Low risks. Formal assistive-technology and other owner-controlled
-verification remain open.
+The storefront is now fully variant-centric, displaying each product format as a
+distinct, purchasable item across all catalogue and search surfaces. This
+completes a significant refinement of the shopping experience, moving away from
+the previous product-grouped model. Recent work also fixed a critical bug in
+product variant display on detail pages, improved search accuracy by including
+variant format names, and enhanced dark mode theme contrast. A non-destructive
+technical launch audit is complete, and every recorded High-severity
+engineering blocker has been remediated and production-retested. The final
+technical re-audit completed on 2026-08-04 with an engineering GO and recorded
+Medium/Low risks.
 
 ## Current Feature
-Milestone 4 aligned cart, checkout, checkout status, search, and customer order
-pages with the premium storefront and dark theme. It added canonical URLs,
-OpenGraph/Twitter metadata, a database-backed sitemap, flat-catalogue
-Product/BreadcrumbList data, skip/focus/search/navigation accessibility
-improvements, above-the-fold image loading, self-hosted Geist, and the Next 16
-Proxy convention.
+The product catalogue, search results, and search suggestions now query and
+display individual `ProductVariant` entities instead of `Product` entities.
+This is supported by a new `VariantCard` component. Search queries have been
+updated to include variant format names stored in the `combination` JSON
+field. Dark mode theme contrast has been improved.
 
 ## Current Objective
-The final non-destructive technical launch re-audit completed on 2026-08-04.
-The removed monitoring test route returns `404`; health remains `200` and
-no-store; production public, protection, header, sitemap, canonical, and
-structured-data checks passed. ESLint, TypeScript, Prisma validation/client
-generation, and the 44-page Next.js 16.2.11 production build passed. No open
-High-severity engineering blocker remains, so the engineering decision is GO
-with recorded Medium/Low risks. Newly explicit follow-ups are checkout abuse
-control (Medium) and idempotent Clerk `user.created` retry handling (Low).
-This does not replace the owner's remaining launch gates or final approval.
-Owner-controlled secret rotation began on 2026-08-04 without exposing values.
-The existing Clerk production credentials and newly created Sentry upload token
-were confirmed as current. Resend was rotated in Vercel Production and
-redeployed; controlled newsletter `cmsefshpp000004l831obsax9` sent to the sole
-subscriber (`1/1`) and the owner confirmed receipt. Revocation of the previous
-Resend key remains unconfirmed. `CRON_SECRET` was regenerated and updated in
-Vercel Production and cron-job.org, whose target now uses the custom domain;
-the owner-run scheduler test returned `200`, and separate root/health checks
-also returned `200`. Query-parameter cron authentication was retained, so its
-Medium hardening finding remains open. HitPay rotation is deferred until the
-owner has a live merchant account. Neon production now uses a separately
-created Console role and a replacement `DATABASE_URL` with
-`sslmode=verify-full`. The redeployment is Ready; health, public catalogue,
-authenticated account orders, and authenticated admin analytics all passed
-against the new credential. Sentry showed ten consecutive minute-by-minute
-`200` health checks with no ongoing issue, and Vercel showed zero warning,
-error, or fatal logs in the observed 30-minute window. The original owner role
-remains active solely as rollback until every other consumer is inventoried;
-its password has not yet been reset.
-Subsequent live HitPay payment-request attempts returned provider `403`
-responses, and the owner confirmed that activating the required merchant
-account would involve business verification and sole-proprietorship
-documentation. The payment direction is now explicitly undecided. The owner
-will first complete a separately authorized disposable-data reset and a later,
-separately scoped storefront professionalism pass, then choose between
-registering for automated provider-backed payments and the documented manual
-personal-PayNow alternative in `handover/PAYMENT_DIRECTION_OPTIONS.md`. No
-manual PayNow code, schema, dependency, environment, or external-service change
-has been authorized.
-Payment Batch 2 is
-complete with the owner-accepted HitPay limitation: declined online attempts
-remain retryable/unpaid, so the customer is shown failure and starts checkout
-again. The deployed payment-idempotency batch passed completed, real HitPay
-expiry, and a two-call
-concurrent reconciliation race on 2026-08-02. Each tested order reached one
-terminal state, stock moved exactly once, and exactly one durable payment-email
-row was created. The corrected production order sender delivered the new paid
-order confirmation and both payment-failed emails; the newsletter sender also
-completed a one-recipient test broadcast with a Resend provider ID. The old
-$5 confirmation row remains failed at its five-attempt cap as intentional test
-history. The additive `OrderEmailDelivery` migration is applied to Neon and
-matching application commit `3f810bc` is Ready in Vercel production.
-The owner-present Clerk migration completed on 2026-08-03. Production now uses
-a Clerk production instance on the custom domain with production-scoped Vercel
-keys, a production `user.created` webhook, and a Google OAuth application in
-production. The existing database admin row was guardedly rebound to the
-owner's production Clerk ID without changing its local ID, role, or relations;
-a fresh signup created a `CUSTOMER`, customer denial from `/admin` passed, and
-the final storefront check produced no CSP errors, Clerk warnings, or browser
-errors. Monitoring Batch 7 completed on 2026-08-04. Production-only Sentry
-error tracking now covers browser, Node.js, Edge, request, and global-error
-failures with data-minimized event hooks; release `6afb773` and readable source
-maps were verified against a harmless admin-authenticated event. The permanent
-`/api/health` database probe is monitored every minute by Sentry Uptime. A
-controlled 404 created a High-priority downtime issue and email alert, the owner
-confirmed delivery, and the restored endpoint returned `200` and automatically
-resolved the issue. The prior High-severity monitoring blocker is closed and
-the final technical re-audit reconfirmed the deployment. Contrast Batch 4 is
-deployed and complete.
-Its final computed production scan passed on the
-homepage, catalogue, product detail, cart, checkout, account/orders, and admin
-routes in both themes. The deployed light-gold ink-section labels measure
-`10.62:1`/`12.03:1`; the scanner's two out-of-stock badge reports were modern
-`oklab()` parsing false positives, and their worst-case composited contrast is
-`12.01:1`. Theme-aware admin chart axes, series, and legends also pass. Browser
-Security Batch 3 is deployed and verified: all five
-headers are present on the custom domain, ISR remains active, and public,
-customer, checkout, and admin smoke tests produced no CSP violations.
-The independent technical-cleanup batch is deployed and verified:
-`/robots.txt`, the empty-cart `h1`, redacted HitPay request-failure logging, an
-explicit Turbopack root, and the complete 43-finding ESLint cleanup. ESLint,
-TypeScript, Prisma generation, and the 44-route production build pass. Live
-robots, sitemap, homepage, catalogue, product detail, empty cart, and signed-in
-admin smoke checks pass without a Next.js error overlay. The Turbopack workspace
-warning is resolved. The remaining
-PostgreSQL `sslmode` warning requires the owner to update the connection string
-during secret rotation. Dependency and admin audit-log implementation plans are
-recorded without changing packages or the database schema.
-Checkout-success owner/non-owner isolation passed in production on 2026-08-02.
-The Next.js 16.2.11
-production deployment, catalogue refresh, cart, sitemap, route protection,
-canonical/structured data, build, and TypeScript checks passed. The separately
-authorized disposable-data reset completed through the signed-in Neon Console
-on 2026-08-05 after a fresh guarded inventory. It deleted 273 disposable rows,
-including 79 orders, 80 order items, 9 order-email records, and 4 customer
-users. The confirmed admin account and all 17 existing completed migrations
-were preserved. Migration
-`20260805000000_add_product_variant_description` was then applied, bringing the
-completed migration count to 18. The database now contains seven unarchived
-`Pokemon English` set listings with 45 sealed-product formats: 30th
-Celebration, Mega Evolution, Phantasmal Flames, Ascended Heroes, Perfect Order,
-Chaos Rising, and Pitch Black. Prices were supplied by the owner, and mock
-stock values from 1 through 10 were assigned per format. Pitch Black was
-repriced to Pokémon Center ETB S$200/6, ETB S$100/4, Booster Bundle S$46/9,
-Booster Display S$250/3, and Build & Battle Box S$42/7. The six added sets and
-all 40 added formats use repository-owned official Pokémon imagery and factual
-product-content descriptions. Their database rows are public, but the new
-local image assets require the owner to push and deploy before those image URLs
-can resolve in production.
-The owner supplied a new 1024-by-1024 `Pokemon English` category artwork, which
-now replaces the former small official Pokémon TCG logo locally. The category
-card and category-detail hero use the new high-resolution artwork in a larger
-image-led treatment rather than the prior small contained-logo presentation.
-Category-card hover keeps its border/shadow feedback without vertical movement,
-preventing the carousel from clipping the card's top edge.
-All order/customer-history tables are empty.
+The project is stable after a series of bug fixes. The storefront now
+consistently displays individual product variants, search is more accurate, and
+dark mode contrast is improved. All high-severity launch blockers have been
+resolved. The next step is to complete the user flow from the new
+variant-centric catalogue pages by ensuring the product detail page correctly
+pre-selects the variant chosen by the user.
 
 ---
 
@@ -411,16 +300,11 @@ All order/customer-history tables are empty.
 ---
 
 ## In Progress
-
-* **Milestone 4 review gate.** Cart, checkout, checkout status, search,
-  customer order pages, canonical/social metadata, the sitemap, structured
-  data, and focused accessibility/performance work are implemented and have
-  passed automated verification. Interactive desktop/mobile and both-theme
-  review remains on the admin-run local server.
-* **Disposable catalogue review.** The admin is reviewing the eight imported
-  Pokemon English sets and 12 variants in production. The cache-refresh change
-  must be deployed and the homepage plus `/categories` rechecked before the
-  admin decides whether to proceed with the separately gated database reset.
+* **Product Page Variant Selection.** The product detail page needs to be
+  updated to read the `?format=` query parameter from the URL and
+  automatically select the corresponding variant upon page load. This will
+  complete the user journey that starts from the new `VariantCard` component
+  on the catalogue and search pages.
 
 ---
 

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { ArrowUpRight } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'About Us',
@@ -30,6 +31,26 @@ export default function AboutPage() {
             our friendly and welcoming community. We look forward to having you
             with us!
           </p>
+        </div>
+      </div>
+
+      <div className="mt-16 border-t border-border-light pt-12 text-center">
+        <h2 className="font-display text-3xl font-semibold text-primary">
+          Join the Community
+        </h2>
+        <p className="mx-auto mt-3 max-w-md text-base leading-7 text-text-muted">
+          Get the latest updates, share your collection, and connect with other collectors on our official Telegram channel.
+        </p>
+        <div className="mt-8">
+          <a
+            href="https://t.me/POKESUNSHINETCG/1"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-6 py-3 text-lg font-medium text-text-inverse transition-all duration-150 ease-out hover:-translate-y-0.5 hover:bg-accent hover:text-accent-foreground active:scale-[0.98] active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+          >
+            <span>Join @PokeSunshineTCG</span>
+            <ArrowUpRight className="h-5 w-5" />
+          </a>
         </div>
       </div>
     </div>

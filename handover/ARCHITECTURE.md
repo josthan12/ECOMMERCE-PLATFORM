@@ -216,9 +216,9 @@ them and can't reach Prisma directly.
 - **Image fallback chain**: `ProductVariant.imageUrl` → `Product.imageUrl` → blank.
 - **Catalog image storage (Phase 8)**: production catalog images are
   repository-owned static files under `public/images/products`,
-  `public/images/variants`, and `public/images/categories`; database image
-  fields store root-relative paths such as `/images/products/card-name.webp`.
-  This deliberately avoids a separately billed managed-storage service.
+  `public/images/variants`, and `public/images/categories`; database image fields
+  store root-relative paths such as `/images/products/card-name.webp`. This
+  deliberately avoids a separately billed managed-storage service.
 - **Shared `CatalogImage`** (`app/components/CatalogImage.tsx`) renders local
   paths with Next.js `Image`. Its native `<img>` branch is temporary
   compatibility for arbitrary remote URLs in the disposable test database
@@ -234,10 +234,12 @@ them and can't reach Prisma directly.
   verified. Edit converts valid stored paths back to filenames and requires
   legacy remote variant images to be replaced or explicitly removed. POST and
   PUT independently reject paths outside the expected local folders.
-- **Shared `ProductCard`** (`app/components/ProductCard.tsx`) — used by
-  category, homepage, and search surfaces. Product imagery uses a consistent
-  square `object-contain` canvas; the card now exposes live availability,
-  format count, price, and a clearer detail affordance.
+- **Shared `VariantCard`** (`app/components/VariantCard.tsx`) — used across
+  all product listing pages (`/products`, `/search`, `/category/[slug]`). It
+  displays a single purchasable `ProductVariant` with its specific name (product
+  name + format), image, and price. This is a key component of the
+  variant-centric display model. The older `ProductCard` is now only used on
+  the homepage's "New Arrivals" section.
 - **Homepage categories** use responsive asymmetric editorial cards with
   `object-cover`, live product counts, optional descriptions, and a stable
   dark image overlay. The first two cards establish visual hierarchy while
@@ -279,6 +281,10 @@ them and can't reach Prisma directly.
   `lib/structuredData.ts`.
 - **`proxy.ts`** is the Next 16 Clerk request-boundary convention that replaced
   deprecated `middleware.ts`; its matcher behaviour is unchanged.
+- **Search logic** now queries the `combination` JSON field on the
+  `ProductVariant` model to match against variant format names, in addition to
+  the product's name and description. This provides more accurate results for
+  users searching for specific formats like "Booster Bundle".
 
 Clerk handles identity; `User` row (via `clerkId`) stores app-specific data. Role check pattern in every admin API route:
 ```ts
