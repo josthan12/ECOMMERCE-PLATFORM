@@ -11,13 +11,26 @@ export async function GET(req: Request) {
 
   const variants = await prisma.productVariant.findMany({
     where: {
-      product: {
-        archived: false,
-        OR: [
-          { name: { contains: q, mode: 'insensitive' } },
-          { description: { contains: q, mode: 'insensitive' } },
-        ],
-      },
+      AND: [
+        {
+          product: {
+            archived: false,
+          },
+        },
+        {
+          OR: [
+            { product: { name: { contains: q, mode: 'insensitive' } } },
+            { product: { description: { contains: q, mode: 'insensitive' } } },
+            {
+              combination: {
+                path: ['Format'],
+                string_contains: q,
+                mode: 'insensitive',
+              },
+            },
+          ],
+        },
+      ],
     },
     include: {
       product: {

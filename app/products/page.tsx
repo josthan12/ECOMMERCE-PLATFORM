@@ -48,14 +48,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       where: {
         product: {
           archived: false,
-          ...(search
-            ? {
-                OR: [
-                  { name: { contains: search, mode: 'insensitive' as const } },
-                  { description: { contains: search, mode: 'insensitive' as const } },
-                ],
-              }
-            : {}),
           ...(selectedCategory
             ? {
                 categoryProducts: {
@@ -65,6 +57,21 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             : {}),
         },
         ...(inStock ? { stock: { gt: 0 } } : {}),
+        ...(search
+          ? {
+              OR: [
+                { product: { name: { contains: search, mode: 'insensitive' as const } } },
+                { product: { description: { contains: search, mode: 'insensitive' as const } } },
+                {
+                  combination: {
+                    path: ['Format'],
+                    string_contains: search,
+                    mode: 'insensitive' as const,
+                  },
+                },
+              ],
+            }
+          : {}),
       },
       include: {
         product: {

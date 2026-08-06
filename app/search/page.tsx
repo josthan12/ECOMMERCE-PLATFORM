@@ -14,13 +14,26 @@ export default async function SearchPage({ searchParams }: Props) {
   const variants = query
     ? await prisma.productVariant.findMany({
         where: {
-          product: {
-            archived: false,
-            OR: [
-              { name: { contains: query, mode: 'insensitive' } },
-              { description: { contains: query, mode: 'insensitive' } },
-            ],
-          },
+          AND: [
+            {
+              product: {
+                archived: false,
+              },
+            },
+            {
+              OR: [
+                { product: { name: { contains: query, mode: 'insensitive' } } },
+                { product: { description: { contains: query, mode: 'insensitive' } } },
+                {
+                  combination: {
+                    path: ['Format'],
+                    string_contains: query,
+                    mode: 'insensitive',
+                  },
+                },
+              ],
+            },
+          ],
         },
         include: {
           product: {
